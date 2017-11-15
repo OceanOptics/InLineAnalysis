@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Matlab
+*.asv
+*.m~
+*.mex*
+slprj/
+octave-workspace
+*.autosave
