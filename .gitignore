@@ -10,3 +10,7 @@
 slprj/
 octave-workspace
 *.autosave
+
+# Project specific
+# exclude package folder as it is developped by others
+packages/
