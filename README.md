@@ -12,6 +12,7 @@ To date the following instruments are supported:
   + LISST
 
 The application is under continuous development and still need testing, please use the [GitHub Issues Tracker](https://github.com/OceanOptics/InLineAnalysis/issues) to signal any bug, or feature requests.
+The documentation is minimal if not existing at the time, however, some help can be found in the comments of the code.
 
 # Quick start
 ## Installation

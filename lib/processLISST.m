@@ -6,8 +6,8 @@ function [p, diameter, bin_size] = processLISST(param, tot, filt)
 %     p.betap   % <Nx32 double> particulate VSF (counts)
 %     p.cp      % <Nx1 double>  particulate beam attenuation (1/m)
 %     p.VD      % <Nx32 double> volume distribution (\muL/L)
-%     p.PSD     % <Nx32 double> numbers / mL / \mum
-%     p.VSD     % <Nx32 double> numbers x 10^-6  / \mum
+%     p.PSD     % <Nx32 double> numbers / mL / m
+%     p.VSD     % <Nx32 double> numbers x 10^-6  / m
 %
 
 
@@ -62,7 +62,7 @@ diameter = sqrt(param.ds(1:end-1).*param.ds(2:end));
 d = diameter .* ones(size(p,1),1);
 
 % Convert to number distribution
-p.PSD = (p.VD ./ (pi*d.^3/6) ./ bs)  * 10^6; % units: # / \mum^3 / \mum
-p.VSD = (p.VD ./ bs) * 10^6;                 % units: # / \mum 
+p.PSD = (p.VD ./ (pi*d.^3/6) ./ bs)  * 10^6; % units: # / \mum^3 / m
+p.VSD = (p.VD ./ bs) * 10^6;                 % units: # / m
 
 end
