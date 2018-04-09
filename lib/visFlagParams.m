@@ -1,4 +1,5 @@
-function fh = visFlagParams(params, data, varname, varindex)
+function fh = visFlagParams(params, data, varindex)%, varname)%
+  varname = params.primary_varname;
   % Define constants
   ColorSet = lines(5);
   fh = fig(51); hold('on');

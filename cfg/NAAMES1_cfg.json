@@ -1,0 +1,167 @@
+{
+  "meta":{
+    "investigators":"Emmanuel_Boss,Nils_Haentjens",
+    "affiliations":"University_of_Maine,University_of_Maine",
+    "emails":"nils.haentjens@maine.edu",
+    "experiment":"NAAMES",
+    "cruise":"NAAMES01",
+    "station":"NA",
+    "documents":"NA",
+    "calibration_files":"NA",
+    "data_type":"flow_thru",
+    "data_status":"final",
+    "measurement_depth":5
+  },
+  "instruments":{
+    "TSG":{
+      "model":"TSG",
+      "boat":"Atlantis",
+      "path":{
+        "raw":"/Users/nils/Data/NAAMES/01_underway/raw/",
+        "wk":"/Users/nils/Data/NAAMES/01_underway/mat/",
+        "prod":"/Users/nils/Data/NAAMES/01_underway/sb/"
+      },
+      "view":{
+        "varname":"t"
+      }
+    },
+    "FTH":{
+      "model":"FTH",
+      "logger":"FlowControl_old",
+      "path":{
+        "raw":"/Users/nils/Data/NAAMES/01_flow/raw/",
+        "wk":"/Users/nils/Data/NAAMES/01_flow/mat/",
+        "prod":"/Users/nils/Data/NAAMES/01_flow/sb/"
+      },
+      "view":{
+        "varname":"swt"
+      }
+    },
+    "BB3":{
+      "model":"BB",
+      "sn":"349",
+      "logger":"DH4PreProc",
+      "lambda":[470,532,660],
+      "theta":124,
+      "slope_":[8.407E-06,4.624E-06,4.090E-06],
+      "dark_":[56,52,45],
+      "slope": [1,1,1],
+      "dark": [0,0,0],
+      "path":{
+        "raw":"/Users/nils/Data/NAAMES/01_inline/raw/",
+        "wk":"/Users/nils/Data/NAAMES/01_inline/mat/",
+        "prod":"/Users/nils/Data/NAAMES/01_inline/sb/"
+      },
+      "view":{
+        "varname":"beta",
+        "varcol":1
+      }    
+    },
+    "WSCD":{
+      "model":"CD",
+      "sn":"???",
+      "logger":"DH4PreProc",
+      "path":{
+        "raw":"/Users/nils/Data/NAAMES/01_inline/raw/",
+        "wk":"/Users/nils/Data/NAAMES/01_inline/mat/",
+        "prod":"/Users/nils/Data/NAAMES/01_inline/sb/"
+      },
+      "view":{
+        "varname":"fdom"
+      } 
+    }
+  },
+  "process":{
+    "days2run":[736274,736275,736276,736277,736278,736279,736280,736281,736282,736283,736284,736285,736286,736287,736288,736289,736290,736291,736292,736293,736294,736295,736296,736297,736298],
+    "days2run_all_":[736274,736275,736276,736277,736278,736279,736280,736281,736282,736283,736284,736285,736286,736287,736288,736289,736290,736291,736292,736293,736294,736295,736296,736297,736298],
+    "instruments2run_":["FTH", "TSG", "BB3", "WSCD"],
+    "force_import":false,
+    "parallel":"Inf",
+    "sync":{
+      "delay":{
+        "FTH":30,
+        "BB3":-18640,
+        "WSCD":-18600
+      },
+      "skip":["TSG"]
+    },
+    "stretch":{
+      "delta":{
+        "BB3":130,
+        "WSCD":130
+      },
+      "skip":["FTH", "TSG"]
+    },
+    "qcref":{
+      "reference":"FTH",
+      "view":"BB3",
+      "mode":"load"
+    },
+    "split":{
+      "reference":"FTH",
+      "buffer":{
+        "BB3":[480, 300],
+        "WSCD":[330, 120]
+      },
+      "skip":["TSG", "FTH"]
+    },
+    "bin":{
+      "prctile_detection":[2.5, 97.5],
+      "prctile_average":[5, 75],
+      "bin_size":{
+        "BB3":1,
+        "WSCD":1
+      },
+      "skip":["TSG", "FTH"]
+    },
+    "flag":{
+      "default":{
+        "maximum_fudge_factor":4,
+        "variance_fudge_factor":3,
+        "avg_sensitivity":1,
+        "unc1_sensitivity":1,
+        "unc2_sensitivity":2,
+        "smooth_threshold":60,
+        "min_flag_n":1,
+        "filt":{
+          "smooth_threshold":2
+        }
+      },
+      "BB3":{
+        "abs_uncertainty":0.00001,
+        "rel_uncertainty":0.02,
+        "min_flag_n": 1,
+        "primary_varname":"beta"
+      },
+      "WSCD":{
+        "abs_uncertainty":0.0007,
+        "rel_uncertainty":0,
+        "primary_varname":"fdom"
+      },
+      "skip":["TSG", "FTH"]
+    },
+    "qc":{
+      "mode":"ui",
+      "global":{
+        "active":false,
+        "view":"BB3",
+        "apply":["BB3"]
+      },
+      "specific":{
+        "active":true,
+        "run":["BB3","WSCD","TSG"]
+      }
+    },
+    "calibrate":{
+      "BB3":{
+        "compute_dissolved":false,
+        "TSG_source":"TSG"
+      },
+      "skip":["WSCD", "TSG", "FTH"]
+    },
+    "write":{
+      "mode":"One file",
+      "skip":["FTH"]
+    }
+  }
+}

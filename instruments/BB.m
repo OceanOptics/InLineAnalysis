@@ -29,9 +29,9 @@ classdef BB < ECO
       param = struct('lambda', obj.lambda, 'theta', obj.theta, 'slope', obj.slope);
       % linear interpolation only, CDOM interpolation is not yet available
       if compute_dissolved
-        [obj.prod.p, obj.prod.g] = processBB3(param, obj.qc.tsw, obj.qc.fsw, obj.qc.diw, TSG);
+        [obj.prod.p, obj.prod.g] = processBB3(param, obj.qc.tsw, obj.qc.fsw, obj.bin.diw, TSG.qc.tsw);
       else
-        [obj.prod.p] = processBB3(param, obj.qc.tsw, obj.qc.fsw, [], TSG);
+        [obj.prod.p] = processBB3(param, obj.qc.tsw, obj.qc.fsw, [], []);
       end
     end
   end

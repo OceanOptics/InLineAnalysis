@@ -1,0 +1,150 @@
+{
+  "meta": {
+    "investigator": "Emmanuel_Boss",
+    "affiliations": "University_of_Maine",
+    "emails": "emmanuel.boss@maine.edu",
+    "experiment": "NAAMES",
+    "cruise": "NAAMES03",
+    "station": "NA",
+    "documents": "NA",
+    "calibration_files": "NA",
+    "data_type": "flow_thru",
+    "data_status": "preliminary",
+    "measurement_depth": 5
+  },
+  "instruments": {
+    "TSG": {
+      "model": "TSG",
+      "boat": "Tara",
+      "path": {
+        "raw": "/Users/Shunkn/Documents/MATLAB/DATA/Wallis_(BB3_&_TSG)/Tahiti-Wallis/Exaxmple/tara_tsg_20161206.txt",
+        "wk": "/Users/Shunkn/Documents/MATLAB/Data/wk",
+        "prod": "/Users/Shunkn/Documents/MATLAB/Data/Product"
+      },
+      "view": {
+        "varname": "t"
+      }
+    },
+    "BB3": {
+      "model": "BB",
+      "sn": "349",
+      "logger":"Inlinino",
+      "lambda": [
+        470,
+        532,
+        660
+      ],
+      "theta": 124,
+      "slope": [
+        0.000008407,
+        0.000004624,
+        0.000004090
+      ],
+      "dark": [
+        56,
+        52,
+        45
+      ],
+      "path": {
+        "raw": "/Users/Shunkn/Documents/MATLAB/Data/Wallis_(BB3_&_TSG)/Tahiti-Wallis/inlinino_20161206_010001/",
+        "wk": "/Users/Shunkn/Documents/MATLAB/Data/wk",
+        "prod": "/Users/Shunkn/Documents/MATLAB/Data/Product"
+      }
+    }
+  },
+  "process": {
+    "days2run": [
+      736942
+    ],
+    "instruments2run": [
+      "BB3", "TSG"
+    ],
+    "write": true,
+    "force_import": false,
+    "parallel": "Inf",
+    "sync": {
+      "delay": {
+        "BB3": 42
+      },
+      "skip": [
+        "TSG"
+      ]
+    },
+    "qcref": {
+      "view": "BB3",
+      "mode": "load"
+    },
+    "split": {
+      "buffer": {
+        "BB3": [
+          400,
+          200
+        ]
+      },
+      "skip": [
+        "TSG"
+      ]
+    },
+    "bin": {
+      "prctile_detection": [
+        2.5,
+        97.5
+      ],
+      "prctile_average": [
+        5,
+        75
+      ],
+      "bin_size": {
+        "BB3": 1
+      },
+      "skip": [
+        "TSG"
+      ]
+    },
+    "flag": {
+      "default": {
+        "maximum_fudge_factor": 4,
+        "variance_fudge_factor": 3,
+        "avg_sensitivity": 1,
+        "unc1_sensitivity": 1,
+        "unc2_sensitivity": 2,
+        "smooth_threshold": 60,
+        "min_flag_n": 1,
+        "filt": {
+          "smooth_threshold": 2
+        }
+      },
+      "BB3": {
+        "abs_uncertainty": 2,
+        "rel_uncertainty": 0.025,
+        "min_flag_n": 2,
+        "primary_varname": "beta"
+      },
+      "skip": [
+        "TSG"
+      ]
+    },
+    "qc": {
+      "mode": "ui",
+      "global": {
+        "active": true,
+        "view": "BB3",
+        "apply": [
+          "BB3"
+        ]
+      },
+      "specific": {
+        "active": true,
+        "run": [
+          "BB3",
+          "TSG"
+        ]
+      }
+    },
+    "calibrate": {
+      "skip": [
+        "TSG"
+      ]
+    }
+  }
+}

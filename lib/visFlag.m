@@ -21,7 +21,7 @@ function fh = visFlag(raw_tot, raw_filt,...
   if ~isempty(raw_filt); scatter(raw_filt.dt, raw_filt.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_filt, 'MarkerEdgeAlpha', 0.5); end
   
   % Plot tot binned data
-  plot(bin_tot_good.dt, bin_tot_good.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', col_tot);
+  if ~isempty(bin_tot_good); plot(bin_tot_good.dt, bin_tot_good.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', col_tot); end
   if ~isempty(bin_tot_suspect); plot(bin_tot_suspect.dt, bin_tot_suspect.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', col_flag, 'MarkerFaceColor', col_flag); end
 %   plot(bb3_tot_flag.dt(sel_tot_target), bb3_tot_flag.beta(sel_tot_target,1), 'o', 'MarkerEdgeColor', col_target);
   

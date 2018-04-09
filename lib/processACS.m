@@ -142,8 +142,27 @@ p.cp_sd = sqrt(tot.c_avg_sd + filt_interp.c_avg_sd);
 p.ap_n = tot.a_avg_n;
 p.cp_n = tot.c_avg_n;
 
+% QC using ap spectrum
+% TODO replace the transpose by std(.., 0, 1 or 2); line 149 for speed
+sel_bad = any(p.ap(:,lambda.ref < 430) < 0,2)...
+          | any(p.ap(:,:) < -0.0015,2)...
+          | std(p.ap(:,lambda.ref < 430)')' > 6 * 10^-3;
+p(sel_bad,:) = [];
+
+% Derive standard products from ap and cp
+% Derive POC (Specific to region)
+cp660 = interp1(lambda.ref,p.cp',660,'linear')';
+p.poc = cp660.*380;
+% Derive Chl (Line heigh at 676 compared to 650 and 715)
+ap_a=interp1(lambda.ref,p.ap',[650 676 715],'linear')';
+line_height = (ap_a(:,2)-(39/65*ap_a(:,1)+26/65*ap_a(:,3)));
+p.chl=157*line_height.^1.22;
+p.chl(real(p.chl) ~= p.chl) = NaN;
+% 3.3 Derive Gamma (does not support NaN values)
+[~,p.gamma] = FitSpectra_HM2(lambda.ref(:,1:end-2),p.cp(:,1:end-2));
+
 %% ag & cg
-if nargin > 4 && nargout > 1
+if nargin > 3 && nargout > 1
   % Interpolate filtered on Total
   di_interp = table(filt.dt, 'VariableNames', {'dt'});
   di_interp.a = interp1(di.dt, di.a, di_interp.dt, 'linear', 'extrap');
@@ -160,7 +179,8 @@ if nargin > 4 && nargout > 1
   g.ag = interp1(lambda.a', g.ag', lambda.ref', 'linear', 'extrap')';
   g.cg = interp1(lambda.c', g.cg', lambda.ref', 'linear', 'extrap')';
   % Temperature & Salinity Correction (No Scattering correction needed)
-  [g.ag, g.cg] = TemperatureAndSalinityDependence(g.ag, g.cg, a_wl);
+  [g.ag, g.cg] = TemperatureAndSalinityDependence(g.ag, g.cg, lambda.ref);
+%   [g.ag, g.cg] = ResidualTemperatureAndScatteringCorrection(g.ag, g.cg, lambda.ref);
 
   % Propagate error
   %   Note: Error is not propagated through Scattering & Residual temperature
@@ -169,6 +189,9 @@ if nargin > 4 && nargout > 1
   g.cg_sd = sqrt(filt.c_avg_sd + di_interp.c_avg_sd);
   g.ag_n = filt.a_avg_n;
   g.cg_n = filt.c_avg_n;
+  
+  % QC with ag and cg spectrums (limited testing on the QC)
+  g(g.ag(:,1) < 0 & g.cg(:,end-3) < -0.005, :) = [];
 end
 
 end

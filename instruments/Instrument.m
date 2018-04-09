@@ -7,9 +7,10 @@ classdef (Abstract) Instrument < handle
     model = '';
     sn = '';
     logger = '';
+    di_cfg = struct('logger', '', 'prefix', '', 'postfix', '');
     
     % Path to data
-    path = struct('raw', '', 'wk', '', 'prod', '');
+    path = struct('raw', '', 'di', '', 'wk', '', 'prod', '');
     
     % Instrument-specific processing parameters
     split = struct('mode', 'split');
@@ -34,6 +35,7 @@ classdef (Abstract) Instrument < handle
   properties (SetAccess = private, GetAccess = public)
     % Processing parameters modiwfied by instrument methods only
     sync_delay = 0; % days
+    stretch_delta = 0; % days (can also be array of size of dt)
   end
   
   methods
@@ -50,7 +52,7 @@ classdef (Abstract) Instrument < handle
         else; error('Missing field model.'); end
         if isfield(cfg, 'path') && isfield(cfg.path, 'raw') &&...
           isfield(cfg.path, 'wk') && isfield(cfg.path, 'prod')
-          obj.path = cfg.path;
+          for f=fieldnames(cfg.path)'; obj.path.(f{1}) = cfg.path.(f{1}); end
         else
           error('Missing field path, path.raw, path.wk, or path.prod.');
         end
@@ -58,9 +60,14 @@ classdef (Abstract) Instrument < handle
         % Load optional fields
         if isfield(cfg, 'sn'); obj.sn = cfg.sn; end
         if isfield(cfg, 'logger'); obj.logger = cfg.logger; end
-        if isfield(cfg, 'view'); 
+        if isfield(cfg, 'view')
           if isfield(cfg.view, 'varname'); obj.view.varname = cfg.view.varname; end
           if isfield(cfg.view, 'varcol'); obj.view.varcol = cfg.view.varcol; end
+        end
+        if isfield(cfg, 'di')
+          if isfield(cfg.di, 'prefix'); obj.di_cfg.prefix = cfg.di.prefix; end
+          if isfield(cfg.di, 'postfix'); obj.di_cfg.postfix = cfg.di.postfix; end
+          if isfield(cfg.di, 'logger'); obj.di_cfg.logger = cfg.di.logger; end
         end
       end
     end
@@ -80,6 +87,23 @@ classdef (Abstract) Instrument < handle
       obj.data.dt = obj.data.dt + obj.sync_delay - delay_in_days;
       % Update delay stored in instrument properties
       obj.sync_delay = delay_in_days;
+    end
+    
+    function Stretch(obj, delta_in_seconds)
+      % STRETCH stretch the time of instrument
+      %   this function is mainly intendended for instrument recorded with
+      %   the DH4 which clock shift if in time about 3 min/ 30 days
+      
+      % Convert delay in day
+      delta_in_days = delta_in_seconds / 3600 / 24;
+      % Linearly interpolate delay
+      %   no delay at the beginning, full delay at the end.
+      delta_interp = interp1([obj.data.dt(1) obj.data.dt(end)],...
+                             [0 delta_in_days],obj.data.dt, 'linear');
+      % Apply Stretch
+      obj.data.dt = obj.data.dt + obj.stretch_delta - delta_interp;
+      % Update delta stored in instrument properties
+      obj.stretch_delta = delta_interp;
     end
     
     function Split(obj, ref, buffer)
@@ -105,6 +129,16 @@ classdef (Abstract) Instrument < handle
       end
     end
     
+    function BinDI(obj, prctile_detection, prctile_average, parallel)
+      bin_size_minutes = 15;
+      bin_size_days = bin_size_minutes / 60 / 24;
+      if isempty(obj.qc.diw)
+        fprintf('WARNING: No qc.diw data to bin\n');
+      else
+        obj.bin.diw = binTable(obj.qc.diw, bin_size_days, '4flag', prctile_detection, prctile_average, parallel, false);
+      end
+    end
+    
     function Flag(obj, params)
       % Make flags
       flags_tsw = flagTable(obj.bin.tsw, params.tot);
@@ -126,19 +160,25 @@ classdef (Abstract) Instrument < handle
       for i=1:size(user_selection, 1)
 %         obj.bad.tsw = obj.qc.tsw(user_selection(i,1) <= obj.qc.tsw.dt & obj.qc.tsw.dt <= user_selection(i,2),:);
 %         obj.bad.fsw(user_selection(i,1) <= obj.qc.fsw.dt & obj.qc.fsw.dt <= user_selection(i,2),:);
-        obj.qc.tsw(user_selection(i,1) <= obj.qc.tsw.dt & obj.qc.tsw.dt <= user_selection(i,2),:) = []; 
+        if ~isempty(obj.qc.tsw)
+          obj.qc.tsw(user_selection(i,1) <= obj.qc.tsw.dt & obj.qc.tsw.dt <= user_selection(i,2),:) = []; 
+        end
         if ~isempty(obj.qc.fsw)
           obj.qc.fsw(user_selection(i,1) <= obj.qc.fsw.dt & obj.qc.fsw.dt <= user_selection(i,2),:) = []; 
+        end
+        if ~isempty(obj.qc.diw)
+          obj.qc.diw(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = []; 
         end
       end
     end
     
     function Write(obj, filename_prefix, days2write)
       % For each product type (particulate, dissoved...)
-      for f = fieldnames(obj.prod); f = f{1};
+      for f = fieldnames(obj.prod)'; f = f{1};
         filename = [filename_prefix '_' f '_prod.mat'];
         sel = min(days2write) <= obj.prod.(f).dt & obj.prod.(f).dt < max(days2write) + 1;
         data = obj.prod.(f)(sel,:);
+        if ~isdir(obj.path.prod); mkdir(obj.path.prod); end
         save([obj.path.prod filename], 'data');
       end
     end
@@ -146,7 +186,7 @@ classdef (Abstract) Instrument < handle
     function LoadProducts(obj, filename_prefix, days2read)
       % For each product type (particulate, dissoved...)
       l = dir([obj.path.prod filename_prefix '_*_prod.mat']);
-      for f = {l.name}'; f = f{1};
+      for f = {l.name}; f = f{1};
         load([obj.path.prod f], 'data'); % data variable is created
         sel = min(days2read) <= data.dt & data.dt < max(days2read) + 1;
         fn = strsplit(f, '_'); fn = fn{end-1};

@@ -59,7 +59,17 @@ for j=1:size(lvar,2)
   stats.(lvar{j}).variance_threshold = stats.(lvar{j}).med_variance * params.variance_fudge_factor;
 %   stats.(lvar{j}).uncertainty_threshold = params.abs_uncertainty + params.rel_uncertainty .* dbin.(lvar{j});
   stats.(lvar{j}).uncertainty_threshold = max(params.abs_uncertainty, params.rel_uncertainty .* dbin.(lvar{j}));
-  stats.(lvar{j}).smoothed_uncertainty_threshold = filtfilt(ones(params.smooth_threshold,1), params.smooth_threshold, stats.(lvar{j}).uncertainty_threshold);
+  flag_smooth_error = false;
+  while params.smooth_threshold > 1
+    try
+      stats.(lvar{j}).smoothed_uncertainty_threshold = filtfilt(ones(params.smooth_threshold,1), params.smooth_threshold, stats.(lvar{j}).uncertainty_threshold);
+      break;
+    catch
+      params.smooth_threshold = params.smooth_threshold - 1;
+      flag_smooth_error = true;
+    end
+  end
+  if flag_smooth_error; warning('smooth_threshold was recuiced to: %d', params.smooth_threshold); end
 end
 
 % Copy input to output

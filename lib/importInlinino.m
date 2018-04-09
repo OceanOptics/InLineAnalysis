@@ -75,8 +75,10 @@ data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yy
 % data(sel2rm, :) = [];
 
 % Remove last line if it's past midnight (Bug in Inlinino)
-if data.dt(end-1) > data.dt(end)
-  data(end,:) = [];
+if ~isempty(data)
+  if data.dt(end-1) > data.dt(end)
+    data(end,:) = [];
+  end
 end
 
 if verbose; fprintf('Done\n'); end

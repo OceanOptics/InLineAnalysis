@@ -1,5 +1,5 @@
 function [ data ] = importACS( filename, verbose )
-%IMPORTACS Import ACS data recorded with Compass r2.1 in schedule mode
+%IMPORTACS Import ACS data recorded with Compass r2.1
 
 if nargin < 2; verbose = false; end
 if verbose
@@ -77,8 +77,11 @@ end
 % Update date & time
 s = strsplit(filename, '/');
 s = strsplit(s{end}, '_');
-data.dt = datenum(s{2}(1:14), 'yyyymmddHHMMSS') + datenum(0,0,0, 0,0,(data.dt - data.dt(1))/1000);
+if strcmp(file_type, 'Scheduled'); si = 2; % Scheduled recording
+else; si = 3; end% Manual recording (save at prompt when start acquisition with compass)
+data.dt = datenum(s{si}(1:14), 'yyyymmddHHMMSS') + datenum(0,0,0, 0,0,(data.dt - data.dt(1))/1000);
 if strcmp(file_type, 'Scheduled')
+  % Scheduled recording
   % File time stamp is done at the end of the recording
   % Thereafter subtract need to substract the length of the recording to the timestamp
   data.dt = data.dt - (data.dt(end)-data.dt(1));

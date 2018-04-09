@@ -33,6 +33,37 @@ classdef ACS < Instrument
         case 'Compass_2.1rc_scheduled'
           obj.data = iRead(@importACS, obj.path.raw, obj.path.wk, ['acs' obj.sn '_'],...
                          days2run, 'Compass_2.1rc_scheduled', force_import, ~write, true);
+        case 'Compass_2.1rc'
+          obj.data = iRead(@importACS, obj.path.raw, obj.path.wk, ['acs_' obj.sn '_'],...
+                         days2run, 'Compass_2.1rc', force_import, ~write, true);
+        otherwise
+          error('ACS: Unknown logger.');
+      end
+    end
+    
+    function ReadDI(obj, days2run, force_import, write)
+      % Set default parameters
+      if isempty(obj.path.di)
+        fprintf('WARNING: DI Path is same as raw.\n');
+        obj.path.di = obj.path.raw;
+      end
+      if isempty(obj.di_cfg.logger) 
+        fprintf('WARNING: DI Logger set to Compass_2.1rc.\n');
+        obj.di_cfg.logger = 'Compass_2.1rc';
+      end
+      if isempty(obj.di_cfg.postfix) 
+        fprintf('WARNING: DI Postfix set to "_DI" \n');
+        obj.di_cfg.postfix = '_DI';
+      end
+      switch obj.di_cfg.logger
+        case 'Compass_2.1rc_scheduled'
+          if isempty(obj.di_cfg.prefix); obj.di_cfg.prefix = ['acs' obj.sn '_']; end
+          obj.raw.diw = iRead(@importACS, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
+                         days2run, 'Compass_2.1rc_scheduled', force_import, ~write, true, false, obj.di_cfg.postfix);
+        case 'Compass_2.1rc'
+          if isempty(obj.di_cfg.prefix); obj.di_cfg.prefix = ['acs_' obj.sn '_']; end
+          obj.raw.diw = iRead(@importACS, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
+                         days2run, 'Compass_2.1rc', force_import, ~write, true, false, obj.di_cfg.postfix);
         otherwise
           error('ACS: Unknown logger.');
       end
@@ -44,13 +75,13 @@ classdef ACS < Instrument
       switch interpolation_method
         case 'linear'
           if compute_dissolved
-            [obj.prod.p, obj.prod.g] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, obj.qc.diw);
+            [obj.prod.p, obj.prod.g] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, obj.bin.diw);
           else
             [obj.prod.p] = processACS(lambda, obj.qc.tsw, obj.qc.fsw);
           end
         case 'CDOM'
           if compute_dissolved
-            [obj.prod.p, obj.prod.g] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, obj.qc.diw, CDOM.qc.tsw, SWT.qc.tsw, SWT_constants);
+            [obj.prod.p, obj.prod.g] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, obj.bin.diw, CDOM.qc.tsw, SWT.qc.tsw, SWT_constants);
           else
             [obj.prod.p] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, [], CDOM.qc.tsw, SWT.qc.tsw, SWT_constants);
           end

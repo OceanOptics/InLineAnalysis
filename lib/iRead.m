@@ -1,4 +1,4 @@
-function [ data ] = iRead( fun, dirname_in, dirname_out, prefix, dt, software, force, nowrite, verbose, read_margin )
+function [ data ] = iRead( fun, dirname_in, dirname_out, prefix, dt, software, force, nowrite, verbose, read_margin, postfix )
 %IMPORTALLUNDERWAY import underway data from all files matching regex settings
 %   in specified directory. Loaded files are saved as mat files for faster run.
 %
@@ -21,6 +21,7 @@ function [ data ] = iRead( fun, dirname_in, dirname_out, prefix, dt, software, f
 %    - write files if nowrite is set to false
 if nargin < 9; verbose = false; end
 if nargin < 10; read_margin = true; end
+if nargin < 11; postfix = ''; end
 
 dir_in = dirname_in;
 dir_out = dirname_out;
@@ -41,15 +42,15 @@ dt = floor(dt);
 
 gdata = [];
 for i=1:length(dt)
-  fn_out = [prefix dt_yyyymmdd(dt(i)) '.mat'];
-  if ~force && exist([dir_out prefix datestr(dt(i), 'yyyymmdd') '.mat'], 'file')
+  fn_out = [prefix dt_yyyymmdd(dt(i)) postfix '.mat'];
+  if ~force && exist([dir_out fn_out], 'file')
     if verbose; fprintf('Loading %s... ', fn_out); end
     load([dir_out fn_out]);
     if verbose; fprintf('Done\n'); end
     gdata = [gdata; data];
   else
     % List files matching date and prefix
-    l = list_files_from_software(software, dir_in, prefix, dt(i));
+    l = list_files_from_software(software, dir_in, prefix, dt(i), postfix);
     % Check if found files
     if isempty(l)
       fprintf('WARNING: No files found on %s\n', datestr(dt(i)));
@@ -81,11 +82,11 @@ if read_margin
   % Load margin to dataset (calling myself)
   margin = 1/24; % day
   if verbose; fprintf('Reading margin ... \n'); end
-  pre_data = iRead( fun, dirname_in, dirname_out, prefix, dt(1)-margin, software, force, nowrite, verbose, false );
+  pre_data = iRead( fun, dirname_in, dirname_out, prefix, dt(1)-margin, software, force, nowrite, verbose, false, postfix );
   if ~isempty(pre_data)
     pre_data = pre_data(dt(1)-margin <= pre_data.dt,:);
   end
-  post_data = iRead( fun, dirname_in, dirname_out, prefix, dt(end)+1+margin, software, force, nowrite, verbose, false );
+  post_data = iRead( fun, dirname_in, dirname_out, prefix, dt(end)+1+margin, software, force, nowrite, verbose, false, postfix );
   if ~isempty(post_data)
     post_data = post_data(post_data.dt <= dt(end)+1+margin,:);
   end
@@ -99,14 +100,14 @@ end
 
 end
 
-function [filenames] = list_files_from_software(software, dir_in, prefix, dt)
+function [filenames] = list_files_from_software(software, dir_in, prefix, dt, postfix)
 % dt <1x1 datenum> day of data to import
   switch software
-    case 'Compass_2.1rc_scheduled'
+    case {'Compass_2.1rc_scheduled', 'Compass_2.1rc'}
       % Compass does not reset files at mid-night thereafter some data from the
       % selected day might be in the first file of the following day
       % List all files in directory
-      l = dir([dir_in filesep prefix '*.dat']);
+      l = dir([dir_in filesep prefix '*' postfix '.dat']);
       if ~isempty(l)
         % Get date of all files
         n = length(prefix);
@@ -116,29 +117,35 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt)
         % Return selected filenames
         filenames = {l(sel).name}';
       else
-        warning('No files found for Compass_2.1rc_scheduled');
+        warning(['No files found for ' software]);
       end
     case 'Inlinino'
       % List all files in directory
-      l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*.csv']);
+      l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.csv']);
       filenames = {l.name}';
     case 'FlowControl'
       % List all files in directory
-      l = dir([dir_in filesep prefix dt_yyyydoy(dt) '*.log']);
+      l = dir([dir_in filesep prefix dt_yyyydoy(dt) '*' postfix '.log']);
       filenames = {l.name}';
+    case 'DH4PreProc'
+      % Get day of data +/- 1 day
+      lp = dir([dir_in filesep prefix dt_doy(dt-1) '*' postfix '.dat']);
+      l = dir([dir_in filesep prefix dt_doy(dt) '*' postfix '.dat']);
+      la = dir([dir_in filesep prefix dt_doy(dt+1) '*' postfix '.dat']);
+      filenames = {lp.name, l.name, la.name}';
     case 'AtlantisTSG'
       % List all files in directory
-      l = dir([dir_in filesep prefix dt_yymmdd(dt) '*.csv']);
+      l = dir([dir_in filesep prefix dt_yymmdd(dt) '*' postfix '.csv']);
       filenames = {l.name}';
     case 'PourquoiPasTSG'
       % List all files in directory
-      l = dir([dir_in filesep dt_yyyymmdd(dt) '*.csv']);
+      l = dir([dir_in filesep dt_yyyymmdd(dt) '*' postfix '.csv']);
       filenames = {l.name}';
     case 'TeraTerm'
       % TeraTerm filenames correspond to the time at which logging started
       % Data from a given day could be in any file preceding that date
       % List all files in directory
-      l = dir([dir_in filesep prefix '*.log*']);
+      l = dir([dir_in filesep prefix '*' postfix '.log*']);
       % Get date of all files
       n = length(prefix);
       l_dt = floor(datenum(cellfun(@(x) x(n+1:n+15), {l.name}, 'UniformOutput', false), 'yyyymmdd_HHMMSS'));
@@ -164,5 +171,9 @@ function [str] = dt_yymmdd(dt)
 end
 
 function [str] = dt_yyyydoy(dt)
-  str = sprintf('%d%d',year(dt),datevec2doy(datevec(dt)));
+  str = sprintf('%d%03d',year(dt),datevec2doy(datevec(dt)));
+end
+
+function [str] = dt_doy(dt)
+  str = sprintf('%03d',datevec2doy(datevec(dt)));
 end

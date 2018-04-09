@@ -23,7 +23,11 @@ classdef InLineAnalysis < handle
       % Post initialization
       if nargin ~= 0
         % Load configuration
-        cfg = loadjson(cfg_file_name, 'SimplifyCell', 0);
+        try
+          cfg = loadjson(cfg_file_name, 'SimplifyCell', 0);
+        catch
+          error('Invalid configuration file: "%s"\n', cfg_file_name);
+        end
         obj.meta = cfg.meta;
         obj.cfg = cfg.process;
         
@@ -31,8 +35,8 @@ classdef InLineAnalysis < handle
         if isfield(obj.cfg,'instruments2run')
           obj.cfg.instruments2run = cellfun(@(x) char(x), obj.cfg.instruments2run, 'UniformOutput', false);
         end
-        tocheck1 = {'sync', 'split', 'bin', 'flag', 'calibrate', 'write'};
-        tocheck2 = {'skip', 'skip', 'skip', 'skip', 'skip', 'skip'};
+        tocheck1 = {'di', 'sync', 'split', 'stretch', 'bin', 'flag', 'calibrate', 'write'};
+        tocheck2 = {'skip', 'skip', 'skip', 'skip', 'skip', 'skip', 'skip', 'skip'};
         for i=1:size(tocheck1,2)
           if isfield(obj.cfg,tocheck1{i}) && isfield(obj.cfg.(tocheck1{i}),tocheck2{i})
             obj.cfg.(tocheck1{i}).(tocheck2{i}) = cellfun(@(x) char(x), obj.cfg.(tocheck1{i}).(tocheck2{i}), 'UniformOutput', false);
@@ -134,7 +138,19 @@ classdef InLineAnalysis < handle
     % Pre-Process
     function Read(obj)
       for i=obj.cfg.instruments2run; i = i{1};
+        fprintf('READ RAW: %s\n', i);
         obj.instrument.(i).ReadRaw(obj.cfg.days2run, obj.cfg.force_import, true);
+      end
+    end
+    
+    function ReadDI(obj)
+      for i=obj.cfg.instruments2run; i = i{1};
+        if  any(strcmp(i,obj.cfg.di.skip))
+          fprintf('READ DI: Skip %s\n', i);
+        else
+          fprintf('READ DI: %s\n', i);
+          obj.instrument.(i).ReadDI(obj.cfg.days2run, obj.cfg.force_import, true);
+        end
       end
     end
     
@@ -144,7 +160,20 @@ classdef InLineAnalysis < handle
         if  any(strcmp(i,obj.cfg.sync.skip))
           fprintf('SYNC: Skip %s\n', i);
         else
+          fprintf('SYNC: %s\n', i);
           obj.instrument.(i).Sync(obj.cfg.sync.delay.(i));
+        end
+      end
+    end
+    
+    function Stretch(obj)
+      % Note: Run all days loaded (independent of days2run)
+      for i=obj.cfg.instruments2run; i = i{1};
+        if  any(strcmp(i,obj.cfg.stretch.skip))
+          fprintf('STRETCH: Skip %s\n', i);
+        else
+          fprintf('STRETCH: %s\n', i);
+          obj.instrument.(i).Stretch(obj.cfg.stretch.delta.(i));
         end
       end
     end
@@ -223,6 +252,7 @@ classdef InLineAnalysis < handle
         elseif strcmp(obj.instrument.(i).split.mode, 'None')
           fprintf('SPLIT: Not available for %s\n', i);
         else
+          fprintf('SPLIT: %s\n', i);
           obj.instrument.(i).Split(obj.instrument.(obj.cfg.split.reference),...
                                    obj.cfg.split.buffer.(i));
         end
@@ -238,8 +268,23 @@ classdef InLineAnalysis < handle
           obj.instrument.(i).bin.fsw = obj.instrument.(i).raw.fsw;
 %           obj.instrument.(i).bin.diw = obj.instrument.(i).raw.diw;
         else
+          fprintf('BIN: %s\n', i);
           obj.instrument.(i).Bin(obj.cfg.bin.bin_size.(i),...
                                  obj.cfg.bin.prctile_detection,...
+                                 obj.cfg.bin.prctile_average,...
+                                 obj.cfg.parallel);
+        end
+      end
+    end
+    
+    function BinDI(obj)
+      % Note: Run all days loaded (independent of days2run)
+      for i=obj.cfg.instruments2run; i = i{1};
+        if  any(strcmp(i,obj.cfg.di.skip))
+          fprintf('BIN DI: Skip %s\n', i);
+        else
+          fprintf('BIN DI: %s\n', i);
+          obj.instrument.(i).BinDI(obj.cfg.bin.prctile_detection,...
                                  obj.cfg.bin.prctile_average,...
                                  obj.cfg.parallel);
         end
@@ -255,6 +300,7 @@ classdef InLineAnalysis < handle
           obj.instrument.(i).qc.tsw = obj.instrument.(i).bin.tsw;
           obj.instrument.(i).qc.fsw = obj.instrument.(i).bin.fsw;
         else
+          fprintf('FLAG: %s\n', i);
           obj.instrument.(i).Flag(obj.cfg.flag.(i))
         end
       end
@@ -331,6 +377,47 @@ classdef InLineAnalysis < handle
       end
     end
     
+    function QCDI(obj)
+      % Manual quality check of the data resulting in good and bad data
+      % Check if qc level is empty for each instrument
+      for i=obj.cfg.instruments2run; i = i{1};
+        obj.instrument.(i).qc.diw = obj.instrument.(i).raw.diw;
+      end
+      
+      switch obj.cfg.qc.mode
+        case 'ui'
+          % For each instrument
+          for i=obj.cfg.qc.specific.run; i = i{1};
+            if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
+            % Display interactive figure
+            foo = obj.instrument.(i);
+            fh=visFlag(foo.raw.diw, [],...
+                       [], [],...
+                       [], [],...
+                       foo.view.varname, foo.view.varcol);
+            title([i ' QC DI']);
+            user_selection = guiSelectOnTimeSeries(fh);
+            % Apply user selection
+            obj.instrument.(i).DeleteUserSelection(user_selection);
+            % Save user selection
+            filename = [obj.instrument.(i).path.wk i '_QCDI_UserSelection.json'];
+            obj.updatejson_userselection_bad(filename, user_selection);
+          end
+        case 'load'
+          % Load previous QC files and apply them
+          for i=obj.cfg.qc.specific.run; i = i{1};
+            if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
+            fprintf('QC DI (load): %s\n', i);
+            file_selection = loadjson([obj.instrument.(i).path.wk i '_QCDI_UserSelection.json']);
+            obj.instrument.(i).DeleteUserSelection(file_selection.bad);
+          end
+        case 'skip'
+          fprintf('WARNING: Quality Check is NOT performed.\n');
+        otherwise
+          error('Unknown mode.');
+      end
+    end
+    
     % Process
     function Calibrate(obj)
       % Note: Run all days loaded (independent of days2run)
@@ -339,6 +426,7 @@ classdef InLineAnalysis < handle
           fprintf('CALIBRATE: Skip %s (copy data to next level)\n', i);
           obj.instrument.(i).prod.a = obj.instrument.(i).qc.tsw;
         else
+          fprintf('CALIBRATE: %s\n', i);
           switch obj.instrument.(i).model
             case 'ACS'
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
@@ -362,6 +450,7 @@ classdef InLineAnalysis < handle
         if  any(strcmp(i,obj.cfg.write.skip))
           fprintf('WRITE: Skip %s\n', i);
         else
+          fprintf('WRITE: %s\n', i);
           switch obj.cfg.write.mode
             case 'One file'
               % Save all days2run in one file
@@ -383,8 +472,9 @@ classdef InLineAnalysis < handle
       % for each instrument
       for i=obj.cfg.instruments2run; i = i{1};
         if  any(strcmp(i,obj.cfg.write.skip))
-          fprintf('WRITE: Skip %s\n', i);
+          fprintf('LOAD: Skip %s\n', i);
         else
+          fprintf('LOAD: %s\n', i);
           switch obj.cfg.write.mode
             case 'One file'
               % Save all days2run in one file

@@ -32,6 +32,27 @@ fl(isnan(fl.fchl), :) = [];
 bb(isnan(bb.betap), :) = [];
 cd(isnan(cd.fdom), :) = [];
 
+% Clear FLBBCD data
+% FL and CD data is acceptable before 2017,05,15,13,20,0 but spiky
+% sel = fl.dt <= datenum(2017, 06,10,6,0,0);
+sel = datenum(2017,05,15,13,20,0) < fl.dt & fl.dt <= datenum(2017, 06,10,6,0,0);
+fl(~sel,:) = [];
+sel = datenum(2017,05,15,13,20,0) < cd.dt & cd.dt <= datenum(2017, 06,10,6,0,0);
+%       ~(cd.fdom > 1.44 & cd.dt < datenum(2017,05,15,13,20,0));
+cd(~sel,:) = [];
+sel = datenum(2017,05,15,13,20,0) < bb.dt & bb.dt <= datenum(2017, 06,10,6,0,0);
+bb(~sel,:) = [];
+
+% Post-processing Cleanning of ACS spectrums
+wl=ila.instrument.ACS.lambda_ref;
+sel_bad = any(acs.ap(:,wl < 430) < 0,2)...
+          | any(acs.ap(:,:) < -0.0015,2)...
+          | std(acs.ap(:,wl<430)')' > 6 * 10^-3;
+acs(sel_bad,:) = [];
+% Cut start and end with bubbles (start might be acceptable but chla values are unexpected)
+sel = datenum(2017,05,15,13,20,0) < acs.dt & acs.dt <= datenum(2017, 06,10,6,0,0);
+acs(~sel,:) = [];
+
 %% 2. Merge instruments (get them ready for SeaBASS)
 % 2.1 Merge TSG, FL, and BB
 tsg_interp = interp1(tsg.dt, [tsg.lat, tsg.lon, tsg.t, tsg.s], bb.dt, 'linear', 'extrap'); % extrap needed for first minute of data
@@ -40,7 +61,7 @@ tsg_flbb = table(bb.dt, tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3), tsg_i
                         fl_interp(:,1), fl_interp(:,2), fl_interp(:,3),...
                         bb.betap, bb.betap_sd, bb.betap_n, bb.bbp);
 tsg_flbb.Properties.VariableNames = {'dt', 'lat', 'lon', 't', 's', 'fchl', 'fchl_sd', 'fchl_n', 'betap', 'betap_sd', 'betap_n', 'bbp'};
-tsg_flbb.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'ug/L', 'ug/L', 'none', '1/sr/m', '1/sr/m', 'none', '1/m'};
+tsg_flbb.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'ug/L', 'ug/L', 'none', '1/m/sr', '1/m/sr', 'none', '1/m'};
 tsg_flbb.Properties.VariableDescriptions = {'','%.4f','%.4f','%.4f','%.4f', '%.4f', '%.4f', '%d', '%.3d', '%.3d', '%d', '%.3d'};
 
 % 2.2 Merge TSG and CD
@@ -103,7 +124,7 @@ tsg_flbb.betap_se = tsg_flbb.betap_sd ./ tsg_flbb.betap_n;
 tsg_flbb(:,8) = []; tsg_flbb(:,10) = []; % delete _n
 tsg_flbb = [tsg_flbb(:,1:7) tsg_flbb(:,11) tsg_flbb(:,8:9) tsg_flbb(:,12) tsg_flbb(:,10)];% reorder column
 tsg_flbb.Properties.VariableNames = {'dt', 'lat', 'lon', 't', 's', 'Chl', 'Chl_sd', 'Chl_se', 'VSFp_124ang', 'VSFp_124ang_sd', 'VSFp_124ang_se', 'bbp'};
-tsg_flbb.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'ug/L', 'ug/L', 'ug/L', '1/sr/m', '1/sr/m', '1/sr/m', '1/m'};
+tsg_flbb.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'ug/L', 'ug/L', 'ug/L', '1/m/sr', '1/m/sr', '1/m/sr', '1/m'};
 tsg_flbb.Properties.VariableDescriptions = {'','%.4f','%.4f','%.4f','%.4f', '%.4f', '%.4f', '%.2d', '%.3d', '%.2d', '%.2d', '%.3d'};
 % CD (issue need to convert to Volts ??)
 tsg_cd.Properties.VariableNames = {'dt', 'lat', 'lon', 't', 's', 'cdmf', 'cdmf_sd', 'bincount'};

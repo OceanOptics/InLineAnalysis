@@ -32,7 +32,7 @@ ila.Sync()
 % 3,1 Manually QC the reference
 ila.QCRef();
 
-% 3.2 Split and remove buufer periods
+% 3.2 Split and remove buffer periods
 % Same as previous step, let's find the right settings first.
 % ila.instrument.BB3.Split(ila.instrument.FTH.data, [400, 200])
 % Quick visualization

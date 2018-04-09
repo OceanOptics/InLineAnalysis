@@ -7,6 +7,9 @@ function fh = visProd3D(x, dt, data, smooth, color, autorotate)
 %   smooth <boolean> smooth data
 %   color <'Wavelength'|'Intensity'> Color data
 %   autorotate <boolean> animate figure (will stop execution of program)
+%
+% EXAMPLE:
+%   visProd3D(lambda.ref, ACS.p.dt, ACS.p.ap, false); zlabel('a_p (m^{-1})');
 
 % Unselect NaN
 sel = any(~isnan(data),2);
@@ -30,7 +33,7 @@ end
 if nargin < 6; autorotate=false; end;
 
  %% 3D Mesh Plot
-fh = fig(62);
+fh = fig(72);
 %   waterfall(x, dt, Z, C);
 mesh(x, dt(sel), Z, C);
 

@@ -34,7 +34,11 @@ p.bbp = 2 * pi * X_p .* p.betap;
 p.betap_sd = param.slope .* sqrt(tot.beta_avg_sd + filt_interp.beta_avg_sd);
 p.betap_n = tot.beta_avg_n;
 
-if nargout > 1 && nargin > 3
+if nargout > 1 && nargin > 4
+  % Interpolate DI on Filtered
+  di_interp = table(filt.dt, 'VariableNames', {'dt'});
+  di_interp.beta = interp1(di.dt, di.beta, di_interp.dt);
+  di_interp.beta_avg_sd = interp1(di.dt, di.beta_avg_sd, di_interp.dt);
   % Get beta salt from Zhang et al. 2009
   t = interp1(tsg.dt, tsg.t, filt.dt);
   s = interp1(tsg.dt, tsg.s, filt.dt);
@@ -47,12 +51,12 @@ if nargout > 1 && nargin > 3
 
   % Compute beta dissolved
   g = table(filt.dt, 'VariableNames', {'dt'});
-  g.betag = param.slope .* (filt.beta - di.beta) - beta_s ;
+  g.betag = param.slope .* (filt.beta - di_interp.beta) - beta_s ;
   
   % Propagate error
   %   Note: Error is not propagated through Scattering & Residual temperature
   %         correction as required by SeaBASS
-  g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di.beta_avg_sd);
+  g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_interp.beta_avg_sd);
   g.betag_n = filt.beta_avg_n;
 end
 end
