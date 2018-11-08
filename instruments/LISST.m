@@ -39,6 +39,7 @@ classdef LISST < Instrument
 %       obj.diameters = NaN(1,33);
       
       if isempty(obj.logger); obj.logger = 'TeraTerm'; end
+      if isempty(obj.view.varname); obj.view.varname = 'beta'; end
     end    
     
     function ReadRaw(obj, days2run, force_import, write)
@@ -51,7 +52,7 @@ classdef LISST < Instrument
       end
     end
     
-    function ReadDI(obj, days2run, force_import, write)
+    function ReadRawDI(obj, days2run, force_import, write)
       if isempty(obj.path.di)
         fprintf('WARNING: DI Path is same as raw.\n');
         obj.path.di = obj.path.raw;

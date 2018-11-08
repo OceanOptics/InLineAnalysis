@@ -9,7 +9,7 @@ classdef InLineAnalysis < handle
     cfg=struct();
     instrument = struct();
   end
-  
+   
   methods
     % Constructor
     function obj = InLineAnalysis(cfg_file_name)
@@ -22,43 +22,19 @@ classdef InLineAnalysis < handle
       
       % Post initialization
       if nargin ~= 0
-        % Load configuration
-        try
-          cfg = loadjson(cfg_file_name, 'SimplifyCell', 0);
-        catch
-          error('Invalid configuration file: "%s"\n', cfg_file_name);
+        [~, ~, ext] = fileparts(cfg_file_name);
+        switch ext
+          case '.json'
+            cfg = obj.ReadCfgJSON(cfg_file_name);
+          case '.m'
+            cfg = obj.ReadCfgM(cfg_file_name);
+          otherwise
+            error('Unknown configuration file type.');
         end
+        
         obj.meta = cfg.meta;
         obj.cfg = cfg.process;
         
-        % Reformat string cell arrays in cfg
-        if isfield(obj.cfg,'instruments2run')
-          obj.cfg.instruments2run = cellfun(@(x) char(x), obj.cfg.instruments2run, 'UniformOutput', false);
-        end
-        tocheck1 = {'di', 'sync', 'split', 'stretch', 'bin', 'flag', 'calibrate', 'write'};
-        tocheck2 = {'skip', 'skip', 'skip', 'skip', 'skip', 'skip', 'skip', 'skip'};
-        for i=1:size(tocheck1,2)
-          if isfield(obj.cfg,tocheck1{i}) && isfield(obj.cfg.(tocheck1{i}),tocheck2{i})
-            obj.cfg.(tocheck1{i}).(tocheck2{i}) = cellfun(@(x) char(x), obj.cfg.(tocheck1{i}).(tocheck2{i}), 'UniformOutput', false);
-          end
-        end
-        tocheck1 = {'qc', 'qc'};
-        tocheck2 = {'global', 'specific'};
-        tocheck3 = {'apply', 'run'};
-        for i=1:size(tocheck1,2)
-          if isfield(obj.cfg,tocheck1{i}) && isfield(obj.cfg.(tocheck1{i}),tocheck2{i}) && isfield(obj.cfg.(tocheck1{i}).(tocheck2{i}),tocheck3{i})
-            obj.cfg.(tocheck1{i}).(tocheck2{i}).(tocheck3{i}) = cellfun(@(x) char(x), obj.cfg.(tocheck1{i}).(tocheck2{i}).(tocheck3{i}), 'UniformOutput', false);
-          end
-        end
-        
-        % Reformat parallel flag
-        if ischar(obj.cfg.parallel)
-          obj.cfg.parallel = str2double(obj.cfg.parallel);
-          if isnan(obj.cfg.parallel)
-            obj.cfg.parallel = 0;
-            fprintf('WARNING: process.parallel forced to 0.\n');
-          end
-        end
         % Format cfg in flag
         cfg_flag_buf = obj.cfg.flag;
         obj.cfg.flag = struct();
@@ -109,10 +85,10 @@ classdef InLineAnalysis < handle
               obj.instrument.(i) = FTH(cfg.instruments.(i));
             case 'ACS'
               obj.instrument.(i) = ACS(cfg.instruments.(i));
-            case 'BB3'
-              obj.instrument.(i) = BB3(cfg.instruments.(i));
-            case 'WSCD'
-              obj.instrument.(i) = WSCD(cfg.instruments.(i));
+%             case 'BB3'
+%               obj.instrument.(i) = BB3(cfg.instruments.(i));
+%             case 'WSCD'
+%               obj.instrument.(i) = WSCD(cfg.instruments.(i));
             case 'LISST'
               obj.instrument.(i) = LISST(cfg.instruments.(i));
             case 'ECO'
@@ -123,6 +99,10 @@ classdef InLineAnalysis < handle
               obj.instrument.(i) = BB(cfg.instruments.(i));
             case {'CD', 'WSCD'}
               obj.instrument.(i) = CD(cfg.instruments.(i));
+            case 'ALFA'
+              obj.instrument.(i) = ALFA(cfg.instruments.(i));
+           case 'PAR'
+              obj.instrument.(i) = PAR(cfg.instruments.(i));
             otherwise
               error('Instrument not supported: %s.', cfg.instruments.(i).model);
           end
@@ -135,21 +115,25 @@ classdef InLineAnalysis < handle
       end
     end
     
+    
+    
+    
     % Pre-Process
-    function Read(obj)
+    function ReadRaw(obj)
+      % Read was renamed to ReadRaw on Oct 19, 2018
       for i=obj.cfg.instruments2run; i = i{1};
         fprintf('READ RAW: %s\n', i);
         obj.instrument.(i).ReadRaw(obj.cfg.days2run, obj.cfg.force_import, true);
       end
     end
     
-    function ReadDI(obj)
+    function ReadRawDI(obj)
       for i=obj.cfg.instruments2run; i = i{1};
         if  any(strcmp(i,obj.cfg.di.skip))
           fprintf('READ DI: Skip %s\n', i);
         else
           fprintf('READ DI: %s\n', i);
-          obj.instrument.(i).ReadDI(obj.cfg.days2run, obj.cfg.force_import, true);
+          obj.instrument.(i).ReadRawDI(obj.cfg.days2run, obj.cfg.force_import, true);
         end
       end
     end
@@ -188,6 +172,7 @@ classdef InLineAnalysis < handle
           yyaxis('left');
           plot(obj.instrument.(obj.cfg.qcref.reference).data.dt,...
                obj.instrument.(obj.cfg.qcref.reference).data.(obj.instrument.(obj.cfg.qcref.reference).view.varname), 'k', 'LineWidth', obj.instrument.(obj.cfg.qcref.reference).view.varcol);
+          ylim([-0.1 1.1]);
           yyaxis('right'); 
           plot(obj.instrument.(obj.cfg.qcref.view).data.dt,...
                obj.instrument.(obj.cfg.qcref.view).data.(obj.instrument.(obj.cfg.qcref.view).view.varname)(:,obj.instrument.(obj.cfg.qcref.view).view.varcol),'.');
@@ -201,6 +186,7 @@ classdef InLineAnalysis < handle
           yyaxis('left');
           plot(obj.instrument.(obj.cfg.qcref.reference).data.dt,...
                obj.instrument.(obj.cfg.qcref.reference).data.(obj.instrument.(obj.cfg.qcref.reference).view.varname), 'k', 'LineWidth', 1);
+          ylim([-0.1 1.1]);
           yyaxis('right'); 
           plot(obj.instrument.(obj.cfg.qcref.view).data.dt,...
                obj.instrument.(obj.cfg.qcref.view).data.(obj.instrument.(obj.cfg.qcref.view).view.varname)(:,obj.instrument.(obj.cfg.qcref.view).view.varcol),'.');
@@ -208,31 +194,50 @@ classdef InLineAnalysis < handle
           user_selection_filtered = guiSelectOnTimeSeries(fh);
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection_filtered, 'filtered');
           
-          filename = [obj.instrument.(obj.cfg.qcref.reference).path.wk, 'QCRef_UserSelection.json'];
+          filename = [obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json'];
           if exist(filename, 'file')
             % Load file
             file_selection = loadjson(filename);
+            % Convert datestr to datenum for newer format
+            if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
+            if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
             % Remove old (days2run) selections
-            sel = min(obj.cfg.days2run) <= file_selection.total(:,1) & file_selection.total(:,1) < max(obj.cfg.days2run) + 1;
-            file_selection.total(sel,:) = [];
-            sel = min(obj.cfg.days2run) <= file_selection.filtered(:,1) & file_selection.filtered(:,1) < max(obj.cfg.days2run) + 1;
-            file_selection.filtered(sel,:) = [];
+            if ~isempty(file_selection.total)
+              sel = min(obj.cfg.days2run) <= file_selection.total(:,1) & file_selection.total(:,1) < max(obj.cfg.days2run) + 1;
+              file_selection.total(sel,:) = [];
+            end
+            if ~isempty(file_selection.filtered)
+              sel = min(obj.cfg.days2run) <= file_selection.filtered(:,1) & file_selection.filtered(:,1) < max(obj.cfg.days2run) + 1;
+              file_selection.filtered(sel,:) = [];
+            end
             % Add new user selection
             file_selection.total = [file_selection.total; user_selection_total];
             file_selection.filtered = [file_selection.filtered; user_selection_filtered];
           else
             file_selection = struct('total', user_selection_total, 'filtered', user_selection_filtered);
           end
+          % Convert datenum to datestr for newer format
+          if ~isempty(file_selection.total); file_selection.total = {datestr(file_selection.total(:,1)), datestr(file_selection.total(:,2))}; end
+          if ~isempty(file_selection.filtered); file_selection.filtered = {datestr(file_selection.filtered(:,1)), datestr(file_selection.filtered(:,2))}; end
           % Save user selection
+          if ~isdir(obj.instrument.(obj.cfg.qcref.reference).path.ui); mkdir(obj.instrument.(obj.cfg.qcref.reference).path.ui); end
           savejson('',file_selection,filename);  
         case 'load'
+          fprintf('QCRef LOAD: %s\n', obj.cfg.qcref.reference);
           % Load previous QC and apply it
-          file_selection = loadjson([obj.instrument.(obj.cfg.qcref.reference).path.wk, 'QCRef_UserSelection.json']);
+          file_selection = loadjson([obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json']);
+          % Convert datestr to datenum for newer format
+          if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
+          if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
           % Remove selection from days before & after days2run
-          sel = file_selection.total(:,2) < min(obj.cfg.days2run) | max(obj.cfg.days2run) + 1 < file_selection.total(:,1);
-          file_selection.total(sel,:) = [];
-          sel = file_selection.filtered(:,2) < min(obj.cfg.days2run) | max(obj.cfg.days2run) + 1 < file_selection.filtered(:,1);
-          file_selection.filtered(sel,:) = [];
+          if ~isempty(file_selection.total)
+            sel = file_selection.total(:,2) < min(obj.cfg.days2run) | max(obj.cfg.days2run) + 1 < file_selection.total(:,1);
+            file_selection.total(sel,:) = [];
+          end
+          if ~isempty(file_selection.filtered)
+            sel = file_selection.filtered(:,2) < min(obj.cfg.days2run) | max(obj.cfg.days2run) + 1 < file_selection.filtered(:,1);
+            file_selection.filtered(sel,:) = [];
+          end
           % Apply selection
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.total, 'total');
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.filtered, 'filtered');
@@ -266,27 +271,31 @@ classdef InLineAnalysis < handle
           fprintf('BIN: Skip %s (copy data to next level)\n', i);
           obj.instrument.(i).bin.tsw = obj.instrument.(i).raw.tsw;
           obj.instrument.(i).bin.fsw = obj.instrument.(i).raw.fsw;
-%           obj.instrument.(i).bin.diw = obj.instrument.(i).raw.diw;
         else
           fprintf('BIN: %s\n', i);
           obj.instrument.(i).Bin(obj.cfg.bin.bin_size.(i),...
+                                 obj.cfg.bin.method,...
                                  obj.cfg.bin.prctile_detection,...
                                  obj.cfg.bin.prctile_average,...
-                                 obj.cfg.parallel);
+                                 obj.cfg.parallel,...
+                                 obj.cfg.bin.mode);
         end
       end
     end
     
     function BinDI(obj)
+      %%% NOTE: For DIW QC is done before the Binning %%%
       % Note: Run all days loaded (independent of days2run)
       for i=obj.cfg.instruments2run; i = i{1};
         if  any(strcmp(i,obj.cfg.di.skip))
           fprintf('BIN DI: Skip %s\n', i);
         else
           fprintf('BIN DI: %s\n', i);
-          obj.instrument.(i).BinDI(obj.cfg.bin.prctile_detection,...
-                                 obj.cfg.bin.prctile_average,...
-                                 obj.cfg.parallel);
+          obj.instrument.(i).BinDI(obj.cfg.di.bin.bin_size,...
+                                   obj.cfg.bin.method,...
+                                   obj.cfg.bin.prctile_detection,...
+                                   obj.cfg.bin.prctile_average,...
+                                   obj.cfg.parallel);
         end
       end
     end
@@ -316,7 +325,7 @@ classdef InLineAnalysis < handle
             fh=visFlag(foo.raw.tsw, foo.raw.fsw,...
                        foo.qc.tsw, foo.suspect.tsw,...
                        foo.qc.fsw, foo.suspect.fsw,...
-                       foo.view.varname, foo.view.varcol);
+                       foo.view.varname, foo.view.varcol, foo.raw.bad);
             title('Global QC');
             user_selection = guiSelectOnTimeSeries(fh);
             % For each instrument 
@@ -325,7 +334,8 @@ classdef InLineAnalysis < handle
               % Apply user selection
               obj.instrument.(i).DeleteUserSelection(user_selection);
               % Save user selection
-              filename = [obj.instrument.(i).path.wk i '_QCGlobal_UserSelection.json'];
+              filename = [obj.instrument.(i).path.ui i '_QCGlobal_UserSelection.json'];
+              if ~isdir(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
               obj.updatejson_userselection_bad(filename, user_selection);
             end
           end
@@ -335,16 +345,24 @@ classdef InLineAnalysis < handle
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               % Display interactive figure
               foo = obj.instrument.(i);
-              fh=visFlag(foo.raw.tsw, foo.raw.fsw,...
-                         foo.qc.tsw, foo.suspect.tsw,...
-                         foo.qc.fsw, foo.suspect.fsw,...
-                         foo.view.varname, foo.view.varcol);
+              if ~isempty(foo.raw.tsw)
+                fh=visFlag(foo.raw.tsw, foo.raw.fsw,...
+                           foo.qc.tsw, foo.suspect.tsw,...
+                           foo.qc.fsw, foo.suspect.fsw,...
+                           foo.view.varname, foo.view.varcol, foo.raw.bad);
+              else
+                fh=visFlag([], [],...
+                           foo.qc.tsw, foo.suspect.tsw,...
+                           foo.qc.fsw, foo.suspect.fsw,...
+                           foo.view.varname, foo.view.varcol, foo.raw.bad);
+              end
               title([i ' QC']);
               user_selection = guiSelectOnTimeSeries(fh);
               % Apply user selection
               obj.instrument.(i).DeleteUserSelection(user_selection);
               % Save user selection
-              filename = [obj.instrument.(i).path.wk i '_QCSpecific_UserSelection.json'];
+              filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json'];
+              if ~isdir(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
               obj.updatejson_userselection_bad(filename, user_selection);
             end
           end
@@ -356,14 +374,20 @@ classdef InLineAnalysis < handle
           if obj.cfg.qc.global.active
             for i=obj.cfg.qc.global.apply; i = i{1};
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
-              file_selection = loadjson([obj.instrument.(i).path.wk i '_QCGlobal_UserSelection.json']);
+              fprintf('QC LOAD Global: %s\n', i);
+              file_selection = loadjson([obj.instrument.(i).path.ui i '_QCGlobal_UserSelection.json']);
+              % Convert datestr to datenum for newer format
+              if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
               obj.instrument.(i).DeleteUserSelection(file_selection.bad);
             end
           end
           if obj.cfg.qc.specific.active
             for i=obj.cfg.qc.specific.run; i = i{1};
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
-              file_selection = loadjson([obj.instrument.(i).path.wk i '_QCSpecific_UserSelection.json']);
+              fprintf('QC LOAD Specific: %s\n', i);
+              file_selection = loadjson([obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json']);
+              % Convert datestr to datenum for newer format
+              if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
               obj.instrument.(i).DeleteUserSelection(file_selection.bad);
             end
           end
@@ -378,37 +402,49 @@ classdef InLineAnalysis < handle
     end
     
     function QCDI(obj)
+      %%% NOTE: For DIW QC is done before the Binning %%%
       % Manual quality check of the data resulting in good and bad data
       % Check if qc level is empty for each instrument
       for i=obj.cfg.instruments2run; i = i{1};
         obj.instrument.(i).qc.diw = obj.instrument.(i).raw.diw;
       end
       
-      switch obj.cfg.qc.mode
+      switch obj.cfg.di.qc.mode
         case 'ui'
           % For each instrument
           for i=obj.cfg.qc.specific.run; i = i{1};
             if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
             % Display interactive figure
             foo = obj.instrument.(i);
-            fh=visFlag(foo.raw.diw, [],...
-                       [], [],...
-                       [], [],...
-                       foo.view.varname, foo.view.varcol);
-            title([i ' QC DI']);
+            if isempty(foo.raw.diw); error('Empty raw diw\n'); end
+            ColorSet = lines(2);
+            fh = fig(52); hold('on');
+            if iscell(foo.view.varname)
+              plot(foo.raw.diw.dt, foo.raw.diw.(foo.view.varname{1})(:,foo.view.varcol), '.', 'Color', ColorSet(1,:));
+              plot(foo.raw.diw.dt, foo.raw.diw.(foo.view.varname{2})(:,foo.view.varcol), '.', 'Color', ColorSet(2,:));
+            else
+              plot(foo.raw.diw.dt, foo.raw.diw.(foo.view.varname)(:,foo.view.varcol), '.', 'Color', ColorSet(1,:));
+            end
+            ylabel(foo.view.varname); title([i ' QC DI']);
+            datetick2_doy();
+            set(datacursormode(fh),'UpdateFcn',@data_cursor_display_date);
+            % Get user selection
             user_selection = guiSelectOnTimeSeries(fh);
             % Apply user selection
             obj.instrument.(i).DeleteUserSelection(user_selection);
             % Save user selection
-            filename = [obj.instrument.(i).path.wk i '_QCDI_UserSelection.json'];
+            filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.json'];
+            if ~isdir(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
             obj.updatejson_userselection_bad(filename, user_selection);
           end
         case 'load'
           % Load previous QC files and apply them
           for i=obj.cfg.qc.specific.run; i = i{1};
             if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
-            fprintf('QC DI (load): %s\n', i);
-            file_selection = loadjson([obj.instrument.(i).path.wk i '_QCDI_UserSelection.json']);
+            fprintf('QC DI LOAD: %s\n', i);
+            file_selection = loadjson([obj.instrument.(i).path.ui i '_QCDI_UserSelection.json']);
+            % Convert datestr to datenum for newer format
+            if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
             obj.instrument.(i).DeleteUserSelection(file_selection.bad);
           end
         case 'skip'
@@ -433,9 +469,10 @@ classdef InLineAnalysis < handle
                                            obj.cfg.calibrate.(i).interpolation_method,...
                                            obj.instrument.(obj.cfg.calibrate.(i).CDOM_source),...
                                            obj.instrument.(obj.cfg.calibrate.(i).FTH_source));
-            case 'BB'
+            case {'BB', 'BB3'}
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
-                                           obj.instrument.(obj.cfg.calibrate.(i).TSG_source))
+                                           obj.instrument.(obj.cfg.calibrate.(i).TSG_source),...
+                                           obj.cfg.calibrate.(i).di_method)
             otherwise
               obj.instrument.(i).Calibrate()
           end
@@ -444,21 +481,22 @@ classdef InLineAnalysis < handle
     end
     
     % Write
-    function Write(obj)
+    function Write(obj, level)
+      if nargin < 2; level = 'prod'; end
       % for each instrument
       for i=obj.cfg.instruments2run; i = i{1};
         if  any(strcmp(i,obj.cfg.write.skip))
-          fprintf('WRITE: Skip %s\n', i);
+          fprintf('WRITE %s: Skip %s\n', level, i);
         else
-          fprintf('WRITE: %s\n', i);
+          fprintf('WRITE %s: %s\n', level, i);
           switch obj.cfg.write.mode
             case 'One file'
               % Save all days2run in one file
-              obj.instrument.(i).Write([i 'ALL'], obj.cfg.days2run);
+              obj.instrument.(i).Write([i '_ALL'], obj.cfg.days2run, level);
             case 'One day one file'
               % Save each day from days2run in independent files
               for d=obj.cfg.days2run
-                obj.instrument.(i).Write([i datestr(d,'yyyymmdd')], d);
+                obj.instrument.(i).Write([i '_' datestr(d,'yyyymmdd')], d, level);
               end
             otherwise
               error('Unknow writing mode.');
@@ -468,7 +506,9 @@ classdef InLineAnalysis < handle
     end
     
     % Load
-    function LoadProducts(obj)
+    function Read(obj, level)
+      % LoadProducts is renamed to Read on Oct 19, 2018
+      if nargin < 2; level = 'prod'; end
       % for each instrument
       for i=obj.cfg.instruments2run; i = i{1};
         if  any(strcmp(i,obj.cfg.write.skip))
@@ -477,18 +517,87 @@ classdef InLineAnalysis < handle
           fprintf('LOAD: %s\n', i);
           switch obj.cfg.write.mode
             case 'One file'
-              % Save all days2run in one file
-              obj.instrument.(i).LoadProducts([i 'ALL'], obj.cfg.days2run);
+              % Read all days2run in one file
+              obj.instrument.(i).Read([i '_ALL'], obj.cfg.days2run, level);
             case 'One day one file'
-              % Save each day from days2run in independent files
+              % Read each day from days2run in independent files
               for d=obj.cfg.days2run
-                obj.instrument.(i).LoadProducts([i datestr(d,'yyyymmdd')], d);
+                obj.instrument.(i).Read([i '_' datestr(d,'yyyymmdd')], d, level);
               end
             otherwise
-              error('Unknow writing mode.');
+              error('Unknow loading mode.');
           end
         end
       end
+    end
+    
+    % Merge products of two instruments (same model)
+    function MergeProducts(obj, primary_instrument, secondary_instrument)
+      % Data (at prod level) from the secondary instrument is copied to the
+      % primary_instrument. The product table of the primary instrument is
+      % then sorted by date & time (dt).
+
+      fprintf('MERGING: %s << %s\n', primary_instrument, secondary_instrument);
+      % For each product type (particulate, dissoved...)
+      for f = fieldnames(obj.instrument.(primary_instrument).prod)'; f = f{1};
+        ns = size(obj.instrument.(secondary_instrument).prod.(f),1);
+        obj.instrument.(primary_instrument).prod.(f)(end+1:end+ns,:) = ...
+          obj.instrument.(secondary_instrument).prod.(f);
+        obj.instrument.(primary_instrument).prod.(f) = ...
+          sortrows(obj.instrument.(primary_instrument).prod.(f));
+      end
+    end
+    
+  end
+  
+  
+  
+  methods (Static)
+    % Load configuration file
+    function cfg = ReadCfgJSON(cfg_file_name)
+      % Read JSON configuration file (original format)
+      fprintf('ReadCfgJSON method is DEPRECATED\n');
+      
+      % Load JSON file
+      try
+        cfg = loadjson(cfg_file_name, 'SimplifyCell', 0);
+      catch
+        error('Invalid configuration file: "%s"\n', cfg_file_name);
+      end
+      
+      % Reformat string cell arrays in cfg
+      if isfield(cfg.process,'instruments2run')
+        cfg.process.instruments2run = cellfun(@(x) char(x), cfg.process.instruments2run, 'UniformOutput', false);
+      end
+      tocheck1 = {'di', 'sync', 'split', 'stretch', 'bin', 'flag', 'calibrate', 'write'};
+      tocheck2 = {'skip', 'skip', 'skip', 'skip', 'skip', 'skip', 'skip', 'skip'};
+      for i=1:size(tocheck1,2)
+        if isfield(cfg.process,tocheck1{i}) && isfield(cfg.process.(tocheck1{i}),tocheck2{i})
+          cfg.process.(tocheck1{i}).(tocheck2{i}) = cellfun(@(x) char(x), cfg.process.(tocheck1{i}).(tocheck2{i}), 'UniformOutput', false);
+        end
+      end
+      tocheck1 = {'qc', 'qc'};
+      tocheck2 = {'global', 'specific'};
+      tocheck3 = {'apply', 'run'};
+      for i=1:size(tocheck1,2)
+        if isfield(cfg.process,tocheck1{i}) && isfield(cfg.process.(tocheck1{i}),tocheck2{i}) && isfield(cfg.process.(tocheck1{i}).(tocheck2{i}),tocheck3{i})
+          cfg.process.(tocheck1{i}).(tocheck2{i}).(tocheck3{i}) = cellfun(@(x) char(x), cfg.process.(tocheck1{i}).(tocheck2{i}).(tocheck3{i}), 'UniformOutput', false);
+        end
+      end
+
+      % Reformat parallel flag
+      if ischar(cfg.process.parallel)
+        cfg.process.parallel = str2double(cfg.process.parallel);
+        if isnan(cfg.process.parallel)
+          cfg.process.parallel = 0;
+          fprintf('WARNING: process.parallel forced to 0.\n');
+        end
+      end
+    end
+    
+    function cfg = ReadCfgM(filename)
+      % Read matlab configuration file (current format)
+      run(filename)
     end
   end
   
@@ -497,6 +606,8 @@ classdef InLineAnalysis < handle
       if exist(filename, 'file')
         % Load file
         file_selection = loadjson(filename);
+        % Convert datestr to datenum for newer format
+        if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
         if isfield(file_selection, 'bad') && ~isempty(file_selection.bad)
           % Remove old (days2run) selections
           sel = min(obj.cfg.days2run) <= file_selection.bad(:,1) & file_selection.bad(:,1) < max(obj.cfg.days2run) + 1;
@@ -509,6 +620,8 @@ classdef InLineAnalysis < handle
       else
         file_selection = struct('bad', user_selection);
       end
+      % Convert datenum to datestr for newer format
+      if ~isempty(file_selection.bad); file_selection.bad = {datestr(file_selection.bad(:,1)), datestr(file_selection.bad(:,2))}; end
       % Save user selection
       savejson('',file_selection,filename); 
     end

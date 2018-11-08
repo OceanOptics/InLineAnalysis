@@ -1,7 +1,9 @@
 function fh = visFlag(raw_tot, raw_filt,...
                       bin_tot_good, bin_tot_suspect,...
                       bin_filt_good, bin_filt_bad,...
-                      varname, varindex)
+                      varname, varindex, raw_bad)
+  if nargin < 9; raw_bad = []; end
+  
   % Define constants
   ColorSet = lines(5);
   % . raw | o bin 
@@ -10,15 +12,18 @@ function fh = visFlag(raw_tot, raw_filt,...
   % blue total | red fitlered | yellow is transition | green is flagged | purple target
   col_tot = ColorSet(1,:);
   col_filt = ColorSet(2,:);
-%   col_switch = ColorSet(3, :);
+  col_switch = ColorSet(3, :);
   col_flag = ColorSet(4, :);
 %   col_target = ColorSet(5, :);
   
   fh = fig(52); hold('on');
 
   % Plot second bin data
-  scatter(raw_tot.dt, raw_tot.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_tot, 'MarkerEdgeAlpha', 0.5);
+%   plot(raw_tot.dt, raw_tot.(varname{1})(:,varindex), sha_raw, 'Color', col_tot);
+%   plot(raw_tot.dt, raw_tot.(varname{2})(:,varindex), sha_raw, 'Color', col_tot);
+  if ~isempty(raw_tot);  scatter(raw_tot.dt, raw_tot.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_tot, 'MarkerEdgeAlpha', 0.5); end
   if ~isempty(raw_filt); scatter(raw_filt.dt, raw_filt.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_filt, 'MarkerEdgeAlpha', 0.5); end
+  if ~isempty(raw_bad); scatter(raw_bad.dt, raw_bad.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_switch, 'MarkerEdgeAlpha', 0.5); end
   
   % Plot tot binned data
   if ~isempty(bin_tot_good); plot(bin_tot_good.dt, bin_tot_good.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', col_tot); end

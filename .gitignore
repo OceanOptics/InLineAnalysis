@@ -14,3 +14,4 @@ octave-workspace
 # Project specific
 # exclude package folder as it is developped by others
 packages/
+local/

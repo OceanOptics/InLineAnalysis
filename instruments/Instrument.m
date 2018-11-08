@@ -10,7 +10,7 @@ classdef (Abstract) Instrument < handle
     di_cfg = struct('logger', '', 'prefix', '', 'postfix', '');
     
     % Path to data
-    path = struct('raw', '', 'di', '', 'wk', '', 'prod', '');
+    path = struct('raw', '', 'di', '', 'wk', '', 'prod', '', 'ui', '');
     
     % Instrument-specific processing parameters
     split = struct('mode', 'split');
@@ -19,6 +19,7 @@ classdef (Abstract) Instrument < handle
     view = struct('varname', '', 'varcol', 1);
     
     % Instrument data
+    %%% NOTE: For DIW QC is done before the Binning %%%
     % Raw & sync
     data = table();
     % Split
@@ -40,7 +41,7 @@ classdef (Abstract) Instrument < handle
   
   methods
     % Constructor
-    function obj = Instrument(cfg)
+    function obj = Instrument(cfg, instrument_id)
       
       % Object Initilization
       % obj = obj@handle();
@@ -51,10 +52,10 @@ classdef (Abstract) Instrument < handle
         if isfield(cfg, 'model'); obj.model = cfg.model;
         else; error('Missing field model.'); end
         if isfield(cfg, 'path') && isfield(cfg.path, 'raw') &&...
-          isfield(cfg.path, 'wk') && isfield(cfg.path, 'prod')
+          isfield(cfg.path, 'wk') && isfield(cfg.path, 'prod') && isfield(cfg.path, 'ui')
           for f=fieldnames(cfg.path)'; obj.path.(f{1}) = cfg.path.(f{1}); end
         else
-          error('Missing field path, path.raw, path.wk, or path.prod.');
+          error('Missing field path, path.raw, path.wk, path.prod, and/or path.ui.');
         end
         
         % Load optional fields
@@ -113,29 +114,72 @@ classdef (Abstract) Instrument < handle
         obj.data, buffer, obj.split.mode, reference_constants, false);
     end
     
-    function Bin(obj, bin_size_minutes, prctile_detection, prctile_average, parallel)
+%     function Bin(obj, bin_size_minutes, method, prctile_detection, prctile_average, parallel)
+%       bin_size_days = bin_size_minutes / 60 / 24;
+%       if isempty(obj.raw.tsw)
+%         fprintf('WARNING: No raw.tsw data to bin\n');
+%       else
+%         obj.bin.tsw = binTable(obj.raw.tsw, bin_size_days, method, prctile_detection, prctile_average, false, parallel, false);
+%       end
+%       if isempty(obj.raw.fsw)
+%         if ~(strcmp(obj.split.mode, 'rmBuffer') || strcmp(obj.split.mode, 'None'))
+%           fprintf('WARNING: No raw.fsw data to bin\n');
+%         end
+%       else
+%         obj.bin.fsw = binTable(obj.raw.fsw, bin_size_days, method, prctile_detection, prctile_average, false, parallel, false);
+%       end
+%     end
+    
+    function Bin(obj, bin_size_minutes, method, prctile_detection, prctile_average, parallel, mode)
       bin_size_days = bin_size_minutes / 60 / 24;
       if isempty(obj.raw.tsw)
         fprintf('WARNING: No raw.tsw data to bin\n');
       else
-        obj.bin.tsw = binTable(obj.raw.tsw, bin_size_days, '4flag', prctile_detection, prctile_average, parallel, false);
+        fprintf('\tTSW\n');
+        switch mode
+          case 'OneShot'
+            obj.bin.tsw = binTable(obj.raw.tsw, bin_size_days, method, prctile_detection, prctile_average, false, parallel, false);
+          case 'ByDay'
+            for d = floor(min(obj.raw.tsw.dt)):floor(max(obj.raw.tsw.dt))
+              fprintf('\t\t%s', datestr(d)); tic;
+              sel = d <= obj.raw.tsw.dt & obj.raw.tsw.dt < d + 1;
+              obj.bin.tsw = [obj.bin.tsw; binTable(obj.raw.tsw(sel,:), bin_size_days, method, prctile_detection, prctile_average, false, parallel, false)];
+              t = toc; fprintf('  %1.3f s\n', t);
+            end
+          otherwise
+            error('Binning mode not supported.');
+        end
       end
       if isempty(obj.raw.fsw)
-        if ~strcmp(obj.split.mode, 'rmBuffer')
+        if ~(strcmp(obj.split.mode, 'rmBuffer') || strcmp(obj.split.mode, 'None'))
           fprintf('WARNING: No raw.fsw data to bin\n');
         end
       else
-        obj.bin.fsw = binTable(obj.raw.fsw, bin_size_days, '4flag', prctile_detection, prctile_average, parallel, false);
+        fprintf('\tFSW\n');
+        switch mode
+          case 'OneShot'
+            obj.bin.fsw = binTable(obj.raw.fsw, bin_size_days, method, prctile_detection, prctile_average, false, parallel, false);
+          case 'ByDay'
+            for d = floor(min(obj.raw.tsw.dt)):floor(max(obj.raw.tsw.dt))
+              fprintf('\t\t%s', datestr(d)); tic;
+              sel = d <= obj.raw.fsw.dt & obj.raw.fsw.dt < d + 1;
+              obj.bin.fsw = [obj.bin.fsw; binTable(obj.raw.fsw(sel,:), bin_size_days, method, prctile_detection, prctile_average, false, parallel, false)];
+              t = toc; fprintf('  %1.3f s\n', t);
+            end
+          otherwise
+            error('Binning mode not supported.');
+        end
       end
     end
     
-    function BinDI(obj, prctile_detection, prctile_average, parallel)
-      bin_size_minutes = 15;
+    function BinDI(obj, bin_size_minutes, method, prctile_detection, prctile_average, parallel)
+      %%% NOTE: For DIW QC is done before the Binning %%%
+%       bin_size_minutes = 60;
       bin_size_days = bin_size_minutes / 60 / 24;
       if isempty(obj.qc.diw)
         fprintf('WARNING: No qc.diw data to bin\n');
       else
-        obj.bin.diw = binTable(obj.qc.diw, bin_size_days, '4flag', prctile_detection, prctile_average, parallel, false);
+        obj.bin.diw = binTable(obj.qc.diw, bin_size_days, method, prctile_detection, prctile_average, true, parallel, false);
       end
     end
     
@@ -172,31 +216,91 @@ classdef (Abstract) Instrument < handle
       end
     end
     
-    function Write(obj, filename_prefix, days2write)
-      % For each product type (particulate, dissoved...)
-      for f = fieldnames(obj.prod)'; f = f{1};
-        filename = [filename_prefix '_' f '_prod.mat'];
-        sel = min(days2write) <= obj.prod.(f).dt & obj.prod.(f).dt < max(days2write) + 1;
-        data = obj.prod.(f)(sel,:);
-        if ~isdir(obj.path.prod); mkdir(obj.path.prod); end
-        save([obj.path.prod filename], 'data');
+    function Write(obj, filename_prefix, days2write, level)
+      if nargin < 4; level = 'prod'; end
+      if isstruct(obj.(level))
+        % For each product type (particulate, dissoved...)
+        for f = fieldnames(obj.(level))'; f = f{1};
+          filename = [filename_prefix '_' level '_' f '.mat'];
+          if isempty(obj.(level).(f)); continue; end
+          sel = min(days2write) <= obj.(level).(f).dt & obj.(level).(f).dt < max(days2write) + 1;
+          if ~any(sel); fprintf('WRITE: %s_%s_%s No data.\n', filename_prefix, level, f); continue; end
+          data = obj.(level).(f)(sel,:);
+          if ~isdir(obj.path.wk); mkdir(obj.path.(level)); end
+          save([obj.path.wk filename], 'data');
+        end
+      else
+        % One Table at the level
+        filename = [filename_prefix '_' level '.mat'];
+        if isempty(obj.(level)); fprintf('WRITE: %s_%s No data.\n', filename_prefix, level); return; end
+        sel = min(days2write) <= obj.(level).dt & obj.(level).dt < max(days2write) + 1;
+        if ~any(sel); fprintf('WRITE: %s_%s No data.\n', filename_prefix, level); return; end
+        data = obj.(level)(sel,:);
+        if ~isdir(obj.path.wk); mkdir(obj.path.(level)); end
+        save([obj.path.wk filename], 'data');
       end
     end
     
-    function LoadProducts(obj, filename_prefix, days2read)
+    function Read(obj, filename_prefix, days2read, level)
       % For each product type (particulate, dissoved...)
-      l = dir([obj.path.prod filename_prefix '_*_prod.mat']);
-      for f = {l.name}; f = f{1};
-        load([obj.path.prod f], 'data'); % data variable is created
-        sel = min(days2read) <= data.dt & data.dt < max(days2read) + 1;
-        fn = strsplit(f, '_'); fn = fn{end-1};
-        if isfield(obj.prod, fn)
-          obj.prod.(fn)(end+1:end+sum(sel),:) = data(sel,:);
-        else
-          obj.prod.(fn) = data(sel,:);
+      % This will simply add data at the end of the current table
+      %   (if data was already in memory it could duplicate timestamps)
+      if nargin < 4; level = 'prod'; end
+      l = dir([obj.path.wk filename_prefix '_' level '*.mat']);
+      if isempty(l)
+        fprintf('%s: %s_%s No data.\n', datestr(days2read), filename_prefix, level);
+      else
+        for f = {l.name}; f = f{1};
+          fprintf('\t\t%s', f); tic;
+          load([obj.path.wk f], 'data'); % data variable is created
+          sel = min(days2read) <= data.dt & data.dt < max(days2read) + 1;
+          fn = strsplit(f, '_'); fn = fn{end}(1:end-4);
+          if strcmp(fn, level)
+            obj.(level)(end+1:end+sum(sel),:) = data(sel,:);
+          else
+            if isfield(obj.(level), fn)
+              obj.(level).(fn)(end+1:end+sum(sel),:) = data(sel,:);
+            else
+              obj.(level).(fn) = data(sel,:);
+            end
+          end
+          t = toc; fprintf('  %1.3f s\n', t);
         end
       end
     end
+    
+%     function Write(obj, filename_prefix, days2write)
+%       % For each product type (particulate, dissoved...)
+%       for f = fieldnames(obj.prod)'; f = f{1};
+%         filename = [filename_prefix '_' f '_prod.mat'];
+%         sel = min(days2write) <= obj.prod.(f).dt & obj.prod.(f).dt < max(days2write) + 1;
+%         data = obj.prod.(f)(sel,:);
+%         if ~isdir(obj.path.prod); mkdir(obj.path.prod); end
+%         save([obj.path.prod filename], 'data');
+%       end
+%     end
+    
+%     function LoadProducts(obj, filename_prefix, days2read)
+%       % For each product type (particulate, dissoved...)
+%       % This will simply add data at the end of the current table
+%       %   (if data was already in memory it could duplicate timestamps)
+%       l = dir([obj.path.prod filename_prefix '_*_prod.mat']);
+%       if isempty(l)
+%         fprintf('%s: %s No data.\n', datestr(days2read), filename_prefix);
+%       else
+%         for f = {l.name}; f = f{1};
+%           load([obj.path.prod f], 'data'); % data variable is created
+%           sel = min(days2read) <= data.dt & data.dt < max(days2read) + 1;
+%           fn = strsplit(f, '_'); fn = fn{end-1};
+%           if isfield(obj.prod, fn)
+%             obj.prod.(fn)(end+1:end+sum(sel),:) = data(sel,:);
+%           else
+%             obj.prod.(fn) = data(sel,:);
+%           end
+%         end
+%       end
+%     end
+    
   end
   
 %   methods (Abstract=true)

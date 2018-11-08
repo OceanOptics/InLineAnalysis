@@ -1,4 +1,4 @@
-function [ bin, gflag ] = binTable( raw, bin_size, mode, prctile_dtc, prctile_avg, parallel_flag, verbose )
+function [ bin, gflag ] = binTable( raw, bin_size, mode, prctile_dtc, prctile_avg, dt_discontinus, parallel_flag, verbose )
 %BINTABLE compute median,, 5 and 95 percentiles, standard deviation, and number
 %  observation for each bin. The size of each bin is defined by bin_size
 % bin_size is in seconds
@@ -33,8 +33,8 @@ function [ bin, gflag ] = binTable( raw, bin_size, mode, prctile_dtc, prctile_av
 % Set default parameters
 if nargin < 2; bin_size = 1/60/24; end
 if nargin < 3; mode = '4flag'; end
-if nargin < 4; prctile_dtc = [5 75]; end
-if nargin < 5; prctile_avg = [2.5 97.5]; end
+if nargin < 4; prctile_dtc = [2.5 97.5]; end
+if nargin < 5; prctile_avg = [5 75]; end
 if nargin < 6; parallel_flag = 0; end
 if nargin < 7; verbose = false; end
 
@@ -54,53 +54,26 @@ start_dt = min(raw.dt);
 start_dt = start_dt - second(start_dt)/3600/24; % Start at 0 second
 
 % Init bin array with NaN values
-dt(:,1) = start_dt:bin_size:max(raw.dt); % max range
+if dt_discontinus  
+  dt = [];
+  i = 1; n = size(raw.dt, 1);
+  while i <= n
+    dti = raw.dt(i);
+    sel = find(dti <= raw.dt & raw.dt < dti + bin_size);
+    if isempty(sel)
+      error('Issue with discontinuous time code');
+    end
+    dt(end+1,1) = mean(raw.dt(sel));
+    i = sel(end) + 1;
+  end
+else
+  dt(:,1) = start_dt:bin_size:max(raw.dt); % max range
+end
 bin = table(dt);
 gflag = table(); % Used only in clean 1 mode;
 % Compute stats for each bin
 % It takes some time
 switch mode
-  case 'classic'
-    prctile_avg = [50 prctile_avg];
-    for j=1:size(lvar,2)
-      % Init Var In
-      raw_dt = raw.dt;
-      raw_var = raw.(lvar{j});
-      % Init Var Out
-      md = NaN(size(dt,1),size(raw.(lvar{j}),2)); % Median
-      pl = NaN(size(dt,1),size(raw.(lvar{j}),2));
-      ph = NaN(size(dt,1),size(raw.(lvar{j}),2));
-      sd = NaN(size(dt,1),size(raw.(lvar{j}),2));
-      n = NaN(size(dt,1),1);
-      parfor (i=1:size(dt,1), parallel_flag)
-%       for i=1:size(dt,1)
-        % Select minute to bin
-        sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
-        % Unselect raw with NaN values
-        foo = ~isnan(raw_var); % step required for 2d variables
-        sel = sel & foo(:,1);
-        % Check number of samples
-        n(i) = sum(sel);
-        if n(i) > 0
-          foo = prctile(raw_var(sel,:),prctile_avg,1);
-          md(i,:) = foo(1,:); % median
-          pl(i,:) = foo(2,:); % low percentile
-          ph(i,:) = foo(3,:); % high percentile
-          sd(i,:) = std(raw_var(sel,:),0,1);
-        end
-      end
-      bin.(lvar{j}) =  md;
-      bin.([lvar{j} '_pl']) = pl;
-      bin.([lvar{j} '_ph']) = ph;
-      bin.([lvar{j} '_sd']) = sd;
-      bin.([lvar{j} '_n']) = n;
-    end
-    % Remove empty lines
-    sel = bin.([lvar{1} '_n']) == 0;
-    for j=2:size(lvar,2)
-      sel = sel & bin.([lvar{j} '_n']) == 0;
-    end
-    bin(sel,:) = [];
   case '4flag'
     % Compute upper and lower percentile (2.5 97.5 percentile by defaul)
     % Compute mean and median of data within percentile interval
@@ -125,12 +98,12 @@ switch mode
 %       avg_n  = NaN(size(dt,1),size(raw_var,2));
       avg_n  = NaN(size(dt));
       parfor (i=1:size(dt,1), parallel_flag)
-%         for i=1:size(dt,1)
+%       for i=1:size(dt,1)
         % Select minute to bin
         sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
         % Unselect raw with NaN values
         foo = ~isnan(raw_var); % step required for 2d variables
-        sel = sel & foo(:,1);
+        sel = sel & all(foo,2);
         % Check number of samples
         if sum(sel) > 0
           raw_var_sel = raw_var(sel,:);
@@ -197,37 +170,199 @@ switch mode
       sel = sel & all(isnan(bin.(lvar{j})),2);
     end
     bin(sel,:) = [];
-  case 'average'
+  case 'SB_IN_PRCTL'
+    % Compute mean, standard deviation, and number of point
+    %   for points within averaging percentile within the minute
+    %   products recommended by SeaBASS
     for j=1:size(lvar,2)
       % Init Var In
       raw_dt = raw.dt;
       raw_var = raw.(lvar{j});
-      % Init Var Out
-      md = NaN(size(dt,1),size(raw.(lvar{j}),2)); % Median
-      mn = NaN(size(dt,1),size(raw.(lvar{j}),2)); % Mean
+
+      % Init for averaging
+      avg_pl = NaN(size(dt,1),size(raw_var,2));
+      avg_ph = NaN(size(dt,1),size(raw_var,2));
+      avg_mn = NaN(size(dt,1),size(raw_var,2));
+      avg_sd = NaN(size(dt,1),size(raw_var,2));
+      avg_n  = NaN(size(dt));
+      
+      % Init Parpool (needed for proper display of completion)
+      %parpool(parallel_flag)
+      
+      % Init Display Progress
+%       if verbose
+%         fprintf('\t Completion: ');
+%         showTimeToCompletion;
+%         p = parfor_progress( size(dt,1) / 100);
+%       end
+%       startTime=tic;
+      parfor (i=1:size(dt,1), parallel_flag)
+%       for i=1:size(dt,1)
+%         fprintf('\t%s %s\n', lvar{j}, datestr(dt(i))); 
+        % Select minute to bin
+        sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
+        % Unselect raw with NaN values
+        foo = ~isnan(raw_var); % step required for 2d variables
+        sel = sel & all(foo,2);
+        % Check number of samples
+        if sum(sel) > 0
+          raw_var_sel = raw_var(sel,:);
+          % Compute percentiles
+          foo = prctile(raw_var_sel,[prctile_avg],1);
+          avg_pl(i,:) = foo(1,:); % low percentile
+          avg_ph(i,:) = foo(2,:); % high percentile
+          
+          % Consider all variables as one
+          avg_sel = any(avg_pl(i,:) <= raw_var_sel & raw_var_sel <= avg_ph(i,:),2);
+          avg_n(i) = sum(avg_sel);
+          avg_mn(i,:) = mean(raw_var_sel(avg_sel,:));
+          avg_sd(i,:) = std(raw_var_sel(avg_sel,:));
+        end
+        
+        % Display Progress
+%         if verbose
+%             if ~mod(i, 100)
+%               p = parfor_progress;
+%               showTimeToCompletion( p/100, [], [], startTime );
+%             end
+%         end
+      end
+      % Average Stats
+%       bin.([lvar{j} '_avg_pl']) = avg_pl; % low percentile
+%       bin.([lvar{j} '_avg_ph']) = avg_ph; % high percentile
+      bin.(lvar{j}) = avg_mn; % mean
+      bin.([lvar{j} '_avg_sd']) = avg_sd; % standard deviation
+      bin.([lvar{j} '_avg_n']) = avg_n;
+    end
+    % Remove empty lines
+    sel = all(isnan(bin.(lvar{1})),2);
+    for j=2:size(lvar,2)
+      sel = sel & all(isnan(bin.(lvar{j})),2);
+    end
+    bin(sel,:) = [];
+  case 'SB_ALL'
+    % Compute mean, standard deviation, and number of point
+    %   for all points within the minute
+    %   products recommended by SeaBASS
+    for j=1:size(lvar,2)
+      % Init Var In
+      raw_dt = raw.dt;
+      raw_var = raw.(lvar{j});
+      % Init var Out
+      avg_mn = NaN(size(dt,1),size(raw_var,2));
+      avg_sd = NaN(size(dt,1),size(raw_var,2));
+      avg_n  = NaN(size(dt));
+      
+      % Init Display Progress
+%       if verbose
+%         fprintf('\t Completion: ');
+%         showTimeToCompletion;
+%         p = parfor_progress( size(dt,1) );
+%       end
+%       startTime=tic;
       parfor (i=1:size(dt,1), parallel_flag)
 %       for i=1:size(dt,1)
         % Select minute to bin
         sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
         % Unselect raw with NaN values
         foo = ~isnan(raw_var); % step required for 2d variables
-        sel = sel & foo(:,1);
+        sel = sel & all(foo,2);
         % Check number of samples
-        n = sum(sel);
-        if n > 0
-          md(i,:) = median(raw_var(sel,:));
-          mn(i,:) = mean(raw_var(sel,:));
+        avg_n(i) = sum(sel);
+        if sum(sel) > 0
+%           avg_md(i,:) = median(raw_var(sel,:));
+          avg_mn(i,:) = mean(raw_var(sel,:));
+          avg_sd(i,:) = std(raw_var(sel,:));
         end
+        % Display Progress
+%         if verbose
+%           p = parfor_progress;
+%           showTimeToCompletion( p/100, [], [], startTime );
+%         end
       end
-      bin.(lvar{j}) =  md; % median
-      bin.([lvar{j} '_mn']) = mn; % mean
+      % Average Stats
+      bin.(lvar{j}) = avg_mn; % mean
+      bin.([lvar{j} '_avg_sd']) = avg_sd; % standard deviation
+      bin.([lvar{j} '_avg_n']) = avg_n;   % number of samples
     end
     % Remove empty lines
-    sel = isnan(bin.(lvar{1})(1,:));
+    sel = all(isnan(bin.(lvar{1})),2);
     for j=2:size(lvar,2)
-      sel = sel & isnan(bin.(lvar{j})(1,:));
+      sel = sel & all(isnan(bin.(lvar{j})),2);
     end
     bin(sel,:) = [];
+%   case 'classic'
+%     prctile_avg = [50 prctile_avg];
+%     for j=1:size(lvar,2)
+%       % Init Var In
+%       raw_dt = raw.dt;
+%       raw_var = raw.(lvar{j});
+%       % Init Var Out
+%       md = NaN(size(dt,1),size(raw.(lvar{j}),2)); % Median
+%       pl = NaN(size(dt,1),size(raw.(lvar{j}),2));
+%       ph = NaN(size(dt,1),size(raw.(lvar{j}),2));
+%       sd = NaN(size(dt,1),size(raw.(lvar{j}),2));
+%       n = NaN(size(dt,1),1);
+%       parfor (i=1:size(dt,1), parallel_flag)
+% %       for i=1:size(dt,1)
+%         % Select minute to bin
+%         sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
+%         % Unselect raw with NaN values
+%         foo = ~isnan(raw_var); % step required for 2d variables
+%         sel = sel & foo(:,1);
+%         % Check number of samples
+%         n(i) = sum(sel);
+%         if n(i) > 0
+%           foo = prctile(raw_var(sel,:),prctile_avg,1);
+%           md(i,:) = foo(1,:); % median
+%           pl(i,:) = foo(2,:); % low percentile
+%           ph(i,:) = foo(3,:); % high percentile
+%           sd(i,:) = std(raw_var(sel,:),0,1);
+%         end
+%       end
+%       bin.(lvar{j}) =  md;
+%       bin.([lvar{j} '_pl']) = pl;
+%       bin.([lvar{j} '_ph']) = ph;
+%       bin.([lvar{j} '_sd']) = sd;
+%       bin.([lvar{j} '_n']) = n;
+%     end
+%     % Remove empty lines
+%     sel = bin.([lvar{1} '_n']) == 0;
+%     for j=2:size(lvar,2)
+%       sel = sel & bin.([lvar{j} '_n']) == 0;
+%     end
+%     bin(sel,:) = [];
+%   case 'average'
+%     for j=1:size(lvar,2)
+%       % Init Var In
+%       raw_dt = raw.dt;
+%       raw_var = raw.(lvar{j});
+%       % Init Var Out
+%       md = NaN(size(dt,1),size(raw.(lvar{j}),2)); % Median
+%       mn = NaN(size(dt,1),size(raw.(lvar{j}),2)); % Mean
+%       parfor (i=1:size(dt,1), parallel_flag)
+% %       for i=1:size(dt,1)
+%         % Select minute to bin
+%         sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
+%         % Unselect raw with NaN values
+%         foo = ~isnan(raw_var); % step required for 2d variables
+%         sel = sel & foo(:,1);
+%         % Check number of samples
+%         n = sum(sel);
+%         if n > 0
+%           md(i,:) = median(raw_var(sel,:));
+%           mn(i,:) = mean(raw_var(sel,:));
+%         end
+%       end
+%       bin.(lvar{j}) =  md; % median
+%       bin.([lvar{j} '_mn']) = mn; % mean
+%     end
+%     % Remove empty lines
+%     sel = isnan(bin.(lvar{1})(1,:));
+%     for j=2:size(lvar,2)
+%       sel = sel & isnan(bin.(lvar{j})(1,:));
+%     end
+%     bin(sel,:) = [];
   otherwise
     error('Unknown mode of binning data\n');
 end

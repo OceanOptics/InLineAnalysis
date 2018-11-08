@@ -29,6 +29,12 @@ classdef TSG < Instrument
         case 'Pourquoi Pas ?'
           obj.data = iRead(@importPourquoiPasTSG, obj.path.raw, obj.path.wk, 'PP',...
                          days2run, 'PourquoiPasTSG', force_import, ~write, true);
+        case 'Tara'
+          obj.data = iRead(@importTaraTSG, obj.path.raw, obj.path.wk, 'tara_tsg_',...
+                         days2run, 'TaraTSG', force_import, ~write, true);
+        case 'RRevelle'
+          obj.data = iRead(@importRRevelleUnderway, obj.path.raw, obj.path.wk, '',...
+                         days2run, 'RRevelleUnderway', force_import, ~write, true);
         otherwise
           error('TSG: Unknown boat.');
       end

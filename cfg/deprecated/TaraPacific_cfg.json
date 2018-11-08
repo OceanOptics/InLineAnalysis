@@ -3,23 +3,23 @@
     "investigator": "Emmanuel_Boss",
     "affiliations": "University_of_Maine",
     "emails": "emmanuel.boss@maine.edu",
-    "experiment": "NAAMES",
-    "cruise": "NAAMES03",
+    "experiment": "Tara Pacific",
+    "cruise": "Tara Pacific",
     "station": "NA",
     "documents": "NA",
     "calibration_files": "NA",
     "data_type": "flow_thru",
     "data_status": "preliminary",
-    "measurement_depth": 5
+    "measurement_depth": 1.5
   },
   "instruments": {
     "TSG": {
       "model": "TSG",
       "boat": "Tara",
       "path": {
-        "raw": "/Users/Shunkn/Documents/MATLAB/DATA/Wallis_(BB3_&_TSG)/Tahiti-Wallis/Exaxmple/tara_tsg_20161206.txt",
-        "wk": "/Users/Shunkn/Documents/MATLAB/Data/wk",
-        "prod": "/Users/Shunkn/Documents/MATLAB/Data/Product"
+        "raw": "/Users/nils/Data/TaraPacific/TSG/raw/",
+        "wk": "/Users/nils/Data/TaraPacific/TSG/wk/",
+        "prod": "/Users/nils/Data/TaraPacific/TSG/prod/"
       },
       "view": {
         "varname": "t"

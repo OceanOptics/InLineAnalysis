@@ -134,32 +134,39 @@ p.cp = interp1(lambda.c', p.cp', lambda.ref', 'linear', 'extrap')';
 % cp Residual correction (for efficiency use the one computed from ap as it should be the same)
 [p.ap, p.cp] = ResidualTemperatureAndScatteringCorrection(p.ap, p.cp, lambda.ref);
 
-% Propagate error
+% Propagate error (using geometric mean of measurement errors)
 %   Note: Error is not propagated through Scattering & Residual temperature
 %         correction as required by SeaBASS
-p.ap_sd = sqrt(tot.a_avg_sd + filt_interp.a_avg_sd);
-p.cp_sd = sqrt(tot.c_avg_sd + filt_interp.c_avg_sd);
+p.ap_sd = sqrt(tot.a_avg_sd .* filt_interp.a_avg_sd);
+p.cp_sd = sqrt(tot.c_avg_sd .* filt_interp.c_avg_sd);
 p.ap_n = tot.a_avg_n;
 p.cp_n = tot.c_avg_n;
 
 % QC using ap spectrum
 % TODO replace the transpose by std(.., 0, 1 or 2); line 149 for speed
 sel_bad = any(p.ap(:,lambda.ref < 430) < 0,2)...
-          | any(p.ap(:,:) < -0.0015,2)...
-          | std(p.ap(:,lambda.ref < 430)')' > 6 * 10^-3;
+          | any(p.ap(:,:) < -0.0015,2);%...
+%           | std(p.ap(:,lambda.ref < 430)')' > 6 * 10^-3;
 p(sel_bad,:) = [];
 
 % Derive standard products from ap and cp
 % Derive POC (Specific to region)
+% 	The particulate organic carbon (POC) is computed using the particulate attenuation at 660 nm Using the global relationship from Gardner et al. (2006)
 cp660 = interp1(lambda.ref,p.cp',660,'linear')';
 p.poc = cp660.*380;
 % Derive Chl (Line heigh at 676 compared to 650 and 715)
+% 	Chlorophyll a (chl) is computed using the particulate absorption line height at 676 nm and the global relationship from Tara Ocean (Boss et al. 2013)
 ap_a=interp1(lambda.ref,p.ap',[650 676 715],'linear')';
 line_height = (ap_a(:,2)-(39/65*ap_a(:,1)+26/65*ap_a(:,3)));
 p.chl=157*line_height.^1.22;
 p.chl(real(p.chl) ~= p.chl) = NaN;
-% 3.3 Derive Gamma (does not support NaN values)
+% 3.3 Derive Gamma (does not support NaN values) (Boss et al. 2001)
 [~,p.gamma] = FitSpectra_HM2(lambda.ref(:,1:end-2),p.cp(:,1:end-2));
+
+% REFERENCES:
+% Gamma: Boss, E., W.S. Pegau, W.D. Gardner, J.R.V. Zaneveld, A.H. Barnard., M.S. Twardowski, G.C. Chang, and T.D. Dickey, 2001. Spectral particulate attenuation and particle size distribution in the bottom boundary layer of a continental shelf. Journal of Geophysical Research, 106, 9509-9516.
+% Chl: Emmanuel Boss, Marc Picheral, Thomas Leeuw, Alison Chase, Eric Karsenti, Gabriel Gorsky, Lisa Taylor, Wayne Slade, Josephine Ras, Herve Claustre, 2013.The characteristics of particulate absorption, scattering and attenuation coefficients in the surface ocean; Contribution of the Tara Oceans expedition, Methods in Oceanography.
+% POC: Gardner, W.D., Mishonov, A., Richardson, M.J., 2006. Global POC concentrations from in-situ and satellite data. Deep Sea Res. II 53, 718?740.
 
 %% ag & cg
 if nargin > 3 && nargout > 1
@@ -293,8 +300,11 @@ opts = optimset(opts,'TolFun',1e-8);
 
 % Find Near Infrared & references
 iNIR = 710 <= wl &  wl <= 750;  % spectral srange for optimization (710 to 750nm)
+if isempty(iNIR); error('Unable to perform correction as no wavelength available in NIR.'); end
+% Find nearest wavelength to greater than 730 nm to use as reference for correction
 iref = find(730 <= wl, 1,'first');
-% iref = find(720 <= wl, 1,'first'); % TODO: Add cfg variable as instrument dependent
+% If ACS spectrum does not go up to 730 nm take the closest wavelength to 730 nm
+if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
 
 % Initialize output arrays
 deltaT = NaN(size(ap,1),1);

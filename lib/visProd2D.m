@@ -11,7 +11,7 @@ function fh = visProd2D(x, dt, data, smooth)
 sel = any(~isnan(data),2);
 
 % Smooth
-if nargin < 4;  smooth = False; end
+if nargin < 4;  smooth = false; end
 if smooth; Y = filtfilt(ones(10, 1), 10, data(sel,:)); 
 else Y = data(sel,:); end
 

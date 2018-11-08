@@ -34,7 +34,7 @@ end
 % spd = NaN(line_count, 1);
 
 % Set parser
-parser = '%s%d%d%f%f%f%f';
+parser = '%s%d%d%f%f%f%f'; % US format decimal number with dots '.''
 
 % Open file
 fid=fopen(filename);

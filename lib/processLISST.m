@@ -71,7 +71,7 @@ d = diameter .* ones(size(p,1),1);
 
 % Convert to number distribution
 p.PSD = (p.VD ./ (pi*d.^3/6) ./ bs) * 10^6; % units: # / \mum^3 / m
-p.VSD = (p.VD ./ bs) * 10^6;                % units: # / m 
+p.VSD = (p.VD ./ bs) * 10^6;                % units: ppm / m 
 
 % Perform simple QC
 p(any(p.PSD < 0,2),:) = [];

@@ -28,6 +28,12 @@ classdef ECO < Instrument
         case 'Inlinino'
           obj.data = iRead(@importInlinino, obj.path.raw, obj.path.wk, 'Inlinino_',...
                          days2run, 'Inlinino', force_import, ~write, true);
+        case 'InlininoBB3'
+          obj.data = iRead(@importInlininoBB3, obj.path.raw, obj.path.wk, 'Inlinino_',...
+                         days2run, 'Inlinino', force_import, ~write, true);
+        case 'InlininoWSCD'
+          obj.data = iRead(@importInlininoWSCD, obj.path.raw, obj.path.wk, 'Inlinino_',...
+                         days2run, 'Inlinino', force_import, ~write, true);
         case 'InlininoPourquoiPas'
           obj.data = iRead(@importInlininoPourquoiPas, obj.path.raw, obj.path.wk, 'Inlinino_',...
                          days2run, 'Inlinino', force_import, ~write, true);
@@ -46,7 +52,7 @@ classdef ECO < Instrument
       end
     end
     
-    function ReadDI(obj, days2run, force_import, write)
+    function ReadRawDI(obj, days2run, force_import, write)
       % DI parameters
       if isempty(obj.path.di)
         fprintf('WARNING: DI Path is same as raw.\n');
@@ -60,6 +66,12 @@ classdef ECO < Instrument
       switch obj.logger
         case 'Inlinino'
           obj.raw.diw = iRead(@importInlinino, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
+                         days2run, 'Inlinino', force_import, ~write, true, false);
+        case 'InlininoBB3'
+          obj.raw.diw = iRead(@importInlininoBB3, obj.path.raw, obj.path.wk, obj.di_cfg.prefix,...
+                         days2run, 'Inlinino', force_import, ~write, true, false);
+        case 'InlininoWSCD'
+          obj.raw.diw = iRead(@importInlininoWSCD, obj.path.raw, obj.path.wk, obj.di_cfg.prefix,...
                          days2run, 'Inlinino', force_import, ~write, true, false);
         case 'InlininoPourquoiPas'
           obj.raw.diw = iRead(@importInlininoPourquoiPas, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...

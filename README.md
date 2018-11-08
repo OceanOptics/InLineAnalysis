@@ -1,7 +1,7 @@
 InLineAnalysis
 ==============
 
-This set of Matlab code is designed to process In-Line measurements done continuously on the flowthrough system of research vessel. It will synchronize the stream of data from each instrument; separate the different periods of water going through the instruments (Filtered, Total, DIW); bin the data ; and run an automatic quality check (QC) on the data as well as provide a graphical interface to manually QC the data. The processed data is saved in matlab format and can then be exported to SeaBASS format with minimal effort from the user.
+InLineAnalysis provide a set of routine to process observations from scientific instrumentation collected under the way of research vessels. The code can be used to synchronize the stream of data from each instrument; separate the different periods of water going through the instruments (Filtered, Total, DIW); average the data every minute; and run manual and automatic quality check (QC); calibrate, adjust, and compute products from the raw data. The output can then be exported to SeaBASS format to share it with the community.
 
 To date the following instruments are supported:
   + TSG
@@ -10,9 +10,10 @@ To date the following instruments are supported:
   + BB3
   + WSCD
   + LISST
+  + ALFA
+  + PAR
 
-The application is under continuous development and still need testing, please use the [GitHub Issues Tracker](https://github.com/OceanOptics/InLineAnalysis/issues) to signal any bug, or feature requests.
-The documentation is minimal if not existing at the time, however, some help can be found in the comments of the code.
+The application is under continuous development, please use the [GitHub Issues Tracker](https://github.com/OceanOptics/InLineAnalysis/issues) to signal any bug, or feature requests. The documentation is limited to this files and the comments in the code at this time.
 
 # Quick start
 ## Installation
@@ -31,12 +32,12 @@ Download and add the packages below in the `packages` folder:
 Install the [JSONlab toolbox](https://www.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files)
 
 ## Configuration
-For each project processed a new configuration file must be written. The configuration files are located in the directory `cfg`, some example of configurations are available there.
+For each project a new configuration file should be written. The configuration files are located in the `cfg` directory.
 
 ## Run step by step
-For each project the code that will be run should be written in `main_<project_name>.m`. Examples of the main script are available at the root of the project.
+Adapt the `main.m` script to process your InLine data. To consolidate the dataset and export it, adapt the script `Consolidate.m`.
 
 # Code description
-The core of the application is in the `InLineAnalysis` class.
+The application is accessed using the `InLineAnalysis` class.
 The `Instrument` class provide a common interface for each instrument. 
-The `lib` folder contains the logic of the application, most of those function can be used separately.
+The `lib` folder contains the core of the application, most of those function can be used separately.

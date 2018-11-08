@@ -47,7 +47,8 @@
       "path":{
         "raw":"/Users/nils/Data/NAAMES/04_acs/raw301/",
         "wk":"/Users/nils/Data/NAAMES/04_acs/mat301/",
-        "prod":"/Users/nils/Data/NAAMES/04_acs/prod301/"
+        "prod":"/Users/nils/Data/NAAMES/04_acs/prod301/",
+        "di":"/Users/nils/Data/NAAMES/04_acs/raw301/di/"
       },
       "view":{
         "varname":"a",

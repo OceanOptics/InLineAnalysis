@@ -3,9 +3,10 @@ classdef ACS < Instrument
   %   Detailed explanation goes here
   
   properties
+    device_file = '';
     lambda_ref = [];
-    lambda_a = [];
     lambda_c = [];
+    lambda_a = [];
   end
   
   methods
@@ -16,23 +17,40 @@ classdef ACS < Instrument
       obj = obj@Instrument(cfg);
       
       % Post initialization
-      if isfield(cfg, 'lambda_a'); obj.lambda_a = cfg.lambda_a;
-      else; error('Missing field lambda_a.'); end
-      if isfield(cfg, 'lambda_c'); obj.lambda_c = cfg.lambda_c;
-      else; error('Missing field lambda_c.'); end
-      if isfield(cfg, 'lambda_reference'); obj.lambda_ref = cfg.lambda_reference;
-      else; error('Missing field lambda_reference.'); end
+      if isfield(cfg, 'device_file'); obj.device_file = cfg.device_file;
+      else; error('Missing field device_file.'); end
+      % Set lambda reference to c by default
+      if isfield(cfg, 'lambda_reference'); obj.lambda_ref = cfg.lambda_reference; end
+      % DEPRECATED AS will be red in device file now
+%       if isfield(cfg, 'lambda_a'); obj.lambda_a = cfg.lambda_a;
+%       else; error('Missing field lambda_a.'); end
+%       if isfield(cfg, 'lambda_c'); obj.lambda_c = cfg.lambda_c;
+%       else; error('Missing field lambda_c.'); end
+
       if isempty(obj.logger) 
         fprintf('WARNING: Logger set to Compass_2.1rc_scheduled.\n');
         obj.logger = 'Compass_2.1rc_scheduled';
       end
     end    
     
+    function ReadDeviceFile(obj)
+        % Read Device file to set wavelength
+      [obj.lambda_c, obj.lambda_a] = importACSDeviceFile(obj.device_file);
+      if isempty(obj.lambda_ref); obj.lambda_ref = obj.lambda_c; end
+    end
+    
     function ReadRaw(obj, days2run, force_import, write)
+      % Get wavelengths from device file
+      obj.ReadDeviceFile()
+      % Read raw data
       switch obj.logger
         case 'Compass_2.1rc_scheduled'
+          warning('DEPRECATED: as wavelength are shifted when saved to .dat by the scheduler of compass.');
           obj.data = iRead(@importACS, obj.path.raw, obj.path.wk, ['acs' obj.sn '_'],...
                          days2run, 'Compass_2.1rc_scheduled', force_import, ~write, true);
+        case 'Compass_2.1rc_scheduled_bin'
+          obj.data = iRead(@importACSBin, obj.path.raw, obj.path.wk, ['acs' obj.sn '_'],...
+                         days2run, 'Compass_2.1rc_scheduled_bin', force_import, ~write, true, true, '', Inf, obj.device_file);
         case 'Compass_2.1rc'
           obj.data = iRead(@importACS, obj.path.raw, obj.path.wk, ['acs_' obj.sn '_'],...
                          days2run, 'Compass_2.1rc', force_import, ~write, true);
@@ -41,7 +59,7 @@ classdef ACS < Instrument
       end
     end
     
-    function ReadDI(obj, days2run, force_import, write)
+    function ReadRawDI(obj, days2run, force_import, write)
       % Set default parameters
       if isempty(obj.path.di)
         fprintf('WARNING: DI Path is same as raw.\n');

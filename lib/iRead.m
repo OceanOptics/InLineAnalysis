@@ -1,4 +1,4 @@
-function [ data ] = iRead( fun, dirname_in, dirname_out, prefix, dt, software, force, nowrite, verbose, read_margin, postfix )
+function [ data ] = iRead( fun, dirname_in, dirname_out, prefix, dt, software, force, nowrite, verbose, read_margin, postfix, parallel_flag, otherargs )
 %IMPORTALLUNDERWAY import underway data from all files matching regex settings
 %   in specified directory. Loaded files are saved as mat files for faster run.
 %
@@ -22,6 +22,8 @@ function [ data ] = iRead( fun, dirname_in, dirname_out, prefix, dt, software, f
 if nargin < 9; verbose = false; end
 if nargin < 10; read_margin = true; end
 if nargin < 11; postfix = ''; end
+if nargin < 12; parallel_flag = Inf; end
+if nargin < 13; otherargs = {}; end
 
 dir_in = dirname_in;
 dir_out = dirname_out;
@@ -57,8 +59,12 @@ for i=1:length(dt)
     else
       % Import data from selection
       ddata = [];
-      for j=1:size(l,1)
-        foo = fun([dir_in l{j}], verbose);
+      parfor (j=1:size(l,1), parallel_flag)
+        if isempty(otherargs)
+          foo = fun([dir_in l{j}], verbose);
+        else
+          foo = fun([dir_in l{j}], otherargs, verbose);
+        end
         ddata = [ddata; foo];
       end
       % Keep only data of day
@@ -103,11 +109,16 @@ end
 function [filenames] = list_files_from_software(software, dir_in, prefix, dt, postfix)
 % dt <1x1 datenum> day of data to import
   switch software
-    case {'Compass_2.1rc_scheduled', 'Compass_2.1rc'}
+    case {'Compass_2.1rc_scheduled', 'Compass_2.1rc', 'Compass_2.1rc_scheduled_bin'}
       % Compass does not reset files at mid-night thereafter some data from the
       % selected day might be in the first file of the following day
       % List all files in directory
-      l = dir([dir_in filesep prefix '*' postfix '.dat']);
+      switch software
+        case 'Compass_2.1rc_scheduled_bin'
+          l = dir([dir_in filesep prefix '*' postfix '.bin']);
+        otherwise
+          l = dir([dir_in filesep prefix '*' postfix '.dat']);
+      end
       if ~isempty(l)
         % Get date of all files
         n = length(prefix);
@@ -141,6 +152,14 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
       % List all files in directory
       l = dir([dir_in filesep dt_yyyymmdd(dt) '*' postfix '.csv']);
       filenames = {l.name}';
+    case 'RRevelleUnderway'
+      % List all files in directory
+      l = dir([dir_in filesep prefix dt_yymmdd(dt) '*' postfix '.MET']);
+      filenames = {l.name}';
+    case 'TaraTSG'
+      % List all files in directory
+      l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.txt']);
+      filenames = {l.name}';
     case 'TeraTerm'
       % TeraTerm filenames correspond to the time at which logging started
       % Data from a given day could be in any file preceding that date
@@ -149,7 +168,22 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
       % Get date of all files
       n = length(prefix);
       l_dt = floor(datenum(cellfun(@(x) x(n+1:n+15), {l.name}, 'UniformOutput', false), 'yyyymmdd_HHMMSS'));
-      % Select the earliest file from the previous date (within 10 days)
+      % Find adjacent date before the asked date (within 10 days)
+      i = 1;
+      while ~any(l_dt == dt - i) && i < 10; i = i + 1; end
+      % Select previous valid day (within 10 days) and asked dt
+      sel = l_dt == dt - i | l_dt == dt;
+      % Return selected filenames
+      filenames = {l(sel).name}';
+    case 'ALFA_LabView_m'
+      % ALFA LabView filenames correspond to the time at which logging started
+      % Data from a given day could be in any file preceding that date
+      % List all files in directory
+      l = dir([dir_in filesep prefix '*' postfix '_m.txt']);
+      % Get date of all files
+      n = length(prefix);
+      l_dt = floor(datenum(cellfun(@(x) x(n+1:n+15), {l.name}, 'UniformOutput', false), 'yyyymmdd_HHMMSS'));
+      % Find adjacent date before the asked date (within 10 days)
       i = 1;
       while ~any(l_dt == dt - i) && i < 10; i = i + 1; end
       % Select previous valid day (within 10 days) and asked dt

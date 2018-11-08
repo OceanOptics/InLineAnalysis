@@ -13,7 +13,8 @@ classdef CD < ECO
       obj = obj@ECO(cfg);
       
       % Post initialization
-      if isempty(obj.varname); obj.varname = 'fdom'; end
+      if isempty(obj.varname); obj.varname = 'fdom'; end % Required for ECO class
+      if isempty(obj.view.varname); obj.view.varname = 'fdom'; end
       
       % Change default Split method
       obj.split.mode = 'rmBuffer';

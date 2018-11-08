@@ -1,4 +1,4 @@
-function fh = visProd3D(x, dt, data, smooth, color, autorotate)
+function fh = visProd3D(x, dt, data, smooth, color, autorotate, figid)
 %
 % INPUT:
 %   x <1xM double> wavelength (lambda) or scattering angle (theta)
@@ -14,7 +14,7 @@ function fh = visProd3D(x, dt, data, smooth, color, autorotate)
 % Unselect NaN
 sel = any(~isnan(data),2);
 % Smooth
-if nargin < 4;  smooth = False; end
+if nargin < 4;  smooth = false; end
 if smooth; Z = filtfilt(ones(10, 1), 10, data(sel,:)); 
 else Z = data(sel,:); end
 % Color
@@ -30,10 +30,12 @@ switch color
     error('Color mode not supported');
 end
 % Rotate figure
-if nargin < 6; autorotate=false; end;
+if nargin < 6; autorotate=false; end
+% Figure id
+if nargin < 7; figid = 72; end
 
  %% 3D Mesh Plot
-fh = fig(72);
+fh = fig(figid);
 %   waterfall(x, dt, Z, C);
 mesh(x, dt(sel), Z, C);
 

@@ -13,7 +13,7 @@ classdef FL < ECO
       obj = obj@ECO(cfg);
       
       % Post initialization
-      if isempty(obj.varname); obj.varname = 'fchl'; end
+      if isempty(obj.varname); obj.varname = 'fchl'; end % Required for ECO class
       if isnan(obj.slope); error('Missing field slope.'); end
       if isnan(obj.dark); error('Missing field dark.'); end
       

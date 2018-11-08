@@ -15,7 +15,7 @@ classdef BB < ECO
       obj = obj@ECO(cfg);
       
       % Post initialization
-      if isempty(obj.varname); obj.varname = 'beta'; end
+      if isempty(obj.varname); obj.varname = 'beta'; end % Required for ECO class
       if isfield(cfg, 'lambda'); obj.lambda = cfg.lambda;
       else; error('Missing field lambda.'); end
       if isfield(cfg, 'theta'); obj.theta = cfg.theta;
@@ -25,13 +25,13 @@ classdef BB < ECO
       
     end
 
-    function Calibrate(obj, compute_dissolved, TSG)
+    function Calibrate(obj, compute_dissolved, TSG, di_method)
       param = struct('lambda', obj.lambda, 'theta', obj.theta, 'slope', obj.slope);
       % linear interpolation only, CDOM interpolation is not yet available
       if compute_dissolved
-        [obj.prod.p, obj.prod.g] = processBB3(param, obj.qc.tsw, obj.qc.fsw, obj.bin.diw, TSG.qc.tsw);
+        [obj.prod.p, obj.prod.g] = processBB3(param, obj.qc.tsw, obj.qc.fsw, obj.bin.diw, TSG.qc.tsw, di_method);
       else
-        [obj.prod.p] = processBB3(param, obj.qc.tsw, obj.qc.fsw, [], []);
+        [obj.prod.p] = processBB3(param, obj.qc.tsw, obj.qc.fsw);
       end
     end
   end
