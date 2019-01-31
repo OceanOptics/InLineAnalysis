@@ -31,6 +31,10 @@ Download and add the packages below in the `packages` folder:
 
 Install the [JSONlab toolbox](https://www.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files)
 
+Recommended Toolbox
+  + Finance
+  + Parallel
+
 ## Configuration
 For each project a new configuration file should be written. The configuration files are located in the `cfg` directory.
 
