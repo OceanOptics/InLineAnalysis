@@ -15,8 +15,9 @@ classdef WSCD < Instrument
       % Post initialization
       if isempty(obj.logger); obj.logger = 'Inlinino'; end
       
-      % Change default Split method
+      % Change default processing methods
       obj.split.mode = 'rmBuffer';
+      obj.bin_method = 'SB_IN_PRCTL';
       
       warning('WSCD Instrument is deprecated.');
     end    

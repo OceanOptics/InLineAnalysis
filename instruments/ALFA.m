@@ -11,6 +11,9 @@ classdef ALFA < Instrument
       % Object Initilization
       obj = obj@Instrument(cfg);
       
+      % Change default processing method
+      obj.bin_method = 'SB_IN_PRCTL';
+      
       % Post initialization
       if isempty(obj.view.varname); obj.view.varname = 'FvFm'; end
       if isempty(obj.logger); obj.logger = 'TeraTerm'; end

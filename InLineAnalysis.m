@@ -115,9 +115,6 @@ classdef InLineAnalysis < handle
       end
     end
     
-    
-    
-    
     % Pre-Process
     function ReadRaw(obj)
       % Read was renamed to ReadRaw on Oct 19, 2018
@@ -274,11 +271,11 @@ classdef InLineAnalysis < handle
         else
           fprintf('BIN: %s\n', i);
           obj.instrument.(i).Bin(obj.cfg.bin.bin_size.(i),...
-                                 obj.cfg.bin.method,...
                                  obj.cfg.bin.prctile_detection,...
                                  obj.cfg.bin.prctile_average,...
                                  obj.cfg.parallel,...
                                  obj.cfg.bin.mode);
+%                                  obj.cfg.bin.method,...
         end
       end
     end
@@ -292,14 +289,16 @@ classdef InLineAnalysis < handle
         else
           fprintf('BIN DI: %s\n', i);
           obj.instrument.(i).BinDI(obj.cfg.di.bin.bin_size,...
-                                   obj.cfg.bin.method,...
                                    obj.cfg.bin.prctile_detection,...
                                    obj.cfg.bin.prctile_average,...
                                    obj.cfg.parallel);
+%                                    obj.cfg.bin.method,...
+                                   
         end
       end
     end
     
+    % Flag is DEPRECATED: Use skip to move data to next level
     function Flag(obj)
       % Automatic selection of good and bad data
       % Note: Run all days loaded (independent of days2run)
@@ -412,7 +411,7 @@ classdef InLineAnalysis < handle
       switch obj.cfg.di.qc.mode
         case 'ui'
           % For each instrument
-          for i=obj.cfg.qc.specific.run; i = i{1};
+          for i=obj.cfg.instruments2run; i = i{1};
             if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
             % Display interactive figure
             foo = obj.instrument.(i);
@@ -439,7 +438,7 @@ classdef InLineAnalysis < handle
           end
         case 'load'
           % Load previous QC files and apply them
-          for i=obj.cfg.qc.specific.run; i = i{1};
+          for i=obj.cfg.instruments2run; i = i{1};
             if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
             fprintf('QC DI LOAD: %s\n', i);
             file_selection = loadjson([obj.instrument.(i).path.ui i '_QCDI_UserSelection.json']);

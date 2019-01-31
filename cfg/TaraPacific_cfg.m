@@ -158,8 +158,9 @@ cfg.process.split.skip = {'FTH', 'TSG', 'PAR'};
 
 %%% Binning %%%
 cfg.process.bin = struct('bin_size', struct());
+% Directly read from instrument not from here
 % cfg.process.bin.method = '4flag'; % Method to use to flag automatically
-cfg.process.bin.method = 'SB_IN_PRCTL'; % Faster method outputting only requirements for SeaBASS (not compatible with automatic flagging)
+% cfg.process.bin.method = 'SB_IN_PRCTL'; % Faster method outputting only requirements for SeaBASS (not compatible with automatic flagging)
 % cfg.process.bin.method = 'SB_ALL'; % Faster method outputting only requirements for SeaBASS (not compatible with automatic flagging)
 cfg.process.bin.prctile_detection = [2.5, 97.5];
 cfg.process.bin.prctile_average = [5, 75];

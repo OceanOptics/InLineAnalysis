@@ -16,6 +16,9 @@ classdef ACS < Instrument
       % Object Initilization
       obj = obj@Instrument(cfg);
       
+      % Change default processing method
+      obj.bin_method = 'SB_IN_PRCTL';
+      
       % Post initialization
       if isfield(cfg, 'device_file'); obj.device_file = cfg.device_file;
       else; error('Missing field device_file.'); end

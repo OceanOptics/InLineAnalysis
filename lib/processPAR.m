@@ -8,7 +8,7 @@ function [a] = processPAR(param, data)
 sel = 7.2 <= data.v & data.v <= 7.8;
 % Might want to add QC if temperature too high
 
-% Compute chlorophyll a fluorescence (dark independent)
+% Calibrate PAR
 a = table(data.dt(sel), 'VariableNames', {'dt'});
 a.par = data.par(sel) ./ param.scale;
 

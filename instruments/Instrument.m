@@ -14,6 +14,7 @@ classdef (Abstract) Instrument < handle
     
     % Instrument-specific processing parameters
     split = struct('mode', 'split');
+    bin_method = 'SB_ALL';
     
     % Instrument-specific view parametes
     view = struct('varname', '', 'varcol', 1);
@@ -130,7 +131,7 @@ classdef (Abstract) Instrument < handle
 %       end
 %     end
     
-    function Bin(obj, bin_size_minutes, method, prctile_detection, prctile_average, parallel, mode)
+    function Bin(obj, bin_size_minutes, prctile_detection, prctile_average, parallel, mode)
       bin_size_days = bin_size_minutes / 60 / 24;
       if isempty(obj.raw.tsw)
         fprintf('WARNING: No raw.tsw data to bin\n');
@@ -138,12 +139,12 @@ classdef (Abstract) Instrument < handle
         fprintf('\tTSW\n');
         switch mode
           case 'OneShot'
-            obj.bin.tsw = binTable(obj.raw.tsw, bin_size_days, method, prctile_detection, prctile_average, false, parallel, false);
+            obj.bin.tsw = binTable(obj.raw.tsw, bin_size_days, obj.bin_method, prctile_detection, prctile_average, false, parallel, false);
           case 'ByDay'
             for d = floor(min(obj.raw.tsw.dt)):floor(max(obj.raw.tsw.dt))
               fprintf('\t\t%s', datestr(d)); tic;
               sel = d <= obj.raw.tsw.dt & obj.raw.tsw.dt < d + 1;
-              obj.bin.tsw = [obj.bin.tsw; binTable(obj.raw.tsw(sel,:), bin_size_days, method, prctile_detection, prctile_average, false, parallel, false)];
+              obj.bin.tsw = [obj.bin.tsw; binTable(obj.raw.tsw(sel,:), bin_size_days, obj.bin_method, prctile_detection, prctile_average, false, parallel, false)];
               t = toc; fprintf('  %1.3f s\n', t);
             end
           otherwise
@@ -158,12 +159,12 @@ classdef (Abstract) Instrument < handle
         fprintf('\tFSW\n');
         switch mode
           case 'OneShot'
-            obj.bin.fsw = binTable(obj.raw.fsw, bin_size_days, method, prctile_detection, prctile_average, false, parallel, false);
+            obj.bin.fsw = binTable(obj.raw.fsw, bin_size_days, obj.bin_method, prctile_detection, prctile_average, false, parallel, false);
           case 'ByDay'
             for d = floor(min(obj.raw.tsw.dt)):floor(max(obj.raw.tsw.dt))
               fprintf('\t\t%s', datestr(d)); tic;
               sel = d <= obj.raw.fsw.dt & obj.raw.fsw.dt < d + 1;
-              obj.bin.fsw = [obj.bin.fsw; binTable(obj.raw.fsw(sel,:), bin_size_days, method, prctile_detection, prctile_average, false, parallel, false)];
+              obj.bin.fsw = [obj.bin.fsw; binTable(obj.raw.fsw(sel,:), bin_size_days, obj.bin_method, prctile_detection, prctile_average, false, parallel, false)];
               t = toc; fprintf('  %1.3f s\n', t);
             end
           otherwise
@@ -172,14 +173,15 @@ classdef (Abstract) Instrument < handle
       end
     end
     
-    function BinDI(obj, bin_size_minutes, method, prctile_detection, prctile_average, parallel)
+    function BinDI(obj, bin_size_minutes, prctile_detection, prctile_average, parallel)
       %%% NOTE: For DIW QC is done before the Binning %%%
 %       bin_size_minutes = 60;
+      % BinDI is only in mode OneShot, no mode day by day (as in a typical setup they won't many samples
       bin_size_days = bin_size_minutes / 60 / 24;
       if isempty(obj.qc.diw)
         fprintf('WARNING: No qc.diw data to bin\n');
       else
-        obj.bin.diw = binTable(obj.qc.diw, bin_size_days, method, prctile_detection, prctile_average, true, parallel, false);
+        obj.bin.diw = binTable(obj.qc.diw, bin_size_days, obj.bin_method, prctile_detection, prctile_average, true, parallel, false);
       end
     end
     

@@ -15,6 +15,9 @@ classdef ECO < Instrument
       % Object Initilization
       obj = obj@Instrument(cfg);
       
+      % Change default processing method
+      obj.bin_method = 'SB_IN_PRCTL';
+      
       % Post initialization
       if isfield(cfg, 'varname'); obj.varname = cfg.varname; end
       if isfield(cfg, 'slope'); obj.slope = cfg.slope; end

@@ -4,12 +4,16 @@ function [ bin, gflag ] = binTable( raw, bin_size, mode, prctile_dtc, prctile_av
 % bin_size is in seconds
 % raw must contain a dt column
 % parallel: 0 -> False | Inf: -> Max number of thread running
-% mode:
-%     classic -> mean, median, prctile (low & high), standard deviation, and n
-%     average -> mean and median
-%     4flag -> prctile (low & high),
+% mode: 
+%     4flag: Method to use to flag automatically
+%              prctile (low & high),
 %              mean, median, standard and deviation withtin percentile interval, 
 %              n, variance, uncertainty for median (1), and uncertainty for mean (2)
+%     SB_IN_PRCTL:  Faster method outputting only requirements for SeaBASS (not compatible with automatic flagging)
+%     SB_ALL:  Faster method outputting only requirements for SeaBASS (not compatible with automatic flagging)
+% dt_discontinuous: recommended to use on sparse dataset (typically DI runs)
+%                   false (default), much slower
+
 %
 % OUTPUT:
 %   bin <Table> binned by minute with statics based on mode
@@ -35,8 +39,9 @@ if nargin < 2; bin_size = 1/60/24; end
 if nargin < 3; mode = '4flag'; end
 if nargin < 4; prctile_dtc = [2.5 97.5]; end
 if nargin < 5; prctile_avg = [5 75]; end
-if nargin < 6; parallel_flag = 0; end
-if nargin < 7; verbose = false; end
+if nargin < 6; dt_discontinus = false; end
+if nargin < 7; parallel_flag = 0; end
+if nargin < 8; verbose = false; end
 
 % Get dt field
 idt = strcmp(raw.Properties.VariableNames,'dt');

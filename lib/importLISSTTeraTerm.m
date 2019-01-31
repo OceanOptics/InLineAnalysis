@@ -11,7 +11,7 @@ end
 num_line = 1800; % 3.4 Mb files is 89745, one set of data is 49
 dt = NaN(num_line, 1);
 beta = NaN(num_line, 32);
-laser_power = NaN(num_line, 1);
+laser_transmission = NaN(num_line, 1);
 battery = NaN(num_line,1);
 external_instrument = NaN(num_line,1);
 laser_reference = NaN(num_line,1);
@@ -64,7 +64,7 @@ while ~feof(fid)
     if j <= 32
       beta(i,j) = foo;
     elseif j == 33 % 
-      laser_power(i) = foo; % mW % Transmission
+      laser_transmission(i) = foo; % mW % Transmission
     elseif j == 34
       battery(i) = foo * 0.01; % volts
     elseif j == 35
@@ -93,7 +93,7 @@ fclose(fid);
 if flag_sample
   if size(dt, 1) >= i; dt(i) = []; end
   if size(beta, 1) >= i; beta(i,:) = []; end
-  if size(laser_power, 1) >= i; laser_power(i) = []; end
+  if size(laser_transmission, 1) >= i; laser_transmission(i) = []; end
   if size(battery, 1) >= i; battery(i) = []; end
   if size(external_instrument, 1) >= i; external_instrument(i) = []; end
   if size(laser_reference, 1) >= i; laser_reference(i) = []; end
@@ -104,7 +104,7 @@ if flag_sample
 end
 
 % build table
-data = table(dt, beta, laser_power, battery, external_instrument,...
+data = table(dt, beta, laser_transmission, battery, external_instrument,...
              laser_reference, depth, temperature, lisst_dt);
 
 % remove empty lines

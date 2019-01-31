@@ -16,6 +16,9 @@ classdef BB3 < Instrument
       % Object Initilization
       obj = obj@Instrument(cfg);
       
+      % Change default processing method
+      obj.bin_method = 'SB_IN_PRCTL';
+      
       % Post initialization
       if isfield(cfg, 'lambda'); obj.lambda = cfg.lambda;
       else; error('Missing field lambda.'); end

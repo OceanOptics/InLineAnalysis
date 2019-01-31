@@ -171,8 +171,9 @@ cfg.process.split.skip = {'FTH', 'TSG'};
 
 %%% Binning %%%
 cfg.process.bin = struct('bin_size', struct());
+% Directly read from instrument not from here
 % cfg.process.bin.method = '4flag'; % Method to use to flag automatically
-cfg.process.bin.method = 'SB_IN_PRCTL'; % Faster method outputting only requirements for SeaBASS (not compatible with automatic flagging)
+% cfg.process.bin.method = 'SB_IN_PRCTL'; % Faster method outputting only requirements for SeaBASS (not compatible with automatic flagging)
 % cfg.process.bin.method = 'SB_ALL'; % Faster method outputting only requirements for SeaBASS (not compatible with automatic flagging)
 % Bin mode does not affect the outcome of the data but just the way the data is presented to the computer
 % cfg.process.bin.mode = 'OneShot'; % Faster for small dataset fiting in the memory of the computer
