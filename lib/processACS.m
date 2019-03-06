@@ -120,6 +120,12 @@ else
   filt_interp.c_avg_sd = interp1(filt.dt, filt.c_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
 end
 
+% Remove lines of NaNs
+sel2rm = any(isnan(tot.a),2) | any(isnan(tot.c),2) |...
+         any(isnan(filt_interp.a),2) | any(isnan(filt_interp.c),2);
+tot(sel2rm,:) = [];
+filt_interp(sel2rm,:) = [];
+
 % Particulate = Total - FSW
 p = table(tot.dt, 'VariableNames', {'dt'});
 p.ap = tot.a - filt_interp.a;
@@ -161,7 +167,10 @@ line_height = (ap_a(:,2)-(39/65*ap_a(:,1)+26/65*ap_a(:,3)));
 p.chl=157*line_height.^1.22;
 p.chl(real(p.chl) ~= p.chl) = NaN;
 % 3.3 Derive Gamma (does not support NaN values) (Boss et al. 2001)
-[~,p.gamma] = FitSpectra_HM2(lambda.ref(:,1:end-2),p.cp(:,1:end-2));
+% [~,p.gamma] = FitSpectra_HM2(lambda.ref(:,1:end-2),p.cp(:,1:end-2));
+% Correct bu on March 5, 2018, FitSpectra_HM2 does not accept NaNs in cp
+sel = ~any(isnan(p.cp));
+[~,p.gamma] = FitSpectra_HM2(lambda.ref(:,sel),p.cp(:,sel));
 
 % REFERENCES:
 % Gamma: Boss, E., W.S. Pegau, W.D. Gardner, J.R.V. Zaneveld, A.H. Barnard., M.S. Twardowski, G.C. Chang, and T.D. Dickey, 2001. Spectral particulate attenuation and particle size distribution in the bottom boundary layer of a continental shelf. Journal of Geophysical Research, 106, 9509-9516.
