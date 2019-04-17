@@ -20,7 +20,7 @@ if ~isfile([filename '.dat'])
     cmd = ['!/usr/local/bin/wine ' wk_dir '/packages/prepACS/prepacs.exe ' devicefile ' ' filename ' ' filename '.dat'];
   elseif ispc
     % Windows cmd
-    cmd = [wk_dir '\packages\prepACS\prepacs.exe ' devicefile ' ' filename ' ' filename '.dat'];
+    cmd = ['!' wk_dir '\packages\prepACS\prepacs.exe ' devicefile ' ' filename ' ' filename '.dat'];
   else
     error('Platform not supported by prepacs.exe.')
   end
@@ -38,7 +38,7 @@ end
 
 % Read header line by line
 flag_header=true;
-file_type = 'Scheduled'; % unpacked with prepACSe.exe
+file_type = 'Scheduled'; % unpacked with prepACS.exe
 while ~feof(fid) && flag_header
   % Get line
   l = fgetl(fid);

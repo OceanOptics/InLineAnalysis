@@ -31,8 +31,8 @@ classdef ACS < Instrument
 %       else; error('Missing field lambda_c.'); end
 
       if isempty(obj.logger) 
-        fprintf('WARNING: Logger set to Compass_2.1rc_scheduled.\n');
-        obj.logger = 'Compass_2.1rc_scheduled';
+        fprintf('WARNING: Logger set to Compass_2.1rc_scheduled_bin.\n');
+        obj.logger = 'Compass_2.1rc_scheduled_bin';
       end
     end    
     

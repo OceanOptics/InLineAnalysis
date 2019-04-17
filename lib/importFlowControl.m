@@ -12,21 +12,21 @@ if verbose
   fprintf('Importing %s ... ', foo{end});
 end
 
-% Count number of line to init array
-if (~ispc) 
-  [status, cmdout]= system(['wc -l ' filename]);
-  if(status~=1)
-      scan_cell = textscan(cmdout,'%u %s');
-      line_count = scan_cell{1} - 1; % for empty last line
-  else
-      fprintf(1,'\nFailed to find line count of %s\n', filename);
-      line_count = -1;
-  end
-else
-  fprintf(1,'\nScript not compatible with Windows\n');
-  line_count = -1;
-  return
-end
+% % Count number of line to init array
+% if (~ispc) 
+%   [status, cmdout]= system(['wc -l ' filename]);
+%   if(status~=1)
+%       scan_cell = textscan(cmdout,'%u %s');
+%       line_count = scan_cell{1} - 1; % for empty last line
+%   else
+%       fprintf(1,'\nFailed to find line count of %s\n', filename);
+%       line_count = -1;
+%   end
+% else
+%   error(1,'\nScript not compatible with Windows\n');
+%   line_count = -1;
+%   return
+% end
 
 % % Init data arrays
 % dt = NaN(line_count, 1);
