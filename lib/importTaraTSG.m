@@ -1,5 +1,4 @@
 function [ data ] = importTaraTSG( filename, verbose )
-%IMPORTINLININO Import BB3 and WSCD data from NAAMES 3
 
 if nargin < 2; verbose = false; end
 if verbose

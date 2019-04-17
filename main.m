@@ -5,9 +5,9 @@
 % Load InLineAnalysis and the configuration
 ila = InLineAnalysis('cfg/default_cfg.m');
 % Quick Cfg update
-% ila.cfg.days2run = datenum(2018,08,11):datenum(2018,09,12);
+ila.cfg.days2run = datenum(2018,08,20):datenum(2018,09,12);
 % ila.cfg.instruments2run = {'FTH', 'TSG', 'BB3', 'LISST', 'WSCD1299', 'ALFA'};
-% ila.cfg.instruments2run = {'FTH', 'LISST'};
+ila.cfg.instruments2run = {'FTH', 'ACS301'};
 
 %% 1. Import | Load raw data
 ila.cfg.force_import = false;
@@ -246,10 +246,19 @@ ila.Calibrate();
 % ila.instrument.ACS.prod.p.chl_naames(real(ila.instrument.ACS.prod.p.chl_naames) ~= ila.instrument.ACS.prod.p.chl_naames) = NaN;
 % fprintf('Done\n');
 
-%% 9. Save products
-ila.Write('prod')
+% Compute EXPORTS Specific chl
+% Derive Chl (Line heigh at 676 compared to 650 and 715)
+% % ila_acs = ila.instrument.ACS298.prod.p; ila_acs_wl = ila.instrument.ACS298.lambda_ref;
+% ila_acs = ila.instrument.ACS301.prod.p; ila_acs_wl = ila.instrument.ACS301.lambda_ref;
+% ap = interp1(ila_acs_wl, ila_acs.ap',[650 676 715],'linear')';
+% line_height = (ap(:,2)-(39/65*ap(:,1)+26/65*ap(:,3)));
+% % ila.instrument.ACS298.prod.p.chl_exports = 138.14 * line_height.^1.11; % EXPORTS relation
+% ila.instrument.ACS301.prod.p.chl_exports = 138.14 * line_height.^1.11; % EXPORTS relation
 
-%% Notify with a song that the job is done
+%% 9. Save products
+% ila.Write('prod')
+
+% Notify with a song that the job is done
 notif_sound = load('gong'); sound(notif_sound.y, notif_sound.Fs); % handel
 return
 
@@ -272,7 +281,7 @@ return
 
 
 %%% ACS %%%
-wl = ila.instrument.ACS298.lambda_ref; ACS = ila.instrument.ACS298.prod; ACS_DIW = ila.instrument.ACS298.bin.diw;
+% wl = ila.instrument.ACS298.lambda_ref; ACS = ila.instrument.ACS298.prod; ACS_DIW = ila.instrument.ACS298.bin.diw;
 wl = ila.instrument.ACS301.lambda_ref; ACS = ila.instrument.ACS301.prod; ACS_DIW = ila.instrument.ACS301.bin.diw;
 % wl = ila.instrument.ACS.lambda_ref; ACS = ila.instrument.ACS.prod; ACS_DIW = ila.instrument.ACS.bin.diw;
 % visProd3D(wl, ACS.p.dt, ACS.p.ap_sd./ACS.p.ap_n, false); zlabel('ste(a_p) (m^{-1})');
@@ -304,7 +313,7 @@ set(gca, 'FontSize', 14, 'FontName', 'Helvetica Neue');
 % save_fig([ila.instrument.ACS.path.prod 'ACS_stnP_chl_gamma'], 1280, 600);
 
 % Check ACS wl registration
-fig(78); hold('on'); plot(wl, ACS.p.ap(2000:2010, :), 'o-'); plot([676 676], ylim(), 'k');
+fig(78); hold('on'); plot(wl, ACS.p.ap(2000:2010, :), 'o-'); plot([676 676], ylim(), 'k'); plot([675 675], ylim(), 'k');
 
 %% BB3 particulate %%%
 BB3 = ila.instrument.BB3.prod.p;

@@ -12,11 +12,11 @@ ila = InLineAnalysis('cfg/default_cfg.m');
 % Update cfg
 % ila.cfg.days2run = datenum(2018,08,11):datenum(2018,09,12);
 % ila.cfg.instruments2run = {'TSG', 'ACS298', 'ACS301', 'BB3', 'LISST', 'WSCD859', 'WSCD1299', 'ALFA'};
-ila.cfg.instruments2run = {'TSG', 'LISST'};
+ila.cfg.instruments2run = {'TSG', 'ACS298', 'ACS301'};
 ila.cfg.write.mode = 'One day one file';
 % Load products
-% ila.instrument.ACS298.ReadDeviceFile()
-% ila.instrument.ACS301.ReadDeviceFile()
+ila.instrument.ACS298.ReadDeviceFile()
+ila.instrument.ACS301.ReadDeviceFile()
 ila.Read('prod');
 % Merge Products coming from multiple instruments
 % ila.MergeProducts('WSCD859', 'WSCD1299'); % Works only for instruments having variable of similar width (not the ACS)
@@ -74,12 +74,14 @@ acs298 = table(ila_acs298.dt, tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3),
 acs298.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', '1/m', '1/m', 'none', '1/m', '1/m', 'none'};
 acs298.Properties.VariableDescriptions = {'','%.4f','%.4f','%.4f','%.4f', '%.4f', '%.4f', '%d', '%.4f', '%.4f', '%d'};
 % ACS merged prod
-ila_acsm = [ila_acs298.dt, ila_acs298.chl, ila_acs298.poc, ila_acs298.gamma;...
-           ila_acs301.dt, ila_acs301.chl, ila_acs301.poc, ila_acs301.gamma];
+% ila_acsm = [ila_acs298.dt, ila_acs298.chl, ila_acs298.poc, ila_acs298.gamma;...
+%            ila_acs301.dt, ila_acs301.chl, ila_acs301.poc, ila_acs301.gamma];
+ila_acsm = [ila_acs298.dt, ila_acs298.chl_exports, ila_acs298.poc, ila_acs298.gamma;...
+           ila_acs301.dt, ila_acs301.chl_exports, ila_acs301.poc, ila_acs301.gamma];
 tsg_interp = interp1(tsg.dt, [tsg.lat, tsg.lon, tsg.t, tsg.s], ila_acsm(:,1), 'linear', 'extrap'); % extrap needed for first minute of data
 acs_prod = table(ila_acsm(:,1), tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3), tsg_interp(:,4),...
                       ila_acsm(:,2), ila_acsm(:,3), ila_acsm(:,4),...
-             'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'Chl', 'POC', 'cp_gamma'});
+             'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'Chl_lineheight', 'POC_cp', 'cp_gamma'});
 acs_prod.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'ug/L', 'ug/L', 'unitless'};
 acs_prod.Properties.VariableDescriptions = {'','%.4f','%.4f','%.4f','%.4f', '%.4f', '%.2f', '%.2f'};
 % BB3
@@ -168,14 +170,19 @@ acs_g = acs_g(:,[1:7 9:11]);
 acs_g.Properties.VariableNames{end} = 'bincount';
 
 % Keep only chl specific (NAAMES) instead of chl_a global
+% For SeaBASS keep cruise specific calibration of chl
 acs_prod.Chl = acs_prod.Chl_NAAMES;
 acs_prod.Chl_NAAMES = [];
+acs_prod.Properties.VariableNames{strcmp(acs_prod.Properties.VariableNames, 'Chl')} = 'Chl_lineheight';
+acs_prod.Properties.VariableNames{strcmp(acs_prod.Properties.VariableNames, 'POC')} = 'POC_cp';
+acs_prod.Properties.VariableNames{strcmp(acs_prod.Properties.VariableNames, 'gamma')} = 'cp_gamma';
 
 
 acs298 = acs298(:,[1:7 9:11]);
 acs298.Properties.VariableNames{end} = 'bincount';
 acs301 = acs301(:,[1:7 9:11]);
 acs301.Properties.VariableNames{end} = 'bincount';
+
 
 %% LISST
 % VSF Angles
@@ -215,9 +222,13 @@ ila.meta.documents = 'EXPORTS_InLine_ACS301_Processing.pdf';
 ila.meta.calibration_files = 'acs301.dev';
 exportSeaBASS([ila.instrument.ACS301.path.prod 'EXPORTS_InLine_ACS_Particulate.sb'], ila.meta, acs301, {string(ila.instrument.ACS301.lambda_ref), string(ila.instrument.ACS301.lambda_ref), string(ila.instrument.ACS301.lambda_ref), string(ila.instrument.ACS301.lambda_ref), ''});
 % ACS Products
-ila.meta.documents = 'EXPORTS_InLine_ACS298_Processing.pdf,EXPORTS_InLine_ACS301_Processing.pdf';
+ila.meta.documents = 'EXPORTS-EXPORTSNP_InLine-ACS_Processing_R3.pdf';
 ila.meta.calibration_files = 'acs298.dev,acs301.dev';
-exportSeaBASS([ila.instrument.ACS301.path.prod 'EXPORTS_InLine_ACS_Products.sb'], ila.meta, acs_prod, {'', '', ''});
+exportSeaBASS([ila.instrument.ACS301.path.prod 'EXPORTS-EXPORTSNP_InLine-ACS-Products_20180811-20180912_R3.sb'], ila.meta, acs_prod, {'', '', ''});
+% ACS Products
+ila.meta.documents = 'NAAMES3_InLine_ACS_Processing.pdf';
+ila.meta.calibration_files = 'acs015.dev';
+exportSeaBASS([ila.instrument.ACS.path.prod 'NAAMES3_InLine_ACS_Products.sb'], ila.meta, acs_prod, {'', '', ''});
 % bb3
 ila.meta.documents = 'EXPORTS_InLine_BB3_Processing.pdf';
 ila.meta.calibration_files = 'EXPORTS_InLine_BB3_Processing.pdf';
