@@ -94,7 +94,7 @@ if i ~= size(data.dt,1)
 end
 
 % Update date & time
-s = strsplit(filename, '/');
+s = strsplit(filename, filesep);
 s = strsplit(s{end}, '_');
 if strcmp(file_type, 'Scheduled'); si = 2; % Scheduled recording
 else; si = 3; end% Manual recording (save at prompt when start acquisition with compass)
