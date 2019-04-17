@@ -15,7 +15,15 @@ if ~isfile([filename '.dat'])
   end
   % Run prepacs.exe
   wk_dir = pwd();
-  cmd = ['!/usr/local/bin/wine ' wk_dir '/packages/prepACS/prepacs.exe ' devicefile ' ' filename ' ' filename '.dat'];
+  if ismac || isunix
+    % OSX cmd
+    cmd = ['!/usr/local/bin/wine ' wk_dir '/packages/prepACS/prepacs.exe ' devicefile ' ' filename ' ' filename '.dat'];
+  elseif ispc
+    % Windows cmd
+    cmd = [wk_dir '\packages\prepACS\prepacs.exe ' devicefile ' ' filename ' ' filename '.dat'];
+  else
+    error('Platform not supported by prepacs.exe.')
+  end
 %   fprintf('\n%s\n', cmd);
   eval(cmd);
 end
