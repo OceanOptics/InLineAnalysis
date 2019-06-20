@@ -530,6 +530,40 @@ classdef InLineAnalysis < handle
       end
     end
     
+    % Check size of data in each instrument
+    function CheckDataStatus(obj)
+      fprintf('---------------------------------------------------------------------------------------------+\n');
+      fprintf('Instrument |   Data   |   Raw    |   Bin    |   QC     | Suspect  |   Bad    |    Prod       |\n');
+      fprintf('-----------+----------+----------+----------+----------+----------+----------+---------------+\n');
+      for i=obj.cfg.instruments2run; i = i{1};
+        sdata = size(obj.instrument.(i).data);
+        sraw = size(obj.instrument.(i).raw.tsw);
+        sbin = size(obj.instrument.(i).bin.tsw);
+        sqc = size(obj.instrument.(i).qc.tsw);
+        ssuspect = size(obj.instrument.(i).suspect.tsw);
+        sbad = size(obj.instrument.(i).bad.tsw);
+        sprod = []; nprod = {};
+        if ~isempty(fieldnames(obj.instrument.(i).prod))
+          for t=fieldnames(obj.instrument.(i).prod); t = t{1};
+            sprod(end+1,:) = size(obj.instrument.(i).prod.(t));
+            nprod{end+1} = t;
+          end
+        end
+        fprintf('%10s | %5dx%2d | %5dx%2d | %5dx%2d | %5dx%2d | %5dx%2d | %5dx%2d | ',...
+                i, sdata(1), sdata(2), sraw(1), sraw(2), sbin(1), sbin(2), sqc(1), sqc(2),...
+                ssuspect(1), ssuspect(2), sbad(1), sbad(2));
+        if isempty(sprod)
+          fprintf('None          | ');
+        else
+          for k = 1:size(sprod,1)
+            fprintf('%3s(%5dx%2d) | ', nprod{k}, sprod(k,1), sprod(k,2));
+          end
+        end
+        fprintf('\n');
+      end
+      fprintf('---------------------------------------------------------------------------------------------+\n');
+    end
+    
     % Merge products of two instruments (same model)
     function MergeProducts(obj, primary_instrument, secondary_instrument)
       % Data (at prod level) from the secondary instrument is copied to the
