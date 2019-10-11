@@ -10,7 +10,9 @@ sel = 7.2 <= data.v & data.v <= 7.8;
 
 % Calibrate PAR
 a = table(data.dt(sel), 'VariableNames', {'dt'});
-a.par = data.par(sel) ./ param.scale;
+insitudark = min(data.par(sel));
+if insitudark < param.dark; dark = insitudark; else; dark = param.dark; end
+a.par = (data.par(sel) - dark)./ param.scale;
 
 % Propagate error
 a.par_sd = data.par_avg_sd(sel) ./ param.scale;
