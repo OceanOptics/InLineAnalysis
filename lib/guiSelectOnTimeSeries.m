@@ -64,11 +64,16 @@ while ~strcmp(k, 'q')
           hc.Enable = 'on';
         end
       case 's'
-        foo = ginput(2); dt_sel = foo(:,1)';
+        foo = ginput(2);
+        x_lim = xlim(); y_lim = ylim();
+        if ~isdatetime(x_lim)
+            dt_sel = foo(:,1)';
+        else
+            ax = gca; xdate = num2ruler(foo,ax.XAxis); dt_sel = xdate(:,1)';
+        end
         user_selection = [user_selection; dt_sel];
         fprintf('%s - %s\n', datestr(dt_sel(1)), datestr(dt_sel(2)));
         % Plot selected area
-        x_lim = xlim(); y_lim = ylim();
         area(dt_sel,[y_lim(2), y_lim(2)], y_lim(1), 'FaceColor', [0.3 0.3 0.3], 'FaceAlpha', 0.3, 'EdgeColor', 'none');
       otherwise
         if ~strcmp(k,'q')
