@@ -4,6 +4,7 @@ classdef PAR < Instrument
   
   properties
     scale = '';
+    dark = '';
   end
   
   methods
@@ -18,6 +19,8 @@ classdef PAR < Instrument
       else; error('Missing field logger.'); end
       if isfield(cfg, 'scale'); obj.scale = cfg.scale;
       else; error('Missing field scale.'); end
+      if isfield(cfg, 'dark'); obj.dark = cfg.dark;
+      else; error('Missing field dark.'); end
       
       % Change default Split method
       obj.split.mode = 'None';
@@ -34,7 +37,7 @@ classdef PAR < Instrument
     end
     
     function Calibrate(obj)
-      param = struct('scale', obj.scale);
+      param = struct('scale', obj.scale, 'dark', obj.dark);
       obj.prod.a = processPAR(param, obj.qc.tsw);
     end
     
