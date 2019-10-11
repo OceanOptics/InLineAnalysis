@@ -76,6 +76,16 @@ parser = ['%f' repmat('%f',1,n_wv) repmat('%f',1,n_wv) '%[^\n\r]'];
 
 % Parse data
 t = textscan(fid, parser);
+% if corrupted file, delete one row to have same number of row to merge
+if max(cellfun('size',t,1))~=min(cellfun('size',t,1))
+    toobig=cellfun('size',t,1)==max(cellfun('size',t,1));
+    tb=t(toobig);
+    notoobig=cellfun(@(c) c(1:end-1,:), tb, 'un',0 );
+    t=[notoobig,t(:,~toobig)];
+    sprintf('%s corrupted: last row deleted', filename);
+end
+
+% (cellfun(@(x) iscell(x),t)) = [];
 dt = t{1};
 c = [t{i_c}];
 a = [t{i_a}];
