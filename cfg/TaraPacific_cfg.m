@@ -31,21 +31,22 @@ PATH_ROOT = '/home/haentjens/InLineAnalysis/Data/TaraPacific/';
 cfg.instruments.TSG = struct();
 cfg.instruments.TSG.model = 'TSG';
 cfg.instruments.TSG.boat = 'Tara';
-cfg.instruments.TSG.path = struct('raw',  [PATH_ROOT 'TSG/raw/'],...
-                                  'wk',   [PATH_ROOT 'TSG/wk/'],...
-                                  'ui',   [PATH_ROOT 'TSG/user_input/'],...
-                                  'prod', [PATH_ROOT 'TSG/']);
+cfg.instruments.TSG.path = struct('raw',  [PATH_ROOT 'raw' filesep],...
+                                  'wk',   [PATH_ROOT 'wk' filesep],...
+                                  'prod', [PATH_ROOT 'prod' filesep],...
+                                  'ui', [PATH_ROOT 'ui' filesep 'Underway' filesep]);
 cfg.instruments.TSG.view = struct('varname', 't');
 
 %%% FTH (FlowControl) %%%
 cfg.instruments.FTH = struct();
 cfg.instruments.FTH.model = 'FTH';
 cfg.instruments.FTH.logger = 'FlowControl';
-cfg.instruments.FTH.path = struct('raw',  [PATH_ROOT 'FlowControl/raw_dot/'],...
-                                  'wk',   [PATH_ROOT 'FlowControl/wk/'],...
-                                  'ui',   [PATH_ROOT 'FlowControl/user_input/'],...
-                                  'prod', [PATH_ROOT 'FlowControl/']);
+cfg.instruments.FTH.path = struct('raw',  [PATH_ROOT 'raw' filesep 'flow' filesep],...
+                                  'wk',   [PATH_ROOT 'wk' filesep 'FlowControl' filesep],...
+                                  'prod', [PATH_ROOT 'prod' filesep],...
+                                  'ui', [PATH_ROOT 'ui' filesep 'FlowControl' filesep]);
 cfg.instruments.FTH.view = struct('varname', 'swt');
+
 
 %%% ACS 301 %%% (Aug 20 to ...)
 % cfg.instruments.ACS = struct();
@@ -82,42 +83,44 @@ cfg.instruments.BB3.model = 'BB';
 cfg.instruments.BB3.sn = '1502';
 cfg.instruments.BB3.ila_prefix = 'BB3';
 cfg.instruments.BB3.logger = 'InlininoBB3';
-% cfg.instruments.BB3.logger = 'TeraTermBB3';
 cfg.instruments.BB3.lambda = [470,532,650];
 cfg.instruments.BB3.theta = 124;
-% Pre-Cruise Calibration from 2016/10/20 ECO BB3-1502
-cfg.instruments.BB3.slope = [1.066e-05, 7.076e-06, 3.569e-06];
-cfg.instruments.BB3.dark = [50, 44, 46];
-cfg.instruments.BB3.path = struct('raw',  [PATH_ROOT 'BB3/raw_inlinino/'],...
-                                  'wk',   [PATH_ROOT 'BB3/wk/'],...
-                                  'ui',   [PATH_ROOT 'BB3/user_input/'],...
-                                  'prod', [PATH_ROOT 'BB3/']);
+cfg.instruments.BB3.slope = [1.066E-05,7.076E-06,3.569E-06];
+% cfg.instruments.BB3.slope = [8.407E-06,4.624E-06,4.090E-06];
+cfg.instruments.BB3.dark = [50,44,46];
+% cfg.instruments.BB3.dark = [56,52,45];
+cfg.instruments.BB3.path = struct('raw',  [PATH_ROOT 'raw' filesep 'BB3' filesep],...
+                                  'di',  [PATH_ROOT 'raw' filesep 'BB3' filesep],...
+                                  'wk',   [PATH_ROOT 'wk' filesep 'BB3' filesep],...
+                                  'prod', [PATH_ROOT 'prod' filesep],...
+                                  'ui', [PATH_ROOT 'ui' filesep 'BB3' filesep]);
 cfg.instruments.BB3.view = struct('varname', 'beta', 'varcol', 2);
 
-%%% WSCD %%%
-cfg.instruments.WSCD = struct();
-cfg.instruments.WSCD.model = 'CD';
-cfg.instruments.WSCD.sn = '';
-cfg.instruments.WSCD.ila_prefix = 'WSCD';
-cfg.instruments.WSCD.logger = 'InlininoWSCD';
-cfg.instruments.WSCD.slope = NaN;
-cfg.instruments.WSCD.dark = NaN;
-cfg.instruments.WSCD.path = struct('raw',  [PATH_ROOT 'CDOM/raw/'],...
-                                   'wk',   [PATH_ROOT 'CDOM/wk/'],...
-                                   'ui',   [PATH_ROOT 'CDOM/user_input/'],...
-                                   'prod', [PATH_ROOT 'CDOM/']);
-cfg.instruments.WSCD.view = struct('varname', 'fdom');
+%%% WSCD %%% (Mai 2016 to Oct 2018)
+cfg.instruments.WSCD1082P = struct();
+cfg.instruments.WSCD1082P.model = 'CD';
+cfg.instruments.WSCD1082P.sn = '1082P';
+cfg.instruments.WSCD1082P.ila_prefix = 'WSCD';
+cfg.instruments.WSCD1082P.logger = 'InlininoWSCD';
+cfg.instruments.WSCD1082P.slope = 62;
+cfg.instruments.WSCD1082P.dark = 0.059;
+cfg.instruments.WSCD1082P.path = struct('raw',  [PATH_ROOT 'raw' filesep 'WSCD' filesep],...
+                                  'wk',   [PATH_ROOT 'wk' filesep 'WSCD' filesep],...
+                                  'prod', [PATH_ROOT 'prod' filesep],...
+                                  'ui', [PATH_ROOT 'ui' filesep 'WSCD' filesep]);
+cfg.instruments.WSCD1082P.view = struct('varname', 'fdom');
 
 %%% PAR %%%
 cfg.instruments.PAR = struct();
 cfg.instruments.PAR.model = 'PAR';
-cfg.instruments.PAR.sn = '';
+cfg.instruments.PAR.sn = '50168';
 cfg.instruments.PAR.logger = 'Inlinino';
 cfg.instruments.PAR.scale = 6.451E-04; % Volts/(uE/m²sec)
-cfg.instruments.PAR.path = struct('raw',  [PATH_ROOT 'PAR/raw/'],...
-                                   'wk',   [PATH_ROOT 'PAR/wk/'],...
-                                   'ui',   [PATH_ROOT 'PAR/user_input/'],...
-                                   'prod', [PATH_ROOT 'PAR/']);
+cfg.instruments.PAR.dark = 9.7E-03;
+cfg.instruments.PAR.path = struct('raw',  [PATH_ROOT 'raw' filesep 'PAR' filesep],...
+                                  'wk',   [PATH_ROOT 'wk' filesep 'PAR' filesep],...
+                                  'prod', [PATH_ROOT 'prod' filesep],...
+                                  'ui', [PATH_ROOT 'ui' filesep 'PAR' filesep]);
 cfg.instruments.PAR.view = struct('varname', 'par');
 
 
@@ -127,7 +130,7 @@ cfg.instruments.PAR.view = struct('varname', 'par');
 
 %%% General parameters %%%
 cfg.process.days2run = datenum(2016,05,28):datenum(2018,10,27);
-cfg.process.instruments2run = {'FTH', 'TSG', 'ACS', 'BB3', 'WSCD'};
+cfg.process.instruments2run = {'FTH', 'TSG', 'ACS', 'BB3', 'WSCD1082P'};
 cfg.process.write = true;
 cfg.process.force_import = false;
 cfg.process.parallel = 36; % 0: disable parallel or Inf: as many thread available
@@ -138,7 +141,7 @@ cfg.process.sync.delay = struct();
 cfg.process.sync.delay.FTH = 0;
 cfg.process.sync.delay.ACS = 66;
 cfg.process.sync.delay.BB3 = 0;
-cfg.process.sync.delay.WSCD = 5;
+cfg.process.sync.delay.WSCD1082P = 5;
 cfg.process.sync.skip = {'TSG', 'PAR'};
 
 %%% QC Reference (Flow Control/FTH) %%%
@@ -153,7 +156,7 @@ cfg.process.split.reference = 'FTH';
 cfg.process.split.buffer = struct();
 cfg.process.split.buffer.ACS = [180, 30];
 cfg.process.split.buffer.BB3 = [420, 220];
-cfg.process.split.buffer.WSCD = [310, 20];
+cfg.process.split.buffer.WSCD1082P = [310, 20];
 cfg.process.split.skip = {'FTH', 'TSG', 'PAR'};
 
 %%% Binning %%%
@@ -164,12 +167,13 @@ cfg.process.bin = struct('bin_size', struct());
 % cfg.process.bin.method = 'SB_ALL'; % Faster method outputting only requirements for SeaBASS (not compatible with automatic flagging)
 cfg.process.bin.prctile_detection = [2.5, 97.5];
 cfg.process.bin.prctile_average = [5, 75];
+cfg.process.bin.bin_size.FTH = 1;
 cfg.process.bin.bin_size.ACS = 1;
 cfg.process.bin.bin_size.BB3 = 1;
-cfg.process.bin.bin_size.WSCD = 1;
+cfg.process.bin.bin_size.WSCD1082P = 1;
 cfg.process.bin.bin_size.TSG = 1;
 cfg.process.bin.bin_size.PAR = 1; 
-cfg.process.bin.skip = {'FTH'};
+cfg.process.bin.skip = {TSG};
 
 %%% Automatically flagging %%%
 cfg.process.flag = struct();
@@ -201,10 +205,10 @@ cfg.process.flag.BB3.rel_uncertainty = 0.05;
 cfg.process.flag.BB3.min_flag_n =  2;
 cfg.process.flag.BB3.primary_varname = 'beta';
 % Flag parameters specific to the WSCD
-cfg.process.flag.WSCD = struct();
-cfg.process.flag.WSCD.abs_uncertainty = 0.3;
-cfg.process.flag.WSCD.rel_uncertainty = 0.0125;
-cfg.process.flag.WSCD.primary_varname = 'fdom';
+cfg.process.flag.WSCD1082P = struct();
+cfg.process.flag.WSCD1082P.abs_uncertainty = 0.3;
+cfg.process.flag.WSCD1082P.rel_uncertainty = 0.0125;
+cfg.process.flag.WSCD1082P.primary_varname = 'fdom';
   
 %%% Manually QC %%%
 cfg.process.qc = struct();
@@ -212,21 +216,21 @@ cfg.process.qc.mode = 'load';
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
 cfg.process.qc.global.view = 'ACS';
-cfg.process.qc.global.apply = {'ACS', 'BB3', 'WSCD'};
+cfg.process.qc.global.apply = {'ACS', 'BB3', 'WSCD1082P'};
 cfg.process.qc.specific = struct();
 cfg.process.qc.specific.active = true;
-cfg.process.qc.specific.run = {'TSG', 'ACS', 'BB3', 'WSCD'};
+cfg.process.qc.specific.run = {'TSG', 'ACS', 'BB3', 'WSCD1082P'};
   
 %%% Calibrate %%%
 cfg.process.calibrate = struct();
 cfg.process.calibrate.ACS = struct('compute_dissolved', false,...
                                   'interpolation_method', 'linear', ...
-                                  'CDOM_source', 'WSCD',...
+                                  'CDOM_source', 'WSCD1082P',...
                                   'FTH_source', 'FTH');
 cfg.process.calibrate.BB3 = struct('compute_dissolved', false,...
                                    'TSG_source', 'TSG',...
                                    'di_method', 'constant');
-cfg.process.calibrate.skip = {'FTH', 'TSG', 'WSCD'};
+cfg.process.calibrate.skip = {'FTH', 'TSG', 'WSCD1082P'};
 
 %%% Write %%%
 cfg.process.write = struct();

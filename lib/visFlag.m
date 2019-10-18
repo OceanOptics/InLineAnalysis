@@ -25,6 +25,15 @@ function fh = visFlag(raw_tot, raw_filt,...
   if ~isempty(raw_filt); scatter(raw_filt.dt, raw_filt.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_filt, 'MarkerEdgeAlpha', 0.5); end
   if ~isempty(raw_bad); scatter(raw_bad.dt, raw_bad.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_switch, 'MarkerEdgeAlpha', 0.5); end
   
+  % plot flow right y axis
+  if ~strcmp(varname,'par')
+  yyaxis('right'); 
+  if ~isempty(fooflow); plot(fooflow.dt, fooflow.spd,'Color',[0 0.8 0]); popo=gca; 
+  ylim([0 max(fooflow.spd)+4]); ylabel('Flow rate (lpm)'); popo.YColor = [0 0.8 0]; % green
+  end
+  yyaxis('left');
+  end
+  
   % Plot tot binned data
   if ~isempty(bin_tot_good); plot(bin_tot_good.dt, bin_tot_good.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', col_tot); end
   if ~isempty(bin_tot_suspect); plot(bin_tot_suspect.dt, bin_tot_suspect.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', col_flag, 'MarkerFaceColor', col_flag); end

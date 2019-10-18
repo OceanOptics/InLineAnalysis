@@ -40,15 +40,31 @@ parser = '%s%d%d%f%f%f%f'; % US format decimal number with dots '.''
 fid=fopen(filename);
 if fid==-1
   error('Unable to open file: %s', filename);
-end;
+end
 
 % Read data
-t = textscan(fid, parser, 'delimiter','\t');
-% Close file
-fclose(fid);
-% Build table
-data = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{6},...
-             'VariableNames', {'dt', 'swt', 'spd'});
+try
+    t = textscan(fid, parser, 'delimiter','\t');
+    data = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{6},...
+             'VariableNames', {'dt', 'swt', 'spd'}); % Build table
+    fclose(fid); % Close file
+
+catch
+    parser = '%s%d%d%s%s%s%s'; % french format decimal number with dots '.''
+    fid=fopen(filename);
+    if fid==-1
+    error('Unable to open file: %s', filename);
+    end
+    t = textscan(fid, parser, 'delimiter','\t');
+    t{1,4} = str2double(strrep(t{1,4}, ',', '.'));
+    t{1,5} = str2double(strrep(t{1,5}, ',', '.'));
+    t{1,6} = str2double(strrep(t{1,6}, ',', '.'));
+    t{1,7} = str2double(strrep(t{1,7}, ',', '.'));
+    data = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{6},...
+             'VariableNames', {'dt', 'swt', 'spd'}); % Build table
+    fclose(fid); % Close file
+
+end
 % % Read file line by line (slow)
 % i=1;
 % while ~feof(fid)

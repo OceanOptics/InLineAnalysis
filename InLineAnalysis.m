@@ -147,6 +147,11 @@ classdef InLineAnalysis < handle
       end
     end
     
+    function SplitDetect (obj)
+        fprintf('Detecting %s filter events \n', obj.cfg.qcref.view);
+        obj.instrument.FTH.data = SplitDetect(obj.cfg.qcref.view, obj.instrument.(obj.cfg.qcref.view).data, obj.instrument.FTH.data);
+    end
+    
     function Stretch(obj)
       % Note: Run all days loaded (independent of days2run)
       for i=obj.cfg.instruments2run; i = i{1};
@@ -196,9 +201,17 @@ classdef InLineAnalysis < handle
             % Load file
             file_selection = loadjson(filename);
             % Convert datestr to datenum for newer format
-            if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
-            if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
-            % Remove old (days2run) selections
+            try
+                if ~isempty(file_selection.total); file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))]; end
+            catch
+                if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
+            end
+            try
+                if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))]; end
+            catch
+                if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
+            end
+          % Remove old (days2run) selections
             if ~isempty(file_selection.total)
               sel = min(obj.cfg.days2run) <= file_selection.total(:,1) & file_selection.total(:,1) < max(obj.cfg.days2run) + 1;
               file_selection.total(sel,:) = [];
@@ -224,8 +237,16 @@ classdef InLineAnalysis < handle
           % Load previous QC and apply it
           file_selection = loadjson([obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json']);
           % Convert datestr to datenum for newer format
-          if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
-          if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
+            try
+                if ~isempty(file_selection.total); file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))]; end
+            catch
+                if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
+            end
+            try
+                if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))]; end
+            catch
+                if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
+            end
           % Remove selection from days before & after days2run
           if ~isempty(file_selection.total)
             sel = file_selection.total(:,2) < min(obj.cfg.days2run) | max(obj.cfg.days2run) + 1 < file_selection.total(:,1);
@@ -386,7 +407,11 @@ classdef InLineAnalysis < handle
               fprintf('QC LOAD Specific: %s\n', i);
               file_selection = loadjson([obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json']);
               % Convert datestr to datenum for newer format
-              if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
+              try
+                  if ~isempty(file_selection.bad); file_selection.bad = [datenum(file_selection.bad(1)), datenum(file_selection.bad(2))]; end;
+              catch
+                  if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
+              end
               obj.instrument.(i).DeleteUserSelection(file_selection.bad);
             end
           end
@@ -640,7 +665,11 @@ classdef InLineAnalysis < handle
         % Load file
         file_selection = loadjson(filename);
         % Convert datestr to datenum for newer format
-        if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
+        try
+            if ~isempty(file_selection.bad); file_selection.bad = [datenum(file_selection.bad(1)), datenum(file_selection.bad(2))]; end
+        catch
+            if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
+        end
         if isfield(file_selection, 'bad') && ~isempty(file_selection.bad)
           % Remove old (days2run) selections
           sel = min(obj.cfg.days2run) <= file_selection.bad(:,1) & file_selection.bad(:,1) < max(obj.cfg.days2run) + 1;

@@ -56,6 +56,9 @@ ila.Sync()
 %ila.instrument.BB3.Sync(-90);
 % ila.instrument.BB3.Sync(-10);
 
+%% in case of bad synchronisation or to replace Sync.m use SplitDetect to automatically identify filtered events
+ila.SplitDetect();
+
 %% 3. QC Reference
 % run with mode ui during first run (it saves your work for the next run)
 % run with mode load to load previous QC
