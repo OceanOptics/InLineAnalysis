@@ -59,7 +59,9 @@ for i=1:length(dt)
     else
       % Import data from selection
       ddata = [];
+%       for j=1:size(l,1)
       parfor (j=1:size(l,1), parallel_flag)
+
         if isempty(otherargs)
           foo = fun([dir_in l{j}], verbose);
         else
@@ -88,7 +90,7 @@ if read_margin
   % Load margin to dataset (calling myself)
   margin = 1/24; % day
   if verbose; fprintf('Reading margin ... \n'); end
-  pre_data = iRead( fun, dirname_in, dirname_out, prefix, dt(1)-margin, software, force, nowrite, verbose, false, postfix, parallel_flag, otherargs );
+  pre_data = iRead( fun, dirname_in, dirname_out, prefix, dt(1)-margin, software, force, nowrite, verbose, false, postfix, parallel_flag, otherargs);
   if ~isempty(pre_data)
     pre_data = pre_data(dt(1)-margin <= pre_data.dt,:);
   end
@@ -109,7 +111,7 @@ end
 function [filenames] = list_files_from_software(software, dir_in, prefix, dt, postfix)
 % dt <1x1 datenum> day of data to import
   switch software
-    case {'Compass_2.1rc_scheduled', 'Compass_2.1rc', 'Compass_2.1rc_scheduled_bin'}
+    case {'WetView', 'Compass_2.1rc_scheduled', 'Compass_2.1rc', 'Compass_2.1rc_scheduled_bin'}
       % Compass does not reset files at mid-night thereafter some data from the
       % selected day might be in the first file of the following day
       % List all files in directory
@@ -124,7 +126,12 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
         n = length(prefix);
         l_dt = datenum(cellfun(@(x) x(n+1:n+14), {l.name}, 'UniformOutput', false), 'yyyymmddHHMMSS');
         % Get selection of files to import
-        sel = dt <= l_dt & l_dt <= dt + 1 + 1/24; % Add one hour margin
+        switch software
+            case 'WetView'
+            sel = dt <= l_dt & l_dt <= dt + 1 + 6; % Add 6 day margin
+            otherwise
+            sel = dt <= l_dt & l_dt <= dt + 1 + 1/24; % Add one hour margin
+        end
         % Return selected filenames
         filenames = {l(sel).name}';
       else

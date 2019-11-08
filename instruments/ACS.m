@@ -31,8 +31,8 @@ classdef ACS < Instrument
 %       else; error('Missing field lambda_c.'); end
 
       if isempty(obj.logger) 
-        fprintf('WARNING: Logger set to Compass_2.1rc_scheduled_bin.\n');
-        obj.logger = 'Compass_2.1rc_scheduled_bin';
+        fprintf('WARNING: Logger set to Compass_2.1rc_scheduled.\n');
+        obj.logger = 'Compass_2.1rc_scheduled';
       end
     end    
     
@@ -57,6 +57,9 @@ classdef ACS < Instrument
         case 'Compass_2.1rc'
           obj.data = iRead(@importACS, obj.path.raw, obj.path.wk, ['acs_' obj.sn '_'],...
                          days2run, 'Compass_2.1rc', force_import, ~write, true);
+        case 'WetView'
+          obj.data = iRead(@importACSwetview, obj.path.raw, obj.path.wk, ['acs_' obj.sn '_'],...
+                         days2run, 'WetView', force_import, ~write, true);
         otherwise
           error('ACS: Unknown logger.');
       end
