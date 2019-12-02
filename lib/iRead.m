@@ -128,14 +128,17 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
         % Get selection of files to import
         switch software
             case 'WetView'
-            sel = dt <= l_dt & l_dt <= dt + 1 + 6; % Add 6 day margin
+                sel = dt - 7 <= l_dt & l_dt <= dt + 1 + 7; % Add 7 day margin
+            case 'Compass_2.1rc'
+                sel = dt - 6 <= l_dt & l_dt <= dt + 1 + 6; % Add 6 day margin
             otherwise
-            sel = dt <= l_dt & l_dt <= dt + 1 + 1/24; % Add one hour margin
+                sel = dt <= l_dt & l_dt <= dt + 1 + 1/24; % Add one hour margin
         end
         % Return selected filenames
         filenames = {l(sel).name}';
       else
         warning(['No files found for ' software]);
+        filenames = [];
       end
     case 'Inlinino'
       % List all files in directory

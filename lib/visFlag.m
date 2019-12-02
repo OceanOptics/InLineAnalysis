@@ -1,7 +1,7 @@
 function fh = visFlag(raw_tot, raw_filt,...
                       bin_tot_good, bin_tot_suspect,...
                       bin_filt_good, bin_filt_bad,...
-                      varname, varindex, raw_bad)
+                      varname, varindex, raw_bad,fooflow)
   if nargin < 9; raw_bad = []; end
   
   % Define constants
@@ -43,7 +43,7 @@ function fh = visFlag(raw_tot, raw_filt,...
   if ~isempty(bin_filt_good); plot(bin_filt_good.dt, bin_filt_good.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', col_filt); end
   if ~isempty(bin_filt_bad); plot(bin_filt_bad.dt, bin_filt_bad.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', col_flag, 'MarkerFaceColor', col_flag); end
 %   plot(bb3_filt_flag.dt(sel_filt_target), bb3_filt_flag.beta(sel_filt_target,1), 'o', 'MarkerEdgeColor', col_target);  legend('pass 2', 'flag 16 & 32');
-  
+
   ylabel(varname);
   datetick2_doy();
   set(datacursormode(fh),'UpdateFcn',@data_cursor_display_date);

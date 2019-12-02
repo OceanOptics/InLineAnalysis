@@ -24,7 +24,7 @@ if ~isfile([filename '.dat'])
   else
     error('Platform not supported by prepacs.exe.')
   end
-%   fprintf('\n%s\n', cmd);
+    %   fprintf('\n%s\n', cmd);
   eval(cmd);
 end
 
@@ -38,7 +38,7 @@ end
 
 % Read header line by line
 flag_header=true;
-file_type = 'Scheduled'; % unpacked with prepACS.exe
+file_type = 'Scheduled'; % unpacked with prepACSe.exe
 while ~feof(fid) && flag_header
   % Get line
   l = fgetl(fid);

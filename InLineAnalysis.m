@@ -85,6 +85,8 @@ classdef InLineAnalysis < handle
               obj.instrument.(i) = FTH(cfg.instruments.(i));
             case 'ACS'
               obj.instrument.(i) = ACS(cfg.instruments.(i));
+            case 'AC9'
+              obj.instrument.(i) = AC9(cfg.instruments.(i));
 %             case 'BB3'
 %               obj.instrument.(i) = BB3(cfg.instruments.(i));
 %             case 'WSCD'
@@ -120,7 +122,7 @@ classdef InLineAnalysis < handle
       % Read was renamed to ReadRaw on Oct 19, 2018
       for i=obj.cfg.instruments2run; i = i{1};
         fprintf('READ RAW: %s\n', i);
-        obj.instrument.(i).ReadRaw(obj.cfg.days2run, obj.cfg.force_import, true);
+            obj.instrument.(i).ReadRaw(obj.cfg.days2run, obj.cfg.force_import, true);
       end
     end
     
@@ -147,11 +149,39 @@ classdef InLineAnalysis < handle
       end
     end
     
-    function SplitDetect (obj)
-        fprintf('Detecting %s filter events \n', obj.cfg.qcref.view);
-        obj.instrument.FTH.data = SplitDetect(obj.cfg.qcref.view, obj.instrument.(obj.cfg.qcref.view).data, obj.instrument.FTH.data);
+    function SplitDetect (obj, MinFiltPeriod)
+        fprintf('Detecting %s filter events...\n', obj.cfg.qcref.view);
+        obj.instrument.FTH.data = SplitDetect(obj.cfg.qcref.view, obj.instrument.(obj.cfg.qcref.view).data, obj.instrument.FTH.data, MinFiltPeriod);
+        fprintf('Done\n');
     end
     
+    function StepQC (obj, fudge_factor_a, fudge_factor_c)
+      if nargin < 2 | nargin < 3
+          fudge_factor_a = 3;
+          fudge_factor_c = 3;
+      end
+      for i=obj.cfg.instruments2run; i = i{1};
+        if  any(contains(i,'ACS'))
+          fprintf('Deleting bad spectrum from %s filtered data...', i);
+          [obj.instrument.(i).raw.fsw, Nbad_a, Nbad_c]= StepQC(obj.instrument.(i).raw.fsw, obj.instrument.(i).lambda_a, obj.instrument.(i).lambda_c, fudge_factor_a, fudge_factor_c);
+          fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s filtered data\n', Nbad_a, Nbad_c, i);
+          fprintf('Deleting bad spectrum from %s total data... ', i);
+          [obj.instrument.(i).raw.tsw, Nbad_a, Nbad_c]= StepQC(obj.instrument.(i).raw.tsw, obj.instrument.(i).lambda_a, obj.instrument.(i).lambda_c, fudge_factor_a, fudge_factor_c);
+          fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s total data\n', Nbad_a, Nbad_c, i);
+          fprintf('StepQC [Done]\n');
+        end
+      end
+    end
+    
+    function DiagnosticPlot (obj, instrument, level, dt)
+      for i=obj.cfg.instruments2run; i = i{1};
+        if  any(contains(i,instrument))
+          fprintf('%s Diagnostic plots\n', i);
+          DiagnosticPlot(obj.instrument.(i), i, level, dt);
+        end
+      end
+    end
+      
     function Stretch(obj)
       % Note: Run all days loaded (independent of days2run)
       for i=obj.cfg.instruments2run; i = i{1};
@@ -168,9 +198,9 @@ classdef InLineAnalysis < handle
       switch obj.cfg.qcref.mode
         case 'ui'
           % Fresh selection does not take into account previous QC
-          % TOTAL Sections
+          % TOTAL and FILTERED Sections
           fh = fig(31);
-          title('Select Total Section'); fprintf('Select total section\n');
+          title('Select Total (red) and filtered (green) sections'); fprintf('Select Total (red) and filtered (green) sections\n');
           yyaxis('left');
           plot(obj.instrument.(obj.cfg.qcref.reference).data.dt,...
                obj.instrument.(obj.cfg.qcref.reference).data.(obj.instrument.(obj.cfg.qcref.reference).view.varname), 'k', 'LineWidth', obj.instrument.(obj.cfg.qcref.reference).view.varcol);
@@ -179,21 +209,8 @@ classdef InLineAnalysis < handle
           plot(obj.instrument.(obj.cfg.qcref.view).data.dt,...
                obj.instrument.(obj.cfg.qcref.view).data.(obj.instrument.(obj.cfg.qcref.view).view.varname)(:,obj.instrument.(obj.cfg.qcref.view).view.varcol),'.');
           ylabel(obj.instrument.(obj.cfg.qcref.view).view.varname);
-          user_selection_total = guiSelectOnTimeSeries(fh);
+          [user_selection_total, user_selection_filtered] = guiSelectOnTimeSeries(fh);
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection_total, 'total');
-          
-          % FILTERED Sections
-          fh = fig(31);
-          title('Select Filtered Section'); fprintf('Select filtered section\n');
-          yyaxis('left');
-          plot(obj.instrument.(obj.cfg.qcref.reference).data.dt,...
-               obj.instrument.(obj.cfg.qcref.reference).data.(obj.instrument.(obj.cfg.qcref.reference).view.varname), 'k', 'LineWidth', 1);
-          ylim([-0.1 1.1]);
-          yyaxis('right'); 
-          plot(obj.instrument.(obj.cfg.qcref.view).data.dt,...
-               obj.instrument.(obj.cfg.qcref.view).data.(obj.instrument.(obj.cfg.qcref.view).view.varname)(:,obj.instrument.(obj.cfg.qcref.view).view.varcol),'.');
-          ylabel(obj.instrument.(obj.cfg.qcref.view).view.varname);
-          user_selection_filtered = guiSelectOnTimeSeries(fh);
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection_filtered, 'filtered');
           
           filename = [obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json'];
@@ -201,16 +218,16 @@ classdef InLineAnalysis < handle
             % Load file
             file_selection = loadjson(filename);
             % Convert datestr to datenum for newer format
-            try
-                if ~isempty(file_selection.total); file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))]; end
-            catch
-                if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
-            end
-            try
-                if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))]; end
-            catch
-                if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
-            end
+          try
+          if ~isempty(file_selection.total); file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))]; end
+          catch
+          if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
+          end
+          try
+          if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))]; end
+          catch
+          if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
+          end
           % Remove old (days2run) selections
             if ~isempty(file_selection.total)
               sel = min(obj.cfg.days2run) <= file_selection.total(:,1) & file_selection.total(:,1) < max(obj.cfg.days2run) + 1;
@@ -237,16 +254,16 @@ classdef InLineAnalysis < handle
           % Load previous QC and apply it
           file_selection = loadjson([obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json']);
           % Convert datestr to datenum for newer format
-            try
-                if ~isempty(file_selection.total); file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))]; end
-            catch
-                if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
-            end
-            try
-                if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))]; end
-            catch
-                if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
-            end
+          try
+          if ~isempty(file_selection.total); file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))]; end
+          catch
+          if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
+          end
+          try
+          if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))]; end
+          catch
+          if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
+          end
           % Remove selection from days before & after days2run
           if ~isempty(file_selection.total)
             sel = file_selection.total(:,2) < min(obj.cfg.days2run) | max(obj.cfg.days2run) + 1 < file_selection.total(:,1);
@@ -341,11 +358,14 @@ classdef InLineAnalysis < handle
         case 'ui'
           if obj.cfg.qc.global.active
             % Display interactive figure
-            foo = obj.instrument.(obj.cfg.qc.global.view);
+			foo = obj.instrument.(obj.cfg.qc.global.view);
+            fooflow = obj.instrument.FTH.bin.tsw;
+
             fh=visFlag(foo.raw.tsw, foo.raw.fsw,...
                        foo.qc.tsw, foo.suspect.tsw,...
                        foo.qc.fsw, foo.suspect.fsw,...
-                       foo.view.varname, foo.view.varcol, foo.raw.bad);
+                       foo.view.varname, foo.view.varco,...
+                       foo.raw.bad,fooflow);
             title('Global QC');
             user_selection = guiSelectOnTimeSeries(fh);
             % For each instrument 
@@ -365,16 +385,20 @@ classdef InLineAnalysis < handle
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               % Display interactive figure
               foo = obj.instrument.(i);
+              fooflow = obj.instrument.FTH.bin.tsw;
+
               if ~isempty(foo.raw.tsw)
                 fh=visFlag(foo.raw.tsw, foo.raw.fsw,...
                            foo.qc.tsw, foo.suspect.tsw,...
                            foo.qc.fsw, foo.suspect.fsw,...
-                           foo.view.varname, foo.view.varcol, foo.raw.bad);
+                           foo.view.varname, foo.view.varcol,...
+                           foo.raw.bad,fooflow);
               else
                 fh=visFlag([], [],...
                            foo.qc.tsw, foo.suspect.tsw,...
                            foo.qc.fsw, foo.suspect.fsw,...
-                           foo.view.varname, foo.view.varcol, foo.raw.bad);
+                           foo.view.varname, foo.view.varcol,...
+                           foo.raw.bad,fooflow);
               end
               title([i ' QC']);
               user_selection = guiSelectOnTimeSeries(fh);
@@ -488,6 +512,11 @@ classdef InLineAnalysis < handle
         else
           fprintf('CALIBRATE: %s\n', i);
           switch obj.instrument.(i).model
+            case 'AC9'
+              obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
+                                           obj.cfg.calibrate.(i).interpolation_method,...
+                                           obj.instrument.(obj.cfg.calibrate.(i).CDOM_source),...
+                                           obj.instrument.(obj.cfg.calibrate.(i).FTH_source));
             case 'ACS'
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.cfg.calibrate.(i).interpolation_method,...
@@ -666,9 +695,9 @@ classdef InLineAnalysis < handle
         file_selection = loadjson(filename);
         % Convert datestr to datenum for newer format
         try
-            if ~isempty(file_selection.bad); file_selection.bad = [datenum(file_selection.bad(1)), datenum(file_selection.bad(2))]; end
+        if ~isempty(file_selection.bad); file_selection.bad = [datenum(file_selection.bad(1)), datenum(file_selection.bad(2))]; end
         catch
-            if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
+        if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
         end
         if isfield(file_selection, 'bad') && ~isempty(file_selection.bad)
           % Remove old (days2run) selections

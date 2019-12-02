@@ -38,7 +38,7 @@ function [ bin, gflag ] = binTable( raw, bin_size, mode, prctile_dtc, prctile_av
 if nargin < 2; bin_size = 1/60/24; end
 if nargin < 3; mode = '4flag'; end
 if nargin < 4; prctile_dtc = [2.5 97.5]; end
-if nargin < 5; prctile_avg = [5 75]; end
+if nargin < 5; prctile_avg = [2.5 97.5]; end
 if nargin < 6; dt_discontinus = false; end
 if nargin < 7; parallel_flag = 0; end
 if nargin < 8; verbose = false; end
@@ -219,9 +219,15 @@ switch mode
           
           % Consider all variables as one
           avg_sel = any(avg_pl(i,:) <= raw_var_sel & raw_var_sel <= avg_ph(i,:),2);
-          avg_n(i) = sum(avg_sel);
-          avg_mn(i,:) = mean(raw_var_sel(avg_sel,:));
-          avg_sd(i,:) = std(raw_var_sel(avg_sel,:));
+          if sum(avg_sel) == 1
+            avg_mn(i,:) = raw_var_sel(avg_sel,:);
+            avg_sd(i,:) = 0;
+            avg_n(i) = 1;
+          else
+            avg_n(i) = sum(avg_sel);
+            avg_mn(i,:) = mean(raw_var_sel(avg_sel,:));
+            avg_sd(i,:) = std(raw_var_sel(avg_sel,:));
+          end
         end
         
         % Display Progress
@@ -245,6 +251,12 @@ switch mode
       sel = sel & all(isnan(bin.(lvar{j})),2);
     end
     bin(sel,:) = [];
+% % %     % Remove straight spectrum 
+% % %     sel = all(isnan(bin.(lvar{1})),2);
+% % %     for j=2:size(lvar,2)
+% % %       sel = sel & all(isnan(bin.(lvar{j})),2);
+% % %     end
+% % %     bin(sel,:) = [];
   case 'SB_ALL'
     % Compute mean, standard deviation, and number of point
     %   for all points within the minute
@@ -275,7 +287,7 @@ switch mode
         % Check number of samples
         avg_n(i) = sum(sel);
         if sum(sel) > 0
-%           avg_md(i,:) = median(raw_var(sel,:));
+%           avg_md(i,:) = nanmedian(raw_var(sel,:));
           avg_mn(i,:) = mean(raw_var(sel,:));
           avg_sd(i,:) = std(raw_var(sel,:));
         end

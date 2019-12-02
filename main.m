@@ -8,10 +8,12 @@ ila = InLineAnalysis('cfg/default_cfg.m');
 ila.cfg.days2run = datenum(2018,08,20):datenum(2018,09,12);
 % ila.cfg.instruments2run = {'FTH', 'TSG', 'BB3', 'LISST', 'WSCD1299', 'ALFA'};
 ila.cfg.instruments2run = {'FTH', 'ACS301'};
+ila.cfg.parallel = Inf;
 
 %% 1. Import | Load raw data
 ila.cfg.force_import = false;
 ila.ReadRaw();
+ila.CheckDataStatus();
 
 %% 1.1 Read & QC DI
 % To get ag and cg from ACS can run DI day by day
@@ -56,8 +58,12 @@ ila.Sync()
 %ila.instrument.BB3.Sync(-90);
 % ila.instrument.BB3.Sync(-10);
 
-%% in case of bad synchronisation or to replace Sync.m use SplitDetect to automatically identify filtered events
-ila.SplitDetect();
+%% Automatic detection of filter events
+% data = ila.instrument.(ila.cfg.qcref.view).data;
+% instrument = ila.cfg.qcref.view;
+% FTH = ila.instrument.FTH.data;
+ila.cfg.qcref.MinFiltPeriod = 55; % filter even period in minute
+ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod);
 
 %% 3. QC Reference
 % run with mode ui during first run (it saves your work for the next run)
@@ -65,8 +71,9 @@ ila.SplitDetect();
 % Note: when redoing QC of a given period of time (days2run) the previous
 % QC during the same period of time is erased, QC done on other periods of
 % time is kept in the json file
-ila.cfg.qcref.mode='load'; % 'ui' or 'load'
+ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
 ila.QCRef();
+
 
 %% 4. Split fsw and tsw
 % ila.instrument.ACS.Split(ila.instrument.FTH, [120, 30])
@@ -105,6 +112,7 @@ ila.QCRef();
 %         ila.instrument.ALFA.raw.bad.dt, ila.instrument.ALFA.raw.bad.Chlb,...
 %         'Chlb (counts)'); yyaxis('left'); ylim([0 2]);
 ila.Split();
+ila.CheckDataStatus();
 
 % i=20; visSplit(ila.instrument.FTH.data,...
 %               ila.instrument.ACS.raw.tsw.dt, ila.instrument.ACS.raw.tsw.a(:,i),...
@@ -117,16 +125,34 @@ ila.Split();
 %               ila.instrument.BB3.raw.bad.dt, ila.instrument.BB3.raw.bad.beta(:,2),...
 %               '\beta (counts)');
 % return
-%% 5. Bin
-% Set settings directly in configuration file (no tunning at this step)
-ila.Bin()
-% ila.Write('bin')
-% return
+
+%% automatic pre-QC for step in spectrum
+ila.cfg.qc.StepQCLim_a = 3; % auto QC threshold varies between ACS must be >= 3 (default = 3)
+ila.cfg.qc.StepQCLim_c = 3; % auto QC threshold varies between ACS must be >= 3 (default = 3)
+ila.StepQC(ila.cfg.qc.StepQCLim_a, ila.cfg.qc.StepQCLim_c);
+ila.CheckDataStatus();
+
+%% Diagnostic Plot
+% check raw spectrums
+ila.DiagnosticPlot('AC',{'raw'},{ila.cfg.days2run(1)+0 ila.cfg.days2run(1)+0.1});
+
+%% Diagnostic Plot
+% check binned spectrums
+ila.DiagnosticPlot('AC',{'bin'},{ila.cfg.days2run(1) ila.cfg.days2run(end)});
+
+%% Write bin
+ila.Write('bin')
+ila.CheckDataStatus();
 
 %% 5.1 Read Raw and Bin data
-% ila.instrument.ACS.ReadDeviceFile()
-% ila.Read('raw');
-% ila.Read('bin');
+ila.Read('raw');
+ila.Read('bin');
+ila.Read('qc');
+ila.Read('prod');
+
+ila.instrument.ACS007.ReadDeviceFile()
+% ila.instrument.ACS111.ReadDeviceFile()
+% ila.instrument.ACS091.ReadDeviceFile()
 
 %% 6. Flag
 % Visualize flag parameter before applying them
@@ -222,14 +248,23 @@ ila.cfg.qc.mode='load';  % load or ui
 % visSync(ila.instrument.FTH.data, ila.instrument.TSG.data.dt, ila.instrument.TSG.data.s, 's (PSU)');
 % visSync(ila.instrument.FTH.data, ila.instrument.TSG.data.dt, ila.instrument.TSG.data.fchl, 'fchl (counts)');
 ila.QC();
+ila.CheckDataStatus();
 
+%% Diagnostic Plot
+% run to find source of bad data 
+% {'raw','bin','qc'}
+ila.DiagnosticPlot('AC',{'qc'},{ila.cfg.days2run(1) ila.cfg.days2run(end)});
+
+%% Write qc
 ila.Write('qc')
-% ila.Read('qc')
+ila.CheckDataStatus();
 
 %% 8. Calibrate
 % ila.cfg.calibrate.ACS.compute_dissolved = true;
 % ila.cfg.calibrate.BB3.compute_dissolved = true;
 ila.Calibrate();
+ila.CheckDataStatus();
+
 % Calibrate LISST only
 % ila.instrument.LISST.inversion = 'non-spherical';
 % ila.instrument.LISST.Calibrate()
@@ -258,8 +293,25 @@ ila.Calibrate();
 % % ila.instrument.ACS298.prod.p.chl_exports = 138.14 * line_height.^1.11; % EXPORTS relation
 % ila.instrument.ACS301.prod.p.chl_exports = 138.14 * line_height.^1.11; % EXPORTS relation
 
+%% 3D QC plots
+%%% ACS %%%
+wl = ila.instrument.ACS007.lambda_ref; ACS = ila.instrument.ACS007.prod.p(:,:); ACS_DIW = ila.instrument.ACS007.bin.diw;
+
+visProd3D(wl, ACS.dt , ACS.ap, false, 'Wavelength', false, 72); zlabel('a_p (m^{-1})'); %, 'Wavelength', true
+visProd3D(wl, ACS.dt, ACS.cp, false, 'Wavelength', false, 73); zlabel('c_p (m^{-1})');
+
+% visProd3D(wl, ACS_DIW.g.dt, ACS007.g.ag, false, 'Wavelength', false, 78); zlabel('a_g (m^{-1})');
+% visProd3D(wl, ACS_DIW.g.dt, ACS007.g.cg, false, 'Wavelength', true, 79); zlabel('c_g (m^{-1})');
+xlabel('\lambda (nm)');
+
+%%% BB3 %%%
+% bbwl = ila.instrument.BB3.lambda;
+% visProd3D(bbwl, ila.instrument.BB3.prod.p.dt, ila.instrument.BB3.prod.p.bbp, false, 'Wavelength', false, 73); zlabel('bbp (m^{-1})');
+% visProd3D(bbwl, ila.instrument.BB3.prod.p.dt, ila.instrument.BB3.prod.p.betap, false, 'Wavelength', false, 72); zlabel('betap (m^{-1})'); %, 'Wavelength', true
+% xlabel('\lambda (nm)');
+
 %% 9. Save products
-% ila.Write('prod')
+ila.Write('prod')
 
 % Notify with a song that the job is done
 notif_sound = load('gong'); sound(notif_sound.y, notif_sound.Fs); % handel

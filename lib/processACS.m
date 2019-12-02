@@ -150,8 +150,12 @@ p.cp_n = tot.c_avg_n;
 
 % QC using ap spectrum
 % TODO replace the transpose by std(.., 0, 1 or 2); line 149 for speed
-sel_bad = any(p.ap(:,lambda.ref < 430) < 0,2)...
-          | any(p.ap(:,:) < -0.0015,2);%...
+sel_bad_UV = any(p.ap(:,lambda.ref < 430) < -0.0015, 2);
+p.ap(sel_bad_UV,lambda.ref < 430) = NaN;
+sel_bad_IR = any(p.ap(:,lambda.ref > 720) < -0.0015, 2);
+p.ap(sel_bad_IR,lambda.ref > 720) = NaN;
+
+sel_bad = any(p.ap(:,lambda.ref >= 430 & lambda.ref <= 720) < -0.0015, 2);% ...
 %           | std(p.ap(:,lambda.ref < 430)')' > 6 * 10^-3;
 p(sel_bad,:) = [];
 
@@ -169,7 +173,9 @@ p.chl(real(p.chl) ~= p.chl) = NaN;
 % 3.3 Derive Gamma (does not support NaN values) (Boss et al. 2001)
 % [~,p.gamma] = FitSpectra_HM2(lambda.ref(:,1:end-2),p.cp(:,1:end-2));
 % Correct bu on March 5, 2018, FitSpectra_HM2 does not accept NaNs in cp
+p(all(isnan(p.cp),2),:)=[];
 sel = ~any(isnan(p.cp));
+
 [~,p.gamma] = FitSpectra_HM2(lambda.ref(:,sel),p.cp(:,sel));
 
 % REFERENCES:

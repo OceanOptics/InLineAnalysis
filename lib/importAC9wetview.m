@@ -1,4 +1,4 @@
-function [ data ] = importACSwetview( filename, verbose )
+function [ data ] = importAC9wetview( filename, verbose )
 %IMPORTACS Import ACS data recorded with Compass r2.1
 
 if nargin < 2; verbose = false; end
@@ -16,7 +16,7 @@ end
 % Read header line by line
 flag_header=true; foo = 1;
 % file_type = 'Manual';
-while ~feof(fid) && flag_header && foo < 3
+while ~feof(fid) && flag_header && foo < 2
   % Get line
   l = fgetl(fid);
   % Split in parameter and value
@@ -34,24 +34,27 @@ while ~feof(fid) && flag_header && foo < 3
   if contains(l, 'acquisition binsize')
     foo = foo + 1;
   end
-  if foo == 3
-    i_c = cellfun(@any, strfind(s,'c'));
-    if sum(i_c) == 0
-      i_c = cellfun(@any, strfind(s,'C'));
-    end
-    i_a = cellfun(@any, strfind(s,'a'));
-    if sum(i_a) == 0
-      i_a = cellfun(@any, strfind(s,'A'));
-    end
-  end
+  i_c = [17 18 19 5 6 7 11 12 13]; % order wl c
+  i_a = [8 9 10 14 15 16 2 3 4]; % order wl a
+
+%   if foo == 3
+%     i_c = cellfun(@any, strfind(s,'c'));
+%     if sum(i_c) == 0
+%       i_c = cellfun(@any, strfind(s,'C'));
+%     end
+%     i_a = cellfun(@any, strfind(s,'a'));
+%     if sum(i_a) == 0
+%       i_a = cellfun(@any, strfind(s,'A'));
+%     end
+%   end
 end
 
 % Check number of wavelength
-if sum(i_a) ~= sum(i_c)
-  error('Unexpected number of wavelength.\n');
-else
-  n_wv = sum(i_a);
-end
+% if sum(i_a) ~= sum(i_c)
+%   error('Unexpected number of wavelength.\n');
+% else
+  n_wv = size(i_c,2);
+% end
 
 % Build data parser
 parser = ['%f' repmat('%f',1,n_wv) repmat('%f',1,n_wv) '%[^\n\r]'];
