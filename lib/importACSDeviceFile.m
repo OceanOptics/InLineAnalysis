@@ -1,4 +1,4 @@
-function [lambda_c, lambda_a, n] = importACSDeviceFile(filename, verbose)
+function [lambda_c, lambda_a, T_cal, n] = importACSDeviceFile(filename, verbose)
 % Get wavelength out of ACS device file
 
 fid=fopen(filename);
@@ -6,13 +6,17 @@ fid=fopen(filename);
 if contains(filename,{'ac9','AC9'})
     lambda_c = [412 440 488 510 532 555 650 676 715];
     lambda_a = lambda_c;
+    T_cal = 25.50628;
 else
     lambda_c = [];
     lambda_a = [];
     n = NaN; i = 1;
     while ~feof(fid)
         l = fgetl(fid);
-        if contains(l, 'number of temperature bins')
+        if contains(l, 'tcal')
+            foo = strsplit(l, ' ');
+            T_cal = str2double(foo{2});
+        elseif contains(l, 'number of temperature bins')
             % Init arrays with number of wavelength
             foo = strsplit(l, ';');
             n = str2double(foo{1});

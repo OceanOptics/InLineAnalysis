@@ -33,8 +33,8 @@ classdef FTH < Instrument
     function ReadRaw(obj, days2run, force_import, write)
       switch obj.logger
         case {'FlowControl', 'FlowControl_old'}
-          obj.data = iRead(@importFlowControl, obj.path.raw, obj.path.wk, 'Flow_',...
-                         days2run, 'FlowControl', force_import, ~write, true);
+            obj.data = iRead(@importFlowControl, obj.path.raw, obj.path.wk, 'Flow_',...
+                       days2run, 'FlowControl', force_import, ~write, true);
         otherwise
           error('FTH: Unknown logger.');
       end
@@ -44,16 +44,34 @@ classdef FTH < Instrument
       % Correct part of switch data
       % Note: spd data is lost when corrected
       for i=1:size(user_selection,1)
+        % Add user selection in fth
+        % round user input to the second and create continuous time vector
+        dt_st = datenum(floor(datevec(user_selection(i,1))));
+        dt_end = datenum(floor(datevec(user_selection(i,2))));%, 'ConvertFrom','datenum', 'Format', 'yyyy/MM/dd hh:mm:ss') ...
+        dt = (dt_st:1/obj.SAMPLING_FREQUENCY/3600/24:dt_end)';
+        
+        % delete data with duplicats timestamp
+        [~, I] = unique(obj.data.dt, 'first');
+        x = 1:length(obj.data.dt);
+        x(I) = [];
+        obj.data(x,:) = [];
+        % round data time vector to the second
+        obj.data.dt = datenum(floor(datevec(obj.data.dt)));
+        % interpolate flow rate data over continuous time vector   
+        interp_spd = interp1(obj.data.dt, obj.data.spd, dt, 'linear', 'extrap'); % extrap needed for first minute of data
+        % delete interpolated data to keep only 'true' data
+        ism = ~ismember(dt,obj.data.dt);
+        interp_spd (ism) = NaN;
+
         % Remove existing data from fth
         obj.data(user_selection(i,1) <= obj.data.dt &...
           obj.data.dt <= user_selection(i,2),:) = [];
-        % Add user selection in fth
-        dt = [user_selection(i,1):1/obj.SAMPLING_FREQUENCY/3600/24:user_selection(i,2)]';
+
         switch mode
           case 'total'
-            obj.data = [obj.data; table(dt, ones(size(dt)) * obj.SWITCH_TOTAL, NaN(size(dt)), 'VariableNames', {'dt', 'swt', 'spd'})];
+            obj.data = [obj.data; table(dt, ones(size(dt)) * obj.SWITCH_TOTAL, interp_spd, 'VariableNames', {'dt', 'swt', 'spd'})];
           case 'filtered'
-            obj.data = [obj.data; table(dt, ones(size(dt)) * obj.SWITCH_FILTERED, NaN(size(dt)), 'VariableNames', {'dt', 'swt', 'spd'})];
+            obj.data = [obj.data; table(dt, ones(size(dt)) * obj.SWITCH_FILTERED, interp_spd, 'VariableNames', {'dt', 'swt', 'spd'})];
           otherwise
             error('Unknown mode.');
         end

@@ -27,11 +27,11 @@ function fh = visFlag(raw_tot, raw_filt,...
   
   % plot flow right y axis
   if ~strcmp(varname,'par')
-  yyaxis('right'); 
-  if ~isempty(fooflow); plot(fooflow.dt, fooflow.spd,'Color',[0 0.8 0]); popo=gca; 
-  ylim([0 max(fooflow.spd)+4]); ylabel('Flow rate (lpm)'); popo.YColor = [0 0.8 0]; % green
-  end
-  yyaxis('left');
+      yyaxis('right'); 
+      if ~isempty(fooflow); plot(fooflow.dt, fooflow.spd,'Color',[0 0.8 0]); popo=gca; 
+        ylim([0 max(fooflow.spd)+4]); ylabel('Flow rate (lpm)'); popo.YColor = [0 0.8 0]; % green
+      end
+      yyaxis('left');
   end
   
   % Plot tot binned data

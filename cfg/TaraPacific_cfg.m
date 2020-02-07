@@ -17,7 +17,7 @@ cfg.meta.documents = 'NA';
 cfg.meta.calibration_files = 'NA';
 cfg.meta.data_type = 'flow_thru';
 cfg.meta.data_status = 'preliminary';
-cfg.meta.measurement_depth = 5;
+cfg.meta.measurement_depth = 1.5;
 
 
 %%%%%%%%%%%%%%%%%
@@ -172,8 +172,7 @@ cfg.instruments.BB3.lambda = [470,532,650];
 cfg.instruments.BB3.theta = 124;
 cfg.instruments.BB3.slope = [1.066E-05,7.076E-06,3.569E-06];
 % cfg.instruments.BB3.slope = [8.407E-06,4.624E-06,4.090E-06];
-cfg.instruments.BB3.dark = [50,44,46];
-% cfg.instruments.BB3.dark = [56,52,45];
+cfg.instruments.BB3.dark = [50,44,45];
 cfg.instruments.BB3.path = struct('raw',  [PATH_ROOT 'raw' filesep 'BB3' filesep],...
                                   'di',  [PATH_ROOT 'raw' filesep 'BB3' filesep],...
                                   'wk',   [PATH_ROOT 'wk' filesep 'BB3' filesep],...
@@ -291,7 +290,7 @@ cfg.process.sync.skip = {'TSG','PAR'};
 %%% QC Reference (Flow Control/FTH) %%%
 cfg.process.qcref = struct();
 cfg.process.qcref.reference = 'FTH';
-cfg.process.qcref.view = 'ACS007';
+cfg.process.qcref.view = 'WSCD1082P';
 cfg.process.qcref.mode = 'ui'; % load or ui
 cfg.process.qcref.MinFiltPeriod = 50; % filter even period in minute
 
@@ -316,7 +315,8 @@ cfg.process.split.skip = {'FTH', 'TSG','WSCD1082P','PAR'};
 %%% Binning %%%
 cfg.process.bin = struct('bin_size', struct());
 cfg.process.bin.prctile_detection = [2.5, 97.5];
-cfg.process.bin.prctile_average = [2.5, 97.5];
+% if StepQC with ACS: prctile_average = [2.5, 97.5]; otherwise prctile_average = [5, 75];
+cfg.process.bin.prctile_average = [5, 75];
 % Bin mode does not affect the outcome of the data but just the way the data is presented to the computer
 % cfg.process.bin.mode = 'OneShot'; % Faster for small dataset fiting in the memory of the computer
 cfg.process.bin.mode = 'ByDay'; % Slightly slower but can handle a lot more data at once as it will be binned one day at a time
@@ -353,8 +353,10 @@ cfg.process.flag.default.filt = struct('smooth_threshold', 2);
   
 %%% Manually QC %%%
 cfg.process.qc = struct();
-cfg.process.qc.ila.cfg.qc.StepQCLim_a = 3;
-cfg.process.qc.ila.cfg.qc.StepQCLim_c = 3;
+cfg.process.qc.StepQCLim.a = 3;
+cfg.process.qc.StepQCLim.c = 3;
+cfg.process.qc.StepQCLim.bb = 3;
+cfg.process.qc.Saturation_Threshold_bb = 4000; % (counts)
 cfg.process.qc.mode = 'ui';
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
@@ -374,7 +376,7 @@ cfg.process.calibrate.BB3 = struct('compute_dissolved', false,...
                                    'TSG_source', 'TSG',...
                                    'di_method', 'constant');
 % cfg.process.calibrate.skip = {'FTH', 'TSG'};
-cfg.process.calibrate.skip = {'FTH', 'TSG','WSCD1082P','BB3','PAR'};
+cfg.process.calibrate.skip = {'FTH', 'TSG'};
 
 %%% Write %%%
 cfg.process.write = struct();

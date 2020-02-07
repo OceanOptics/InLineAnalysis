@@ -62,7 +62,7 @@ ila.Sync()
 % data = ila.instrument.(ila.cfg.qcref.view).data;
 % instrument = ila.cfg.qcref.view;
 % FTH = ila.instrument.FTH.data;
-ila.cfg.qcref.MinFiltPeriod = 55; % filter even period in minute
+ila.cfg.qcref.MinFiltPeriod = 55; % filter even period in minute % ACS: 55
 ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod);
 
 %% 3. QC Reference
@@ -126,18 +126,24 @@ ila.CheckDataStatus();
 %               '\beta (counts)');
 % return
 
-%% automatic pre-QC for step in spectrum
-ila.cfg.qc.StepQCLim_a = 3; % auto QC threshold varies between ACS must be >= 3 (default = 3)
-ila.cfg.qc.StepQCLim_c = 3; % auto QC threshold varies between ACS must be >= 3 (default = 3)
-ila.StepQC(ila.cfg.qc.StepQCLim_a, ila.cfg.qc.StepQCLim_c);
+%% automatic pre-QC for step in ACS spectrum & BB saturated
+ila.cfg.qc.StepQCLim.a = 3; % ACS auto QC threshold varies between ACS must be >= 3 (default = 3)
+ila.cfg.qc.StepQCLim.c = 3; % ACS auto QC threshold varies between ACS must be >= 3 (default = 3)
+ila.cfg.qc.StepQCLim.bb = 3; % BB auto QC threshold must be >= 3 (default = 3)
+ila.cfg.qc.Saturation_Threshold_bb = 4000;
+ila.StepQC(ila.cfg.qc.StepQCLim, ila.cfg.qc.Saturation_Threshold_bb);
 ila.CheckDataStatus();
 
 %% Diagnostic Plot
-% check raw spectrums
+% check raw spectrums AC or BB sensors
 ila.DiagnosticPlot('AC',{'raw'},{ila.cfg.days2run(1)+0 ila.cfg.days2run(1)+0.1});
 
+%% 5. Bin
+% % Set settings directly in configuration file (no tunning at this step)
+ila.Bin()
+
 %% Diagnostic Plot
-% check binned spectrums
+% check binned spectrums AC or BB sensors
 ila.DiagnosticPlot('AC',{'bin'},{ila.cfg.days2run(1) ila.cfg.days2run(end)});
 
 %% Write bin
@@ -220,7 +226,7 @@ ila.Flag() % Now deprecated will just copy data to next level
 % return
 %% 7. QC
 % Interactive or Loading previous qc selection
-ila.cfg.qc.mode='load';  % load or ui
+ila.cfg.qc.mode='ui';  % load or ui
 % cfg.process.qc.specific.run = {'ACS298', 'ACS301', 'BB3', 'LISST', 'WSCD859', 'WSCD1299', 'ALFA'};
 % ila.cfg.qc.specific.run = {'TSG', 'ACS', 'BB3', 'LISST', 'WSCD', 'ALFA'};
 % ila.instrument.TSG.view.varname = 's';
@@ -251,7 +257,7 @@ ila.QC();
 ila.CheckDataStatus();
 
 %% Diagnostic Plot
-% run to find source of bad data 
+% check QCed spectrums AC or BB sensors
 % {'raw','bin','qc'}
 ila.DiagnosticPlot('AC',{'qc'},{ila.cfg.days2run(1) ila.cfg.days2run(end)});
 
@@ -294,21 +300,37 @@ ila.CheckDataStatus();
 % ila.instrument.ACS301.prod.p.chl_exports = 138.14 * line_height.^1.11; % EXPORTS relation
 
 %% 3D QC plots
+% save_figures = true;
+
 %%% ACS %%%
-wl = ila.instrument.ACS007.lambda_ref; ACS = ila.instrument.ACS007.prod.p(:,:); ACS_DIW = ila.instrument.ACS007.bin.diw;
+wl = ila.instrument.ACS007.lambda_ref; ACS = ila.instrument.ACS007.prod.p(1:end,:); ACS_DIW = ila.instrument.ACS007.bin.diw;
+% wl = ila.instrument.ACS057.lambda_ref; ACS = ila.instrument.ACS057.prod.p(:,:); ACS_DIW = ila.instrument.ACS057.bin.diw;
+% wl = ila.instrument.ACS091.lambda_ref; ACS = ila.instrument.ACS091.prod.p(:,:); ACS_DIW091 = ila.instrument.ACS091.bin.diw;
+% wl = ila.instrument.ACS111.lambda_ref; ACS = ila.instrument.ACS111.prod.p(1000:end,:); ACS_DIW = ila.instrument.ACS111.bin.diw;
+% wl = ila.instrument.ACS279.lambda_ref; ACS = ila.instrument.ACS279.prod.p(:,:); ACS_DIW = ila.instrument.ACS279.bin.diw;
+% wl = ila.instrument.AC9.lambda_ref; ACS = ila.instrument.AC9.prod.p(:,:); ACS_DIW = ila.instrument.AC9.bin.diw;
 
 visProd3D(wl, ACS.dt , ACS.ap, false, 'Wavelength', false, 72); zlabel('a_p (m^{-1})'); %, 'Wavelength', true
 visProd3D(wl, ACS.dt, ACS.cp, false, 'Wavelength', false, 73); zlabel('c_p (m^{-1})');
 
-% visProd3D(wl, ACS_DIW.g.dt, ACS007.g.ag, false, 'Wavelength', false, 78); zlabel('a_g (m^{-1})');
-% visProd3D(wl, ACS_DIW.g.dt, ACS007.g.cg, false, 'Wavelength', true, 79); zlabel('c_g (m^{-1})');
-xlabel('\lambda (nm)');
+% visProd3D(wl, ACS_DIW.g.dt, ACS111.g.ag, false, 'Wavelength', false, 78); zlabel('a_g (m^{-1})');
+% visProd3D(wl, ACS_DIW.g.dt, ACS111.g.cg, false, 'Wavelength', true, 79); zlabel('c_g (m^{-1})');
+% xlabel('\lambda (nm)');
 
 %%% BB3 %%%
 % bbwl = ila.instrument.BB3.lambda;
 % visProd3D(bbwl, ila.instrument.BB3.prod.p.dt, ila.instrument.BB3.prod.p.bbp, false, 'Wavelength', false, 73); zlabel('bbp (m^{-1})');
 % visProd3D(bbwl, ila.instrument.BB3.prod.p.dt, ila.instrument.BB3.prod.p.betap, false, 'Wavelength', false, 72); zlabel('betap (m^{-1})'); %, 'Wavelength', true
 % xlabel('\lambda (nm)');
+
+%%% PAR %%%
+% figure(77);
+% scatter(datetime(ila.instrument.PAR.prod.a.dt,'ConvertFrom','datenum'), ila.instrument.PAR.prod.a.par, 4, 'filled'); ylabel('PAR (\muE.m^-^2.s^-^1)');
+
+%%% WSCD %%%
+figure(78);
+scatter(datetime(ila.instrument.WSCD1082P.prod.pd.dt,'ConvertFrom','datenum'), ila.instrument.WSCD1082P.prod.pd.fdom, 4, 'filled'); ylabel('fdom ppb');
+
 
 %% 9. Save products
 ila.Write('prod')
