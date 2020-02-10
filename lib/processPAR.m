@@ -18,4 +18,7 @@ a.par = (data.par(sel) - dark)./ param.scale;
 a.par_sd = data.par_avg_sd(sel) ./ param.scale;
 a.par_n = data.par_avg_n(sel);
 
+% remove obvious bad data
+sel_bad = any(a.par > 5000 | a.par < 0);
+a(sel_bad,:) = [];
 end
