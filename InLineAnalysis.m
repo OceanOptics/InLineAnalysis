@@ -191,10 +191,10 @@ classdef InLineAnalysis < handle
                     lambda.bb = obj.instrument.(i).lambda;
                 elseif any(contains(i,'PAR'))
                     foo = obj.instrument.(i).raw.tsw.par./obj.instrument.PAR.scale > 4500 ...
-                        | obj.instrument.(i).raw.tsw.par.obj.instrument.PAR.scale < 0;
+                        | obj.instrument.(i).raw.tsw.par./obj.instrument.PAR.scale < 0;
                     obj.instrument.(i).raw.tsw(foo,:) = [];
                     foo = obj.instrument.(i).data.par./obj.instrument.PAR.scale > 4500 ...
-                        | obj.instrument.(i).data.par.obj.instrument.PAR.scale < 0;
+                        | obj.instrument.(i).data.par./obj.instrument.PAR.scale < 0;
                     obj.instrument.(i).data(foo,:) = [];
                 end
                 if any(contains(i,{'ACS','BB'}))
@@ -207,7 +207,7 @@ classdef InLineAnalysis < handle
                         fprintf('Done\n%4.2f%% of beta%i deleted from %s total data\n', Nbad.bb(ii), lambda.bb(ii), i);
                     end
                 elseif any(contains(i,'PAR'))
-                    fprintf('Done\n%4.2f raw %s values deleted\n', foo, i);
+                    fprintf('Done\n%i raw %s values deleted\n', sum(foo), i);
                 end
             fprintf('StepQC [Done]\n');
             end
