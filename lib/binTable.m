@@ -108,7 +108,7 @@ switch mode
         sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
         % Unselect raw with NaN values
         foo = ~isnan(raw_var); % step required for 2d variables
-        sel = sel & all(foo,2);
+        sel = sel & any(foo,2);
         % Check number of samples
         if sum(sel) > 0
           raw_var_sel = raw_var(sel,:);
@@ -140,12 +140,12 @@ switch mode
           avg_sel = any(avg_pl(i,:) <= raw_var_sel & raw_var_sel <= avg_ph(i,:),2);
           dtc_n(i) = sum(dtc_sel);
           avg_n(i) = sum(avg_sel);
-          dtc_md(i,:) = median(raw_var_sel(dtc_sel,:));
-          dtc_mn(i,:) = mean(raw_var_sel(dtc_sel,:));
-          dtc_sd(i,:) = std(raw_var_sel(dtc_sel,:));
-          avg_md(i,:) = median(raw_var_sel(avg_sel,:));
-          avg_mn(i,:) = mean(raw_var_sel(avg_sel,:));
-          avg_sd(i,:) = std(raw_var_sel(avg_sel,:));
+          dtc_md(i,:) = nanmedian(raw_var_sel(dtc_sel,:));
+          dtc_mn(i,:) = nanmean(raw_var_sel(dtc_sel,:));
+          dtc_sd(i,:) = nanstd(raw_var_sel(dtc_sel,:));
+          avg_md(i,:) = nanmedian(raw_var_sel(avg_sel,:));
+          avg_mn(i,:) = nanmean(raw_var_sel(avg_sel,:));
+          avg_sd(i,:) = nanstd(raw_var_sel(avg_sel,:));
         end
       end
       % Detection stats
@@ -208,7 +208,7 @@ switch mode
         sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
         % Unselect raw with NaN values
         foo = ~isnan(raw_var); % step required for 2d variables
-        sel = sel & all(foo,2);
+        sel = sel & any(foo,2);
         % Check number of samples
         if sum(sel) > 0
           raw_var_sel = raw_var(sel,:);
@@ -225,8 +225,8 @@ switch mode
             avg_n(i) = 1;
           else
             avg_n(i) = sum(avg_sel);
-            avg_mn(i,:) = mean(raw_var_sel(avg_sel,:));
-            avg_sd(i,:) = std(raw_var_sel(avg_sel,:));
+            avg_mn(i,:) = nanmean(raw_var_sel(avg_sel,:));
+            avg_sd(i,:) = nanstd(raw_var_sel(avg_sel,:));
           end
         end
         
@@ -283,13 +283,13 @@ switch mode
         sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
         % Unselect raw with NaN values
         foo = ~isnan(raw_var); % step required for 2d variables
-        sel = sel & all(foo,2);
+        sel = sel & any(foo,2);
         % Check number of samples
         avg_n(i) = sum(sel);
         if sum(sel) > 0
 %           avg_md(i,:) = nanmedian(raw_var(sel,:));
-          avg_mn(i,:) = mean(raw_var(sel,:));
-          avg_sd(i,:) = std(raw_var(sel,:));
+          avg_mn(i,:) = nanmean(raw_var(sel,:));
+          avg_sd(i,:) = nanstd(raw_var(sel,:));
         end
         % Display Progress
 %         if verbose
