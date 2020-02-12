@@ -1,8 +1,8 @@
-function [data, Nbad] = StepQC (data, lambda, fudge_factor, bb_threshold)
+function [data, Nbad] = StepQC (data, lambda, fudge_factor, bb_dark, bb_threshold)
 % author: Guillaume Bourdin
 % created: Nov 13, 2019
 
-%Detect filter events on ACS and BB3 inline
+%StepQC Auto QC ACs/AC9/BB spectrum
 %
 % INPUT:
 %   - data_in: ACS data <Nx3 Table> time series of data that must contains:
@@ -23,6 +23,7 @@ function [data, Nbad] = StepQC (data, lambda, fudge_factor, bb_threshold)
 %           (default = 3: Step = 3x > mean(diff))
 %       - bb: threshold for automatic QC of beta spectrum (must be >= 3)
 %           (default = 3: Step = beta(lambda(i)) > 3 * mean(beta(lambda(~i))
+%   - bb_dark: beta dark measurements <1xM double>
 %   - bb_threshold: threshold for automatic QC of beta spectrum saturated (default = 4100)
 %           (bb sensor saturation = 4130 counts)
 %
@@ -79,11 +80,14 @@ if any(strcmp(data.Properties.VariableNames, {'a','c'}))
     data.c(bad_c,:) = NaN;
     data(bad_a & bad_c,:)=[];
     
-    
 elseif any(strcmp(data.Properties.VariableNames, 'beta'))
-    if nargin < 4
+    if nargin < 5
         bb_threshold = 4100;
         warning('beta threshold missing, set to default (4100 counts)');
+    end
+    
+    if nargin < 4
+        error('beta dark missing (4th argument)');
     end
     Nbad.bb = NaN(1, size(lambda.bb,2));
     for ii = 1:size(lambda.bb,2)
@@ -94,12 +98,14 @@ elseif any(strcmp(data.Properties.VariableNames, 'beta'))
     if any(fudge_factor.bb < 3)
         error('QC threshold BB3 too low (minimum 3)');
     end
+    bad_bb = NaN(size(data,1), size(lambda.bb, 2));
     for ii = 1:size(lambda.bb, 2)
         other = 1:size(lambda.bb, 2); other(ii)=[];
-        bad_bb = data.beta(:,ii) > fudge_factor.bb * 300 + nanmean(data.beta(:,other),2);
-        data.beta(bad_bb,ii) = NaN;
-        Nbad.bb(ii) = (Nbad.bb(ii) + sum(bad_bb)) / size(data.beta(:,ii),1) * 100;
+        bad_bb (:,ii) = data.beta(:,ii) - bb_dark(ii) > fudge_factor.bb * 75 + nanmean(data.beta(:,other),2) - nanmean(bb_dark(other),2);
+        Nbad.bb(ii) = Nbad.bb(ii) + sum(bad_bb(:,ii));
     end
+    data.beta(logical(bad_bb)) = NaN;
+    Nbad.bb = Nbad.bb / size(data.beta(:,ii),1) * 100;
 end
 end
 
