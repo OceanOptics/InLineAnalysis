@@ -225,6 +225,7 @@ classdef (Abstract) Instrument < handle
         for f = fieldnames(obj.(level))'; f = f{1};
           filename = [filename_prefix '_' level '_' f '.mat'];
           if isempty(obj.(level).(f)); continue; end
+          days2write = floor(days2write); % force days2write to entire day
           sel = min(days2write) <= obj.(level).(f).dt & obj.(level).(f).dt < max(days2write) + 1;
           if ~any(sel); fprintf('WRITE: %s_%s_%s No data.\n', filename_prefix, level, f); continue; end
           data = obj.(level).(f)(sel,:);
@@ -235,6 +236,7 @@ classdef (Abstract) Instrument < handle
         % One Table at the level
         filename = [filename_prefix '_' level '.mat'];
         if isempty(obj.(level)); fprintf('WRITE: %s_%s No data.\n', filename_prefix, level); return; end
+        days2write = floor(days2write); % force days2write to entire day
         sel = min(days2write) <= obj.(level).dt & obj.(level).dt < max(days2write) + 1;
         if ~any(sel); fprintf('WRITE: %s_%s No data.\n', filename_prefix, level); return; end
         data = obj.(level)(sel,:);
