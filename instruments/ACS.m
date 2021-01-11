@@ -43,30 +43,24 @@ classdef ACS < Instrument
     end
     
     function ReadRaw(obj, days2run, force_import, write)
+      % Get wavelengths from device file
+      obj.ReadDeviceFile()
       % Read raw data
       switch obj.logger
         case 'InlininoACScsv'
           obj.data = iRead(@importInlininoACScsv, obj.path.raw, obj.path.wk, ['acs' obj.sn '_'],...
                          days2run, 'InlininoACScsv', force_import, ~write, true);
         case 'Compass_2.1rc_scheduled'
-          % Get wavelengths from device file
-          obj.ReadDeviceFile()
           warning('DEPRECATED: as wavelength are shifted when saved to .dat by the scheduler of compass.');
           obj.data = iRead(@importACS, obj.path.raw, obj.path.wk, ['acs' obj.sn '_'],...
                          days2run, 'Compass_2.1rc_scheduled', force_import, ~write, true);
         case 'Compass_2.1rc_scheduled_bin'
-          % Get wavelengths from device file
-          obj.ReadDeviceFile()
           obj.data = iRead(@importACSBin, obj.path.raw, obj.path.wk, ['acs' obj.sn '_'],...
                          days2run, 'Compass_2.1rc_scheduled_bin', force_import, ~write, true, true, '', Inf, obj.device_file);
         case 'Compass_2.1rc'
-          % Get wavelengths from device file
-          obj.ReadDeviceFile()
           obj.data = iRead(@importACS, obj.path.raw, obj.path.wk, ['acs_' obj.sn '_'],...
                          days2run, 'Compass_2.1rc', force_import, ~write, true);
         case 'WetView'
-          % Get wavelengths from device file
-          obj.ReadDeviceFile()
           obj.data = iRead(@importACSwetview, obj.path.raw, obj.path.wk, ['acs_' obj.sn '_'],...
                          days2run, 'WetView', force_import, ~write, true);
         otherwise
