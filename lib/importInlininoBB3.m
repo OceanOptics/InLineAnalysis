@@ -19,16 +19,33 @@ fid=fopen(filename);
 if fid==-1
   error('Unable to open file: %s', filename);
 end
-% Skip header
-fgetl(fid); fgetl(fid);
+
+% Get header
+hd = strip(strsplit(fgetl(fid), ','));
+% Skip empty lines (bug in Inlinino)
+foo = fgetl(fid);
+while ~isempty(foo)
+    foo = fgetl(fid);
+end
+% get units and lambda
+unit = strip(strsplit(fgetl(fid), ','));
+unit(3:4) = [];
+lambda = str2double(cellfun(@(c) strrep(c, 'beta', ''), hd(2:4), 'un', 0));
+
 % Read data
 t = textscan(fid, parser, 'delimiter',',');
 % Close file
 fclose(fid);
 
 % Build table
-data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
-             [t{2:4}], 'VariableNames', {'dt', 'beta'});
+if all(contains(t{1}, '/'))
+    data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), [t{2:4}], ...
+             'VariableNames', {'dt', 'beta'});
+else
+    data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
+                 [t{2:4}], 'VariableNames', {'dt', 'beta'});
+end
+data.Properties.VariableUnits = unit;
 
 % Remove last line if it's past midnight (Bug in Inlinino)
 if ~isempty(data)
@@ -39,6 +56,5 @@ end
 
 if verbose; fprintf('Done\n'); end
 
-end
 
 

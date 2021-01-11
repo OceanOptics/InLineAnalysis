@@ -19,16 +19,31 @@ fid=fopen(filename);
 if fid==-1
   error('Unable to open file: %s', filename);
 end
-% Skip header
-fgetl(fid); fgetl(fid);
+
+% Get header
+hd = strip(strsplit(fgetl(fid), ','));
+% Skip empty lines (bug in Inlinino)
+foo = fgetl(fid);
+while ~isempty(foo)
+    foo = fgetl(fid);
+end
+% get units and lambda
+unit = strip(strsplit(fgetl(fid), ','));
+
 % Read data
 t = textscan(fid, parser, 'delimiter',',');
 % Close file
 fclose(fid);
 
 % Build table
-data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
+if all(contains(t{1}, '/'))
+    data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{2}, ...
+             'VariableNames', {'dt', 'fdom'});
+else
+    data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
              t{2}, 'VariableNames', {'dt', 'fdom'});
+end
+
 
 % Remove last line if it's past midnight (Bug in Inlinino)
 if ~isempty(data)

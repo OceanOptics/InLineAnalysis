@@ -1,4 +1,5 @@
-function [ data ] = iRead( fun, dirname_in, dirname_out, prefix, dt, software, force, nowrite, verbose, read_margin, postfix, parallel_flag, otherargs )
+function [ data ] = iRead( fun, dirname_in, dirname_out, prefix, dt, software, ...
+    force, nowrite, verbose, read_margin, postfix, parallel_flag, otherargs )
 %IMPORTALLUNDERWAY import underway data from all files matching regex settings
 %   in specified directory. Loaded files are saved as mat files for faster run.
 %
@@ -74,7 +75,7 @@ for i=1:length(dt)
       ddata = ddata(sel,:);
       % Write data of day
       if ~nowrite
-        if ~isdir(dir_out); mkdir(dir_out); end
+        if ~isfolder(dir_out); mkdir(dir_out); end
         data = ddata;
         if verbose; fprintf('Saving %s... ', fn_out); end
         save([dir_out fn_out], 'data');
@@ -90,11 +91,13 @@ if read_margin
   % Load margin to dataset (calling myself)
   margin = 1/24; % day
   if verbose; fprintf('Reading margin ... \n'); end
-  pre_data = iRead( fun, dirname_in, dirname_out, prefix, dt(1)-margin, software, force, nowrite, verbose, false, postfix, parallel_flag, otherargs);
+  pre_data = iRead( fun, dirname_in, dirname_out, prefix, dt(1)-margin, ...
+      software, force, nowrite, verbose, false, postfix, parallel_flag, otherargs);
   if ~isempty(pre_data)
     pre_data = pre_data(dt(1)-margin <= pre_data.dt,:);
   end
-  post_data = iRead( fun, dirname_in, dirname_out, prefix, dt(end)+1+margin, software, force, nowrite, verbose, false, postfix, parallel_flag, otherargs );
+  post_data = iRead( fun, dirname_in, dirname_out, prefix, dt(end)+1+margin, ...
+      software, force, nowrite, verbose, false, postfix, parallel_flag, otherargs );
   if ~isempty(post_data)
     post_data = post_data(post_data.dt <= dt(end)+1+margin,:);
   end
@@ -111,7 +114,8 @@ end
 function [filenames] = list_files_from_software(software, dir_in, prefix, dt, postfix)
 % dt <1x1 datenum> day of data to import
   switch software
-    case {'WetView', 'Compass_2.1rc_scheduled', 'Compass_2.1rc', 'Compass_2.1rc_scheduled_bin'}
+    case {'WetView', 'Compass_2.1rc_scheduled', 'Compass_2.1rc', ...
+            'Compass_2.1rc_scheduled_bin'}
       % Compass does not reset files at mid-night thereafter some data from the
       % selected day might be in the first file of the following day
       % List all files in directory
@@ -140,7 +144,7 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
         warning(['No files found for ' software]);
         filenames = [];
       end
-    case 'Inlinino'
+    case {'Inlinino', 'InlininoACScsv'}
       % List all files in directory
       l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.csv']);
       filenames = {l.name}';
@@ -215,7 +219,9 @@ function [str] = dt_yymmdd(dt)
 end
 
 function [str] = dt_yyyydoy(dt)
-  str = sprintf('%d%03d',year(dt),datevec2doy(datevec(dt)));
+%   str = sprintf('%d%03d',year(dt),datevec2doy(datevec(dt)));
+  dtvec = datevec(dt);
+  str = sprintf('%d%03d',dtvec(1),datevec2doy(dtvec));
 end
 
 function [str] = dt_doy(dt)

@@ -144,6 +144,10 @@ classdef (Abstract) Instrument < handle
             for d = floor(min(obj.raw.tsw.dt)):floor(max(obj.raw.tsw.dt))
               fprintf('\t\t%s', datestr(d)); tic;
               sel = d <= obj.raw.tsw.dt & obj.raw.tsw.dt < d + 1;
+              if sum(sel) == 0
+                fprintf('  No total data to bin\n');
+                continue
+              end
               obj.bin.tsw = [obj.bin.tsw; binTable(obj.raw.tsw(sel,:), bin_size_days, obj.bin_method, prctile_detection, prctile_average, false, parallel, false)];
               t = toc; fprintf('  %1.3f s\n', t);
             end
@@ -164,6 +168,10 @@ classdef (Abstract) Instrument < handle
             for d = floor(min(obj.raw.tsw.dt)):floor(max(obj.raw.tsw.dt))
               fprintf('\t\t%s', datestr(d)); tic;
               sel = d <= obj.raw.fsw.dt & obj.raw.fsw.dt < d + 1;
+              if sum(sel) == 0
+                fprintf('  No filtered data to bin\n');
+                continue
+              end
               obj.bin.fsw = [obj.bin.fsw; binTable(obj.raw.fsw(sel,:), bin_size_days, obj.bin_method, prctile_detection, prctile_average, false, parallel, false)];
               t = toc; fprintf('  %1.3f s\n', t);
             end

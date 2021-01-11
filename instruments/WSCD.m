@@ -20,7 +20,7 @@ classdef WSCD < Instrument
       obj.bin_method = 'SB_IN_PRCTL';
       
       warning('WSCD Instrument is deprecated.');
-    end    
+    end
     
     function ReadRaw(obj, days2run, force_import, write)
       switch obj.logger
