@@ -29,9 +29,36 @@ if nargin < 2
     error('missing argument: input instrument name, its data and FTH log');
 end
 
+% if contains(instrument, 'ACS')
+%     sampling_freq = 4;
+% elseif contains(instrument, 'AC9')
+%     sampling_freq = 6;
+% elseif contains(instrument, 'BB3')
+%     sampling_freq = 1;
+% end
 % raw_swt = FTH.swt; % back-up FTH log
-FTH.swt = zeros(size(FTH.swt,1),1);
 
+%% create new FTH vector
+if ~isempty(FTH)
+    % FTH.swt = zeros(size(FTH.swt,1),1);
+    oldFTH = FTH;
+    FTHdt = (oldFTH.dt(1):1/1/3600/24:oldFTH.dt(end))';
+
+    % delete data with duplicats timestamp
+    [~, I] = unique(oldFTH.dt, 'first');
+    x = 1:length(oldFTH.dt);
+    x(I) = [];
+    oldFTH(x,:) = [];
+    int_spd = interp1(oldFTH.dt, oldFTH.spd, FTHdt, 'linear', 'extrap');
+    ism = ~ismember(FTHdt,oldFTH.dt);
+    int_spd (ism) = NaN;
+    FTH = table(FTHdt, zeros(size(FTHdt,1),1), int_spd, 'VariableNames', {'dt', 'swt', 'spd'});
+else
+    FTH = table(data.dt, zeros(size(data.dt,1),1), zeros(size(data.dt,1),1), ...
+        'VariableNames', {'dt', 'swt', 'spd'});
+end
+
+%%
 dt_ini = datetime(table2array(data(:,1)),'ConvertFrom','datenum');
 if any(contains(instrument, 'ACS') | contains(instrument, 'AC9'))
     data = table2array(data(:,3)); data(isinf(data)) = NaN;
@@ -43,423 +70,322 @@ else
     error('Instrument not recognized, check "QC Reference" in cfg file');
 end
 
+d = designfilt('lowpassiir','FilterOrder',2, ...
+     'PassbandFrequency',1/(60*5),'PassbandRipple',0.2, ...
+     'SampleRate', 1);
+
 sep = diff(dt_ini);
 seg = find(sep > minutes(10)); seg = [1; seg; size(dt_ini,1)];
 
-for i = 1:size(seg,1)-1
-m_data = m_data_ini(seg(i):seg(i+1));
-dt = dt_ini(seg(i):seg(i+1));
-
-try
-if any(contains(instrument, 'ACS') | contains(instrument, 'AC9'))
-%     m_M = movmean(m_data,200);
-    m_M = sgolayfilt(m_data,1,201);
-elseif contains(instrument, 'BB3')
-    m_M = movmean(m_data,200);
-end
-catch
-if any(contains(instrument, 'ACS') | contains(instrument, 'AC9'))
-    m_M = movmean(m_data,200);
-elseif contains(instrument, 'BB3')
-    m_M = movmean(m_data,200);
-end
-end
-
-dbbp = NaN(size(m_M,1),1);
-for j = 1:size(m_M,1)-1; dbbp (j) = m_M(j)-m_M(j+1); end
-m_dbbp = movmean(dbbp,100);
-
-try
-    if contains(instrument, 'ACS')
-%         [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',7000,'MinPeakWidth',1200); % 10000
-        [~, x] = findpeaks(-sgolayfilt(m_M,1,401),'MinPeakDistance',MinFiltPeriod*0.6*240); % 10000  ,'MinPeakWidth',1200
-    elseif contains(instrument, 'AC9')
-%         [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',7000,'MinPeakWidth',1200); % 10000
-        [~, x] = findpeaks(-sgolayfilt(m_M,1,601),'MinPeakDistance',MinFiltPeriod*0.6*360); % 10000  ,'MinPeakWidth',1200
-    elseif contains(instrument, 'BB3')
-        [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',MinFiltPeriod*0.47*60,'MinPeakWidth',1000); % 2000
-    end
-catch
-    if any(contains(instrument, 'ACS') | contains(instrument, 'AC9'))
-%         [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',size(m_data,1)-2,'MinPeakWidth',1200); % 10000
-        [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',size(m_data,1)-2); % 10000  ,'MinPeakWidth',1200
-    elseif contains(instrument, 'AC9')
-%         [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',7000,'MinPeakWidth',1200); % 10000
-        [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',size(m_data,1)-2); % 10000  ,'MinPeakWidth',1200
-    elseif contains(instrument, 'BB3')
-        [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',size(m_data,1)-2,'MinPeakWidth',1000); % 2000
-    end
-end
-
-
-% figure(62)
-% % scatter(dt,m_Msg,15); hold on;
-% scatter(dt,m_M,2,'filled'); hold
-% scatter(dt,sgolayfilt(m_M,1,401),2,'g','filled');
-% scatter(dt(x), nanmedian(m_M)*ones(size(x,1),1),10,'r','filled')
-% yyaxis('right')
-% scatter(dt,m_dbbp,2,'filled')
-
-filt_st = NaT(size(x,1),1);
-filt_end = NaT(size(x,1),1);
-if contains(instrument, 'ACS') % for ACS
-parfor k = 1:size(x,1)
-    if all(x(k)<=1920 & x(k)>=size(m_data,1)-1920)% when seg is very small
-        outlim = [1 size(m_M,1)];
-    elseif x(k)<=1920 % when filter event in the beginning of the time series
-        outlim = [1 x(k)+1920];
-    elseif x(k)>=size(m_data,1)-1920 % when filter event at the end of the time series
-        outlim = [x(k)-1920 size(m_M,1)];
-    else % when filter event in the middle of the time series
-        outlim = [x(k)-1920 x(k)+1920];
-    end
-    sel = m_M(outlim(1):outlim(2));
-    seldt = dt(outlim(1):outlim(2));
-    cent = median(seldt(sel<nanmean(sel)));
-    idx = find(abs(dt-cent)<seconds(1));
-    if isempty(idx)
-        idx = floor(median(find(abs(dt-cent)<seconds(3))));
-    end
+for i = progress(1:size(seg,1)-1)
+    m_data = m_data_ini(seg(i):seg(i+1));
+    dt = dt_ini(seg(i):seg(i+1));
     
-    if all(idx(1)<=1250 & idx(1)>=size(m_data,1)-1250)% when seg is very small
-        inlim = [1 size(m_M,1)];
-    elseif idx(1)<=1250 % when filter event in the beginning of the time series
-        inlim = [1 idx(1)+1250];
-    elseif idx(1)>=size(m_data,1)-1250 % when filter event at the end of the time series
-        inlim = [idx(1)-1250 size(m_M,1)];
-    else % when filter event in the middle of the time series
-        inlim = [idx(1)-1250 idx(1)+1250];
-    end    
-    BEtemp = m_dbbp(inlim(1):inlim(2),:);
-    AFtemp = m_dbbp(inlim(1):inlim(2),:);
-    dtBEtmp = dt(inlim(1):inlim(2),:);
-    dtAFtmp = dt(inlim(1):inlim(2),:);
-    
-% % %     if x(k)<=1920 & x(k)>=size(m_data,1)-1920% when seg is very small
-% % %     sel = m_M(1:end);
-% % %     seldt = dt(1:end);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<seconds(1));
-% % %     BEtemp = m_dbbp(1:idx(1),:);
-% % %     AFtemp = m_dbbp(idx(1):end,:);
-% % %     dtBEtmp = dt(1:idx(1),:);
-% % %     dtAFtmp = dt(idx(1):end,:);
-% % %     elseif x(k)<=1920 % when filter event in the beginning of the time series
-% % %     sel = m_M(1:x(k)+1920);
-% % %     seldt = dt(1:x(k)+1920);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<seconds(1));
-% % %     BEtemp = m_dbbp(1:idx(1),:);
-% % %     AFtemp = m_dbbp(idx(1):idx(1)+1250,:);
-% % %     dtBEtmp = dt(1:idx(1),:);
-% % %     dtAFtmp = dt(idx(1):idx(1)+1250,:);
-% % %     elseif x(k)>=size(m_data,1)-1920 % when filter event at the end of the time series
-% % %     sel = m_M(x(k)-1920:end);
-% % %     seldt = dt(x(k)-1920:end);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<seconds(1));
-% % %     BEtemp = m_dbbp(idx(1)-1250:idx(1),:);
-% % %     AFtemp = m_dbbp(idx(1):end,:);
-% % %     dtBEtmp = dt(idx(1)-1250:idx(1),:);
-% % %     dtAFtmp = dt(idx(1):end,:);
-% % %     else % when filter event in the middle of the time series
-% % %     sel = m_M(x(k)-1920:x(k)+1920);
-% % %     seldt = dt(x(k)-1920:x(k)+1920);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<seconds(1));
-% % %     try
-% % %     BEtemp = m_dbbp(idx(1)-1250:idx(1),:);
-% % %     dtBEtmp = dt(idx(1)-1250:idx(1),:);
-% % %     catch
-% % %     end
-% % %     try
-% % %     AFtemp = m_dbbp(idx(1):idx(1)+1250,:);
-% % %     dtAFtmp = dt(idx(1):idx(1)+1250,:);
-% % %     catch
-% % %     end
-% % %     end
-%     plot(seldt,sel); hold on; scatter(cent,nanmedian(sel),10,'r','filled')
-%     plot(dtBEtmp,BEtemp); plot(dtAFtmp,AFtemp);
-
-%     if std(BEtemp)<0.01*abs(sel(1000)) & std(AFtemp)<0.01*sel(1000)
-%         continue
-%     end
-       
-    highpk = dtBEtmp(BEtemp > 0.7 * max(BEtemp)); % local high peak > 10% of max local peak of derivative
-    highpk = highpk(highpk < dt(x(k))); % keep only local high peak before filter event "x"
-    popohpk = highpk(abs(dt(x(k))-highpk) == min(abs(dt(x(k))-highpk)));
-    if all(isempty(popohpk) & x(k)<=1920)
-        filt_st (k) = dtBEtmp(1);
-    elseif isempty(popohpk)
-        filt_st (k) = NaT;
+    if any(isnan(m_data))
+        filled = fillmissing(m_data,'linear','SamplePoints',dt);
     else
-        filt_st (k) = (popohpk - seconds(55));
+        filled = m_data;
     end
+    m_M= filtfilt(d,filled);
 
-    lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp)); % local low peak < 10% of min local peak of derivative
-    lowpk = lowpk(lowpk > dt(x(k))); % keep only local low peak after filter event "x"
-    popolpk = lowpk(abs(dt(x(k))-lowpk) == min(abs(dt(x(k))-lowpk)));
-    if all(isempty(popolpk) & x(k)>=size(m_data,1)-1920)
-        filt_st (k) = dtAFtmp(end);
-    elseif isempty(popolpk)
-        filt_end (k) = NaT;
-    else
-        filt_end (k) = (popolpk - seconds(0));
-    end
-end
-
-elseif contains(instrument, 'AC9') % for ACS
-parfor k = 1:size(x,1)
-    if all(x(k)<=2880 & x(k)>=size(m_data,1)-2880)% when seg is very small
-        outlim = [1 size(m_M,1)];
-    elseif x(k)<=2880 % when filter event in the beginning of the time series
-        outlim = [1 x(k)+2880];
-    elseif x(k)>=size(m_data,1)-2880 % when filter event at the end of the time series
-        outlim = [x(k)-2880 size(m_M,1)];
-    else % when filter event in the middle of the time series
-        outlim = [x(k)-2880 x(k)+2880];
-    end
-    sel = m_M(outlim(1):outlim(2));
-    seldt = dt(outlim(1):outlim(2));
-    cent = median(seldt(sel<nanmean(sel)));
-    idx = find(abs(dt-cent)<seconds(1));
-    if isempty(idx)
-        idx = floor(median(find(abs(dt-cent)<seconds(3))));
-    end
     
-    if all(idx(1)<=1875 & idx(1)>=size(m_data,1)-1875)% when seg is very small
-        inlim = [1 size(m_M,1)];
-    elseif idx(1)<=1875 % when filter event in the beginning of the time series
-        inlim = [1 idx(1)+1875];
-    elseif idx(1)>=size(m_data,1)-1875 % when filter event at the end of the time series
-        inlim = [idx(1)-1875 size(m_M,1)];
-    else % when filter event in the middle of the time series
-        inlim = [idx(1)-1875 idx(1)+1875];
-    end    
-    BEtemp = m_dbbp(inlim(1):inlim(2),:);
-    AFtemp = m_dbbp(inlim(1):inlim(2),:);
-    dtBEtmp = dt(inlim(1):inlim(2),:);
-    dtAFtmp = dt(inlim(1):inlim(2),:);
-    
-% % %     if x(k)<=1920 & x(k)>=size(m_data,1)-1920% when seg is very small
-% % %     sel = m_M(1:end);
-% % %     seldt = dt(1:end);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<seconds(1));
-% % %     BEtemp = m_dbbp(1:idx(1),:);
-% % %     AFtemp = m_dbbp(idx(1):end,:);
-% % %     dtBEtmp = dt(1:idx(1),:);
-% % %     dtAFtmp = dt(idx(1):end,:);
-% % %     elseif x(k)<=1920 % when filter event in the beginning of the time series
-% % %     sel = m_M(1:x(k)+1920);
-% % %     seldt = dt(1:x(k)+1920);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<seconds(1));
-% % %     BEtemp = m_dbbp(1:idx(1),:);
-% % %     AFtemp = m_dbbp(idx(1):idx(1)+1250,:);
-% % %     dtBEtmp = dt(1:idx(1),:);
-% % %     dtAFtmp = dt(idx(1):idx(1)+1250,:);
-% % %     elseif x(k)>=size(m_data,1)-1920 % when filter event at the end of the time series
-% % %     sel = m_M(x(k)-1920:end);
-% % %     seldt = dt(x(k)-1920:end);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<seconds(1));
-% % %     BEtemp = m_dbbp(idx(1)-1250:idx(1),:);
-% % %     AFtemp = m_dbbp(idx(1):end,:);
-% % %     dtBEtmp = dt(idx(1)-1250:idx(1),:);
-% % %     dtAFtmp = dt(idx(1):end,:);
-% % %     else % when filter event in the middle of the time series
-% % %     sel = m_M(x(k)-1920:x(k)+1920);
-% % %     seldt = dt(x(k)-1920:x(k)+1920);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<seconds(1));
-% % %     try
-% % %     BEtemp = m_dbbp(idx(1)-1250:idx(1),:);
-% % %     dtBEtmp = dt(idx(1)-1250:idx(1),:);
-% % %     catch
-% % %     end
-% % %     try
-% % %     AFtemp = m_dbbp(idx(1):idx(1)+1250,:);
-% % %     dtAFtmp = dt(idx(1):idx(1)+1250,:);
-% % %     catch
-% % %     end
-% % %     end
-%     plot(seldt,sel); hold on; scatter(cent,nanmedian(sel),10,'r','filled')
-%     plot(dtBEtmp,BEtemp); plot(dtAFtmp,AFtemp);
-
-%     if std(BEtemp)<0.01*abs(sel(1000)) & std(AFtemp)<0.01*sel(1000)
-%         continue
-%     end
-       
-    highpk = dtBEtmp(BEtemp > 0.7 * max(BEtemp)); % local high peak > 10% of max local peak of derivative
-    highpk = highpk(highpk < dt(x(k))); % keep only local high peak before filter event "x"
-    popohpk = highpk(abs(dt(x(k))-highpk) == min(abs(dt(x(k))-highpk)));
-    if all(isempty(popohpk) & x(k)<=2880)
-        filt_st (k) = dtBEtmp(1);
-    elseif isempty(popohpk)
-        filt_st (k) = NaT;
-    else
-        filt_st (k) = (popohpk - seconds(55));
-    end
-
-    lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp)); % local low peak < 10% of min local peak of derivative
-    lowpk = lowpk(lowpk > dt(x(k))); % keep only local low peak after filter event "x"
-    popolpk = lowpk(abs(dt(x(k))-lowpk) == min(abs(dt(x(k))-lowpk)));
-    if all(isempty(popolpk) & x(k)>=size(m_data,1)-2880)
-        filt_st (k) = dtAFtmp(end);
-    elseif isempty(popolpk) 
-        filt_end (k) = NaT;
-    else
-        filt_end (k) = (popolpk - seconds(0));
-    end
-end
-
-elseif contains(instrument, 'BB3') % for BB3
-parfor k = 1:size(x,1)
-    
-    if all(x(k)<=330 & x(k)>=size(m_data,1)-330)% when seg is very small
-        outlim = [1 size(m_M,1)];
-    elseif x(k)<=330 % when filter event in the beginning of the time series
-        outlim = [1 x(k)+330];
-    elseif x(k)>=size(m_data,1)-330 % when filter event at the end of the time series
-        outlim = [x(k)-330 size(m_M,1)];
-    else % when filter event in the middle of the time series
-        outlim = [x(k)-330 x(k)+330];
-    end
-    sel = m_M(outlim(1):outlim(2));
-    seldt = dt(outlim(1):outlim(2));
-    cent = median(seldt(sel<nanmean(sel)));
-    idx = find(abs(dt-cent)<seconds(1));
-    if isempty(idx)
-        idx = floor(median(find(abs(dt-cent)<seconds(3))));
-    end
-    
-    if all(x(k)<=300 & x(k)>=size(m_data,1)-300)% when seg is very small
-        inlim = [1 size(m_M,1)];
-    elseif x(k)<=300 % when filter event in the beginning of the time series
-        inlim = [1 x(k)+300];
-    elseif x(k)>=size(m_data,1)-300 % when filter event at the end of the time series
-        inlim = [x(k)-300 size(m_M,1)];
-    else % when filter event in the middle of the time series
-        inlim = [x(k)-300 x(k)+300];
-    end    
-    BEtemp = m_dbbp(inlim(1):inlim(2),:);
-    AFtemp = m_dbbp(inlim(1):inlim(2),:);
-    dtBEtmp = dt(inlim(1):inlim(2),:);
-    dtAFtmp = dt(inlim(1):inlim(2),:);
-    
-    
-% % %     if x(k)<=330 & x(k)>=size(m_data,1)-330% when seg is very small
-% % %     sel = m_M(1:end);
-% % %     seldt = dt(1:end);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<=seconds(1));
-% % %     BEtemp = m_dbbp(1:idx(1),:);
-% % %     AFtemp = m_dbbp(idx(1):end,:);
-% % %     dtBEtmp = dt(1:idx(1),:);
-% % %     dtAFtmp = dt(idx(1):end,:);
-% % %     elseif x(k)<=330 % when filter event in the beginning of the time series
-% % %     sel = m_M(1:x(k)+330);
-% % %     seldt = dt(1:x(k)+330);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<=seconds(1));
-% % %     BEtemp = m_dbbp(1:idx(1),:);
-% % %     AFtemp = m_dbbp(idx(1):idx(1)+300,:);
-% % %     dtBEtmp = dt(1:idx(1),:);
-% % %     dtAFtmp = dt(idx(1):idx(1)+300,:);
-% % %     elseif x(k)>=size(m_data,1)-330 % when filter event at the end of the time series
-% % %     sel = m_M(x(k)-330:end);
-% % %     seldt = dt(x(k)-330:end);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<seconds(1));
-% % %     BEtemp = m_dbbp(idx(1)-300:idx(1),:);
-% % %     AFtemp = m_dbbp(idx(1):end,:);
-% % %     dtBEtmp = dt(idx(1)-300:idx(1),:);
-% % %     dtAFtmp = dt(idx(1):end,:);
-% % %     else % when filter event in the middle of the time series
-% % %     sel = m_M(x(k)-330:x(k)+330);
-% % %     seldt = dt(x(k)-330:x(k)+330);
-% % %     cent = median(seldt(sel<nanmean(sel)));
-% % %     idx = find(abs(dt-cent)<seconds(1));
-% % %     BEtemp = m_dbbp(idx(1)-300:idx(1),:);
-% % %     AFtemp = m_dbbp(idx(1):idx(1)+300,:);
-% % %     dtBEtmp = dt(idx(1)-300:idx(1),:);
-% % %     dtAFtmp = dt(idx(1):idx(1)+300,:);
-% % %     end
-
-%     if x(k)<=20 % when filter event in the beginning of the time series
-%     BEtemp = m_dbbp(1:x(k),:);
-%     AFtemp = m_dbbp(1:x(k)+300,:);
-%     dtBEtmp = dt(1:x(k),:);
-%     dtAFtmp = dt(1:x(k)+300,:);
-%     elseif x(k)>20 & x(k)<=500 %#ok<*AND2> % when filter event in the beginning of the time series
-%     BEtemp = m_dbbp(1:x(k),:);
-%     AFtemp = m_dbbp(x(k)-20:x(k)+300,:);
-%     dtBEtmp = dt(1:x(k),:);
-%     dtAFtmp = dt(x(k)-20:x(k)+300,:);
-%     elseif x(k)>=size(m_data,1)-300 % when filter event at the end of the time series
-%     BEtemp = m_dbbp(x(k)-500:x(k),:);
-%     AFtemp = m_dbbp(x(k)-20:size(m_data,1),:);
-%     dtBEtmp = dt(x(k)-500:x(k),:);
-%     dtAFtmp = dt(x(k)-20:size(m_data,1),:);
-%     else % when filter event in the middle of the time series
-%     BEtemp = m_dbbp(x(k)-500:x(k),:);
-%     AFtemp = m_dbbp(x(k)-20:x(k)+300,:);
-%     dtBEtmp = dt(x(k)-500:x(k),:);
-%     dtAFtmp = dt(x(k)-20:x(k)+300,:);
+%     try
+%         if any(contains(instrument, 'ACS') | contains(instrument, 'AC9'))
+%         %     m_M = movmean(m_data,200);
+%             m_M = sgolayfilt(m_data,1,201);
+%         elseif contains(instrument, 'BB3')
+%             m_M = movmean(m_data,200);
+%         end
+%     catch
+%         if any(contains(instrument, 'ACS') | contains(instrument, 'AC9'))
+%             m_M = movmean(m_data,200);
+%         elseif contains(instrument, 'BB3')
+%             m_M = movmean(m_data,200);
+%         end
 %     end
 
-    highpk = dtBEtmp(BEtemp > 0.7 * max(BEtemp)); % local high peak > 10% of max local peak of derivative
-    highpk = highpk(highpk < dt(x(k))); % keep only local high peak before filter event "x"
-    popohpk = highpk(abs(dt(x(k))-highpk) == min(abs(dt(x(k))-highpk)));
-    if all(isempty(popohpk) & x(k)<=330)
-        filt_st (k) = dtBEtmp(1);
-    elseif isempty(popohpk)
-        filt_st (k) = NaT;
-    else
-        filt_st (k) = (popohpk - seconds(3.5));
+    dbbp = NaN(size(m_M,1),1);
+    for j = 1:size(m_M,1)-1; dbbp (j) = m_M(j)-m_M(j+1); end
+    m_dbbp = movmean(dbbp,200);
+
+    try
+        if contains(instrument, 'ACS')
+    %         [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',7000,'MinPeakWidth',1200); % 10000
+            [~, x] = findpeaks(-sgolayfilt(m_M,1,401),'MinPeakDistance',MinFiltPeriod*0.6*240); % 10000  ,'MinPeakWidth',1200
+        elseif contains(instrument, 'AC9')
+    %         [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',7000,'MinPeakWidth',1200); % 10000
+            [~, x] = findpeaks(-sgolayfilt(m_M,1,601),'MinPeakDistance',MinFiltPeriod*0.6*360); % 10000  ,'MinPeakWidth',1200
+        elseif contains(instrument, 'BB3')
+            [~, x] = findpeaks(-m_M,'MinPeakDistance',MinFiltPeriod*0.47*60,'MinPeakWidth',200); % 2000
+        end
+    catch
+        if any(contains(instrument, 'ACS') | contains(instrument, 'AC9'))
+    %         [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',size(m_data,1)-2,'MinPeakWidth',1200); % 10000
+            [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',size(m_data,1)-2); % 10000  ,'MinPeakWidth',1200
+        elseif contains(instrument, 'AC9')
+    %         [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',7000,'MinPeakWidth',1200); % 10000
+            [~, x] = findpeaks(-movmean(m_M,1000),'MinPeakDistance',size(m_data,1)-2); % 10000  ,'MinPeakWidth',1200
+        elseif contains(instrument, 'BB3')
+            [~, x] = findpeaks(-m_M,'MinPeakDistance',size(m_data,1)-2,'MinPeakWidth',200); % 2000
+        end
     end
-        
-%     if isempty(popohpk); filt_st (k) = NaT; else
-%     filt_st (k) = (popohpk - minutes(3.5)); end
 
-    lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp)); % local low peak < 10% of min local peak of derivative
-    lowpk = lowpk(lowpk > dt(x(k))); % keep only local low peak after filter event "x"
-    popolpk = lowpk(abs(dt(x(k))-lowpk) == min(abs(dt(x(k))-lowpk)));
-    if all(isempty(popolpk) & x(k)>=size(m_data,1)-330)
-        filt_st (k) = dtAFtmp(end);
-    elseif isempty(popolpk) 
-        filt_end (k) = NaT;
-    else
-        filt_end (k) = (popolpk - seconds(-30));
+%     figure(62)
+%     yyaxis('left')
+%     scatter(dt,-m_M,3,'r','filled'); hold on;
+% %     scatter(dt,-movmean(m_M,1000),2,'filled');
+% %     scatter(dt,sgolayfilt(m_M,1,401),2,'g','filled');
+%     scatter(dt(x), nanmedian(m_M)*ones(size(x,1),1),10,'r','filled')
+%     yyaxis('right')
+%     scatter(dt,m_dbbp,3,'k','filled')
+%     scatter(dt,dbbp,2,'b','filled')
+
+    filt_st = NaT(size(x,1),1);
+    filt_end = NaT(size(x,1),1);
+    if contains(instrument, 'ACS') % for ACS
+        parfor k = 1:size(x,1)
+            if all(x(k)<=1920 & x(k)>=size(m_data,1)-1920)% when seg is very small
+                outlim = [1 size(m_M,1)];
+            elseif x(k)<=1920 % when filter event in the beginning of the time series
+                outlim = [1 x(k)+1920];
+            elseif x(k)>=size(m_data,1)-1920 % when filter event at the end of the time series
+                outlim = [x(k)-1920 size(m_M,1)];
+            else % when filter event in the middle of the time series
+                outlim = [x(k)-1920 x(k)+1920];
+            end
+            sel = m_M(outlim(1):outlim(2));
+            seldt = dt(outlim(1):outlim(2));
+            cent = median(seldt(sel<nanmean(sel)));
+            idx = find(abs(dt-cent)<seconds(1));
+            if isempty(idx)
+                idx = floor(median(find(abs(dt-cent)<seconds(3))));
+            end
+
+            if all(idx(1)<=1250 & idx(1)>=size(m_data,1)-1250)% when seg is very small
+                inlim = [1 size(m_M,1)];
+            elseif idx(1)<=1250 % when filter event in the beginning of the time series
+                inlim = [1 idx(1)+1250];
+            elseif idx(1)>=size(m_data,1)-1250 % when filter event at the end of the time series
+                inlim = [idx(1)-1250 size(m_M,1)];
+            else % when filter event in the middle of the time series
+                inlim = [idx(1)-1250 idx(1)+1250];
+            end    
+            BEtemp = m_dbbp(inlim(1):inlim(2),:);
+            AFtemp = m_dbbp(inlim(1):inlim(2),:);
+            dtBEtmp = dt(inlim(1):inlim(2),:);
+            dtAFtmp = dt(inlim(1):inlim(2),:);
+
+            highpk = dtBEtmp(BEtemp > 0.7 * max(BEtemp)); % local high peak > 70% of max local peak of derivative
+            highpk = highpk(highpk < cent); % keep only local high peak before filter event center
+            popohpk = highpk(abs(dt(x(k))-highpk) == min(abs(dt(x(k))-highpk)));
+            if all(isempty(popohpk) & x(k)<=1920)
+                filt_st (k) = dtBEtmp(1);
+            elseif isempty(popohpk)
+                filt_st (k) = NaT;
+            else
+                filt_st (k) = (popohpk - seconds(55));
+            end
+
+            lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp)); % local low peak < 70% of min local peak of derivative
+            lowpk = lowpk(lowpk > cent); % keep only local low peak after filter event center
+            popolpk = lowpk(abs(dt(x(k))-lowpk) == min(abs(dt(x(k))-lowpk)));
+            if all(isempty(popolpk) & x(k)>=size(m_data,1)-1920)
+                filt_st (k) = dtAFtmp(end);
+            elseif isempty(popolpk)
+                filt_end (k) = NaT;
+            else
+                filt_end (k) = (popolpk - seconds(0));
+            end
+        end
+
+    elseif contains(instrument, 'AC9') % for ACS
+        parfor k = 1:size(x,1)
+            if all(x(k)<=2880 & x(k)>=size(m_data,1)-2880)% when seg is very small
+                outlim = [1 size(m_M,1)];
+            elseif x(k)<=2880 % when filter event in the beginning of the time series
+                outlim = [1 x(k)+2880];
+            elseif x(k)>=size(m_data,1)-2880 % when filter event at the end of the time series
+                outlim = [x(k)-2880 size(m_M,1)];
+            else % when filter event in the middle of the time series
+                outlim = [x(k)-2880 x(k)+2880];
+            end
+            sel = m_M(outlim(1):outlim(2));
+            seldt = dt(outlim(1):outlim(2));
+            cent = median(seldt(sel<nanmean(sel)));
+            idx = find(abs(dt-cent)<seconds(1));
+            if isempty(idx)
+                idx = floor(median(find(abs(dt-cent)<seconds(3))));
+            end
+
+            if all(idx(1)<=1875 & idx(1)>=size(m_data,1)-1875)% when seg is very small
+                inlim = [1 size(m_M,1)];
+            elseif idx(1)<=1875 % when filter event in the beginning of the time series
+                inlim = [1 idx(1)+1875];
+            elseif idx(1)>=size(m_data,1)-1875 % when filter event at the end of the time series
+                inlim = [idx(1)-1875 size(m_M,1)];
+            else % when filter event in the middle of the time series
+                inlim = [idx(1)-1875 idx(1)+1875];
+            end    
+            BEtemp = m_dbbp(inlim(1):inlim(2),:);
+            AFtemp = m_dbbp(inlim(1):inlim(2),:);
+            dtBEtmp = dt(inlim(1):inlim(2),:);
+            dtAFtmp = dt(inlim(1):inlim(2),:);
+
+            highpk = dtBEtmp(BEtemp > 0.7 * max(BEtemp)); % local high peak > 70% of max local peak of derivative
+            highpk = highpk(highpk < cent); % keep only local high peak before filter event center
+            popohpk = highpk(abs(dt(x(k))-highpk) == min(abs(dt(x(k))-highpk)));
+            if all(isempty(popohpk) & x(k)<=2880)
+                filt_st (k) = dtBEtmp(1);
+            elseif isempty(popohpk)
+                filt_st (k) = NaT;
+            else
+                filt_st (k) = (popohpk - seconds(55));
+            end
+
+            lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp)); % local low peak < 70% of min local peak of derivative
+            lowpk = lowpk(lowpk > cent); % keep only local low peak after filter event cent
+            popolpk = lowpk(abs(dt(x(k))-lowpk) == min(abs(dt(x(k))-lowpk)));
+            if all(isempty(popolpk) & x(k)>=size(m_data,1)-2880)
+                filt_st (k) = dtAFtmp(end);
+            elseif isempty(popolpk) 
+                filt_end (k) = NaT;
+            else
+                filt_end (k) = (popolpk - seconds(0));
+            end
+        end
+
+    elseif contains(instrument, 'BB3') % for BB3
+        parfor k = 1:size(x,1)
+%         for k = 1:size(x,1)
+
+            if all(x(k)<=550 & x(k)>=size(m_data,1)-400)% when seg is very small
+                outlim = [1 size(m_M,1)];
+            elseif x(k)<=550 % when filter event in the beginning of the time series
+                outlim = [1 x(k)+400];
+            elseif x(k)>=size(m_data,1)-400 % when filter event at the end of the time series
+                outlim = [x(k)-550 size(m_M,1)];
+            else % when filter event in the middle of the time series
+                outlim = [x(k)-550 x(k)+400];
+            end
+            sel = m_M(outlim(1,1):outlim(1,2));
+            seldt = dt(outlim(1,1):outlim(1,2));
+            cent = median(seldt(sel<nanmean(sel)));
+            idx = find(abs(dt-cent)<seconds(1));
+            if isempty(idx)
+                idx = floor(median(find(abs(dt-cent)<seconds(3))));
+            end
+
+            if all(idx(1)<=330 & idx(1)>=size(m_data,1)-330)% when seg is very small
+                inlim = [1 size(m_M,1)];
+            elseif idx(1)<=330 % when filter event in the beginning of the time series
+                inlim = [1 idx(1)+330];
+            elseif idx(1)>=size(m_data,1)-330 % when filter event at the end of the time series
+                inlim = [idx(1)-330 size(m_M,1)];
+            else % when filter event in the middle of the time series
+                inlim = [idx(1)-330 idx(1)+330];
+            end    
+            BEtemp = m_dbbp(inlim(1,1):inlim(1,2),:);
+            AFtemp = m_dbbp(inlim(1,1):inlim(1,2),:);
+            dtBEtmp = dt(inlim(1,1):inlim(1,2),:);
+            dtAFtmp = dt(inlim(1,1):inlim(1,2),:);
+
+%             highpk = dtBEtmp(BEtemp > 0.7 * max(BEtemp)); % local high peak > 70% of max local peak of derivative
+            highpk = dtBEtmp(BEtemp > 0.7 * max(BEtemp) ...
+                & max(BEtemp) > 0.03); % nanstd(BEtemp) > 12*nanstd(BEtemp(dtBEtmp > cent - minutes(0.5) & dtBEtmp < cent)));
+            highpk = highpk(highpk < cent); % keep only local high peak before filter event center
+            popohpk = highpk(abs(cent-highpk) == min(abs(cent-highpk)));
+            if all(isempty(popohpk) & idx<=330)
+                filt_st (k) = dtBEtmp(1);
+            elseif isempty(popohpk) % find filter event longer than 10 in case flowcontrol is stuck
+                foo = 600;
+                while all(max(BEtemp) < 0.03...% nanstd(BEtemp) < 12*nanstd(BEtemp(dtBEtmp > cent - minutes(0.5) & dtBEtmp < cent)) ...
+                        & foo < 30000 ...
+                        & size(dtBEtmp,1) < size(dt(1:idx(1)-foo),1))
+                    BEtemp = m_dbbp(inlim(1,1)-foo:inlim(1,2)-foo,:);
+                    dtBEtmp = dt(inlim(1,1)-foo:inlim(1,2)-foo,:);
+                    foo = foo + 600;
+                end
+%                 highpk = dtBEtmp(BEtemp > 0.7 * max(BEtemp)); % local high peak > 70% of max local peak of derivative
+                highpk = dtBEtmp(BEtemp > 0.7 * max(BEtemp) ...
+                    & max(BEtemp) > 0.03); % nanstd(BEtemp) > 12*nanstd(BEtemp(dtBEtmp > cent - minutes(0.5) & dtBEtmp < cent)));
+                highpk = highpk(highpk < cent); % keep only local high peak before filter event center
+                popohpk = highpk(abs(cent-highpk) == min(abs(cent-highpk)));
+                if isempty(popohpk)
+                    filt_st (k) = NaT;
+                else
+                    filt_st (k) = (popohpk - seconds(190));
+                end
+%                 filt_st (k) = NaT;
+            else
+                filt_st (k) = (popohpk - seconds(190));
+            end
+
+%             lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp)); % local low peak < 70% of min local peak of derivative
+            lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp) ...
+                & min(AFtemp) < - 0.03);% nanstd(AFtemp) > 12*nanstd(AFtemp(dtAFtmp > cent & dtAFtmp < cent + minutes(0.5))));
+            lowpk = lowpk(lowpk > cent); % keep only local low peak after filter event center
+            popolpk = lowpk(abs(cent-lowpk) == min(abs(cent-lowpk)));
+            if all(isempty(popolpk) & idx>=size(m_data,1)-330)
+                filt_st (k) = dtAFtmp(end);
+            elseif isempty(popolpk) % find filter event longer than 10 in case flowcontrol is stuck
+                foo = 600;
+                while all(min(AFtemp) > - 0.03...% nanstd(AFtemp) < 12*nanstd(AFtemp(dtAFtmp > cent & dtAFtmp < cent + minutes(0.5))) ...
+                        & foo < 30000 ...
+                        & size(dtAFtmp,1) < size(dt(idx(1):end-foo),1))
+                    AFtemp = m_dbbp(inlim(1,1)+foo:inlim(1,2)+foo,:);
+                    dtAFtmp = dt(inlim(1,1)+foo:inlim(1,2)+foo,:);
+                    foo = foo + 600;
+                end
+%                 lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp)); % local low peak < 70% of min local peak of derivative
+                lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp) ...
+                    & min(AFtemp) < - 0.03);% nanstd(AFtemp) > 12*nanstd(AFtemp(dtAFtmp > cent & dtAFtmp < cent + minutes(0.5))));
+                lowpk = lowpk(lowpk > cent); % keep only local low peak after filter event "x"
+                popolpk = lowpk(abs(cent-lowpk) == min(abs(cent-lowpk)));
+                if isempty(popolpk)
+                    filt_end (k) = NaT;
+                else
+                    filt_end (k) = (popolpk - seconds(-10));
+                end
+%                 filt_end (k) = NaT;
+            else
+                filt_end (k) = (popolpk - seconds(-10));
+            end
+            
+%             figure(63)
+%             scatter(dt_ini,m_data_ini,1,'k'); hold on
+%             scatter(cent,mean(sel),30,'r')
+%             scatter(seldt, sel,1,'b'); 
+%             xlim([min(dtBEtmp) max(dtAFtmp)]);
+%             yyaxis('right')
+%             hold on
+%             scatter(dt(dt > cent - minutes(0.8) & dt < cent + minutes(0.8)),m_dbbp(dt > cent - minutes(0.8) & dt < cent + minutes(0.8)),1,'o'); 
+%             scatter(dt(inlim(1):inlim(2)),m_dbbp(inlim(1):inlim(2)),1,'r'); 
+%             plot([filt_st(k) filt_st(k)],[min(m_dbbp(inlim(1):inlim(2))) max(m_dbbp(inlim(1):inlim(2)))],'g','Marker','none','LineStyle','-')
+%             plot([filt_end(k) filt_end(k)],[min(m_dbbp(inlim(1):inlim(2))) max(m_dbbp(inlim(1):inlim(2)))],'g','Marker','none','LineStyle','-')
+
+        end
     end
-    
-%     if isempty(popolpk); filt_end (k) = NaT; else
-%     filt_end (k) = (popolpk - seconds(-30)); end
-end
-end
 
-% figure(64)
-% scatter(dt_ini,m_data_ini,1)
-% hold on
-% plot(datetime(FTH.dt,'ConvertFrom','datenum'),FTH.swt)
-% plot(dt,m_dbbp)
-% yyaxis('right')
-% plot([filt_st filt_st],[0 1],'g','Marker','none','LineStyle','-')
-% plot([filt_end filt_end],[0 1],'g','Marker','none','LineStyle','-')
-% plot(datetime(FTH.dt,'ConvertFrom','datenum'),raw_swt,'r','LineStyle','-')
-% hold off
+%     figure(64)
+%     scatter(dt_ini,m_data_ini,1)
+%     hold on
+%     plot(datetime(FTH.dt,'ConvertFrom','datenum'),FTH.swt)
+%     plot(dt,m_dbbp)
+%     yyaxis('right')
+%     plot([filt_st filt_st],[0 1],'g','Marker','none','LineStyle','-')
+%     plot([filt_end filt_end],[0 1],'g','Marker','none','LineStyle','-')
+% %     plot(datetime(FTH.dt,'ConvertFrom','datenum'),raw_swt,'r','LineStyle','-')
+%     hold off
 
-filt = [filt_st,filt_end];
+    filt = [filt_st,filt_end];
 
-%% keep ref only pair filt detected
-filt(any(isnat(filt),2),:) = [];
+    %% keep ref only pair filt detected
+    filt(any(isnat(filt),2),:) = [];
 
-% copy to FTH table
-for j=1:size(filt,1)
-    FTH.swt(FTH.dt >= datenum(filt(j,1)) & FTH.dt <= datenum(filt(j,2))) = 1;
-end
-end
+    % copy to FTH table
+    for j=1:size(filt,1)
+        FTH.swt(FTH.dt >= datenum(filt(j,1)) & FTH.dt <= datenum(filt(j,2))) = 1;
+    end
 end
 
 
