@@ -1,8 +1,8 @@
 function [data, Nbad] = StepQC (data, lambda, fudge_factor, bb_dark, bb_threshold)
 % author: Guillaume Bourdin
 % created: Nov 13, 2019
-
-%StepQC Auto QC ACs/AC9/BB spectrum
+%
+% StepQC Auto QC ACs/AC9/BB spectrum
 %
 % INPUT:
 %   - data_in: ACS data <Nx3 Table> time series of data that must contains:
@@ -52,7 +52,8 @@ if nargin < 3
     warning('fudge_factor missing, set to default (3)');
 end
 
-if any(strcmp(data.Properties.VariableNames, {'a','c'}))
+if any(strcmp(data.Properties.VariableNames, 'a') | ...
+        strcmp(data.Properties.VariableNames, 'c'))
     if any(fudge_factor.a < 3 | fudge_factor.c < 3)
         error('QC threshold ACS too low (minimum 3)');
     end
@@ -101,7 +102,7 @@ elseif any(strcmp(data.Properties.VariableNames, 'beta'))
     bad_bb = NaN(size(data,1), size(lambda.bb, 2));
     for ii = 1:size(lambda.bb, 2)
         other = 1:size(lambda.bb, 2); other(ii)=[];
-        bad_bb (:,ii) = data.beta(:,ii) - bb_dark(ii) > fudge_factor.bb * 75 + nanmean(data.beta(:,other),2) - nanmean(bb_dark(other),2);
+        bad_bb (:,ii) = data.beta(:,ii) - bb_dark(ii) > fudge_factor.bb * (nanmean(data.beta(:,other),2) - nanmean(bb_dark(other),2));
         Nbad.bb(ii) = Nbad.bb(ii) + sum(bad_bb(:,ii));
     end
     data.beta(logical(bad_bb)) = NaN;

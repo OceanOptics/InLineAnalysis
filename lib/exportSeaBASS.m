@@ -102,7 +102,7 @@ fprintf(fid,'/end_header\n');
 % Pre-format dt
 date_str = datestr(data.dt, 'yyyymmdd');
 time_str = datestr(data.dt, 'HH:MM:SS');
-for i=1:size(data.dt,1)
+for i=progress(1:size(data.dt,1))
   fprintf(fid,'%s,%s,%.4f,%.4f,%.4f,%.4f', date_str(i,:), time_str(i,:), data.lat(i), data.lon(i), data.t(i), data.s(i));
   for j=1:size(i_specific_fields,2)
     fprintf(fid,[',' data.Properties.VariableDescriptions{i_specific_fields(j)}], table2array(data(i,i_specific_fields(j))));

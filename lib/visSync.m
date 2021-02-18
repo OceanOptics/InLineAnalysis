@@ -2,6 +2,7 @@ function fh = visSync(fth, dt, obs, y_label)
   fh = fig(30);
   yyaxis('right');
   plot(fth.dt, fth.swt, 'k');
+%   plot(fth.dt, fth.beta, 'k');
   ylabel('0 = Total | 1 = Filtered');
   ax = gca; ax.YAxis(2).Color = 'k';
   yyaxis('left'); hold('on');

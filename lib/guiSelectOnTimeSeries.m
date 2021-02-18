@@ -1,4 +1,4 @@
-function [ user_selection_t, user_selection_f ] = guiSelectOnTimeSeries( figure_handler )
+function [ user_selection_t, user_selection_f, user_selection_s] = guiSelectOnTimeSeries( figure_handler )
 %GUISELECTONTIMESERIES Graphical User Interface Function o interact with a
 %timeseries and select parts of it.
 %
@@ -30,6 +30,8 @@ hc = datacursormode();
 % Set Select (user select a chunk of data)
 user_selection_t = [];
 user_selection_f = [];
+user_selection_s = [];
+
 hold('on'); % to overlay area
 % User Interaction
 fprintf('User Interface Modes:\n');
@@ -40,6 +42,7 @@ fprintf('\t [p] pan\n');
 fprintf('\t [c] cursor\n');
 fprintf('\t [t] select red (total/trash)\n');
 fprintf('\t [f] select green (filtered)\n');
+fprintf('\t [s] select time point (clean)\n');
 fprintf('\t [q] save & quit\n');
 k='';
 % Master Loop Listenning to commands
@@ -113,6 +116,19 @@ while ~strcmp(k, 'q')
         fprintf('%s - %s\n', datestr(dt_sel_f(1)), datestr(dt_sel_f(2)));
         % Plot selected area
         area(dt_sel_f,[y_lim(2), y_lim(2)], y_lim(1), 'FaceColor', [0.3 1 0.3], 'FaceAlpha', 0.3, 'EdgeColor', 'none');
+
+      case 's'
+        foo = ginput(1);
+        x_lim = xlim(); y_lim = ylim();
+        if ~isdatetime(x_lim)
+            dt_sel_s = foo(:,1)';
+        else
+            ax = gca; xdate = num2ruler(foo,ax.XAxis); dt_sel_s = xdate(:,1)';
+        end
+        user_selection_s = [user_selection_s; dt_sel_s];
+        fprintf('%s\n', datestr(dt_sel_s));
+        % Plot selected area
+        plot([dt_sel_s dt_sel_s], [y_lim(1), y_lim(2)], '-', 'Color', [1 0.2 0.2]);
       otherwise
         if ~strcmp(k,'q')
           fprintf('?\n');

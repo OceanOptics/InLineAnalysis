@@ -43,7 +43,8 @@ classdef FTH < Instrument
     function ApplyUserInput(obj, user_selection, mode)
       % Correct part of switch data
       % Note: spd data is lost when corrected
-      for i=1:size(user_selection,1)
+      fprintf('User input ');
+      for i=progress(1:size(user_selection,1))
         % Add user selection in fth
         % round user input to the second and create continuous time vector
         dt_st = datenum(floor(datevec(user_selection(i,1))));
@@ -77,6 +78,7 @@ classdef FTH < Instrument
         end
       end
       obj.data = sortrows(obj.data);
+      fprintf('Done\n');
     end
   end
 end

@@ -55,8 +55,11 @@ lvar = raw.Properties.VariableNames(~idt);
 if verbose; fprintf('Binning %s ... ', inputname(1)); end
 
 % Get start dt
-start_dt = min(raw.dt);
-start_dt = start_dt - second(start_dt)/3600/24; % Start at 0 second
+% start_dt = min(raw.dt);
+% start_dt = start_dt - second(start_dt)/3600/24; % Start at 0 second
+start_dt = datevec(min(raw.dt));
+start_dt(end) = 0;
+start_dt = datenum(start_dt); % Start at 0 second
 
 % Init bin array with NaN values
 if dt_discontinus  

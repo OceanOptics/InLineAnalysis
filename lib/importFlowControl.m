@@ -23,7 +23,7 @@ end
 %       line_count = -1;
 %   end
 % else
-%   error(1,'\nScript not compatible with Windows\n');
+%   fprintf(1,'\nScript not compatible with Windows\n');
 %   line_count = -1;
 %   return
 % end
@@ -65,6 +65,8 @@ catch
     fclose(fid); % Close file
 
 end
+
+
 % % Read file line by line (slow)
 % i=1;
 % while ~feof(fid)

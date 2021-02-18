@@ -151,7 +151,8 @@ classdef InLineAnalysis < handle
     
     function SplitDetect (obj, MinFiltPeriod)
         fprintf('Detecting %s filter events...\n', obj.cfg.qcref.view);
-        obj.instrument.FTH.data = SplitDetect(obj.cfg.qcref.view, obj.instrument.(obj.cfg.qcref.view).data, obj.instrument.FTH.data, MinFiltPeriod);
+        obj.instrument.FTH.data = SplitDetect(obj.cfg.qcref.view,...
+            obj.instrument.(obj.cfg.qcref.view).data, obj.instrument.FTH.data, MinFiltPeriod);
         fprintf('Done\n');
     end
     
@@ -160,6 +161,7 @@ classdef InLineAnalysis < handle
           fudge_factor.a = 3;
           fudge_factor.c = 3;
       end
+      instru = fieldnames(obj.instrument);
       for i=obj.cfg.instruments2run; i = i{1};
         if  any(contains(i,{'ACS','BB','PAR'}))
             if ~isempty(obj.instrument.(i).raw.fsw)
@@ -171,13 +173,17 @@ classdef InLineAnalysis < handle
                     lambda.bb = obj.instrument.(i).lambda;
                 end
                 if any(contains(i,{'ACS','BB'}))
-                [obj.instrument.(i).raw.fsw, Nbad]= StepQC(obj.instrument.(i).raw.fsw, lambda, fudge_factor, obj.instrument.BB3.dark, bb_threshold);
+                [obj.instrument.(i).raw.fsw, Nbad]= StepQC(obj.instrument.(i).raw.fsw,...
+                    lambda, fudge_factor, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
+                    bb_threshold);
                 end
                 if  any(contains(i,'ACS'))
-                    fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s filtered data\n', Nbad.a, Nbad.c, i);
+                    fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s filtered data\n',...
+                        Nbad.a, Nbad.c, i);
                 elseif  any(contains(i,'BB'))
                     for ii = 1:size(Nbad.bb,2)
-                        fprintf('Done\n%4.2f%% of beta%i deleted from %s filtered data\n', Nbad.bb(ii), lambda.bb(ii), i);
+                        fprintf('Done\n%4.2f%% of beta%i deleted from %s filtered data\n',...
+                            Nbad.bb(ii), lambda.bb(ii), i);
                     end
                 end
                 if isempty(obj.instrument.(i).raw.tsw); fprintf('StepQC [Done]\n');end
@@ -198,13 +204,17 @@ classdef InLineAnalysis < handle
                     obj.instrument.(i).data(foo,:) = [];
                 end
                 if any(contains(i,{'ACS','BB'}))
-                [obj.instrument.(i).raw.tsw, Nbad]= StepQC(obj.instrument.(i).raw.tsw, lambda, fudge_factor, obj.instrument.BB3.dark, bb_threshold);
+                [obj.instrument.(i).raw.tsw, Nbad]= StepQC(obj.instrument.(i).raw.tsw,...
+                    lambda, fudge_factor, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
+                    bb_threshold);
                 end
                 if  any(contains(i,'ACS'))
-                    fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s total data\n', Nbad.a, Nbad.c, i);
+                    fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s total data\n',...
+                        Nbad.a, Nbad.c, i);
                 elseif any(contains(i,'BB'))
                     for ii = 1:size(Nbad.bb,2)
-                        fprintf('Done\n%4.2f%% of beta%i deleted from %s total data\n', Nbad.bb(ii), lambda.bb(ii), i);
+                        fprintf('Done\n%4.2f%% of beta%i deleted from %s total data\n',...
+                            Nbad.bb(ii), lambda.bb(ii), i);
                     end
                 elseif any(contains(i,'PAR'))
                     fprintf('Done\n%i raw %s values deleted\n', sum(foo), i);
@@ -261,14 +271,24 @@ classdef InLineAnalysis < handle
             file_selection = loadjson(filename);
             % Convert datestr to datenum for newer format
           try
-            if ~isempty(file_selection.total); file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))]; end
+            if ~isempty(file_selection.total)
+                file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))];
+            end
           catch
-            if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
+            if ~isempty(file_selection.total)
+                file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)),...
+                    datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))];
+            end
           end
           try
-            if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))]; end
+            if ~isempty(file_selection.filtered)
+                file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))];
+            end
           catch
-            if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
+            if ~isempty(file_selection.filtered)
+                file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)),...
+                    datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))];
+            end
           end
           % Remove old (days2run) selections
             if ~isempty(file_selection.total)
@@ -286,10 +306,16 @@ classdef InLineAnalysis < handle
             file_selection = struct('total', user_selection_total, 'filtered', user_selection_filtered);
           end
           % Convert datenum to datestr for newer format
-          if ~isempty(file_selection.total); file_selection.total = {datestr(file_selection.total(:,1)), datestr(file_selection.total(:,2))}; end
-          if ~isempty(file_selection.filtered); file_selection.filtered = {datestr(file_selection.filtered(:,1)), datestr(file_selection.filtered(:,2))}; end
+          if ~isempty(file_selection.total)
+              file_selection.total = {datestr(file_selection.total(:,1)), datestr(file_selection.total(:,2))};
+          end
+          if ~isempty(file_selection.filtered)
+              file_selection.filtered = {datestr(file_selection.filtered(:,1)), datestr(file_selection.filtered(:,2))};
+          end
           % Save user selection
-          if ~isdir(obj.instrument.(obj.cfg.qcref.reference).path.ui); mkdir(obj.instrument.(obj.cfg.qcref.reference).path.ui); end
+          if ~isdir(obj.instrument.(obj.cfg.qcref.reference).path.ui)
+              mkdir(obj.instrument.(obj.cfg.qcref.reference).path.ui);
+          end
           savejson('',file_selection,filename);  
         case 'load'
           fprintf('QCRef LOAD: %s\n', obj.cfg.qcref.reference);
@@ -297,14 +323,24 @@ classdef InLineAnalysis < handle
           file_selection = loadjson([obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json']);
           % Convert datestr to datenum for newer format
           try
-          if ~isempty(file_selection.total); file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))]; end
+              if ~isempty(file_selection.total)
+                  file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))];
+              end
           catch
-          if ~isempty(file_selection.total); file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))]; end;
+              if ~isempty(file_selection.total)
+                  file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)),...
+                      datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))];
+              end
           end
           try
-          if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))]; end
+              if ~isempty(file_selection.filtered)
+                  file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))];
+              end
           catch
-          if ~isempty(file_selection.filtered); file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))]; end;
+            if ~isempty(file_selection.filtered)
+                file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)),...
+                    datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))];
+            end
           end
           % Remove selection from days before & after days2run
           if ~isempty(file_selection.total)
@@ -344,6 +380,8 @@ classdef InLineAnalysis < handle
     function Bin(obj)
       % Note: Run all days loaded (independent of days2run)
       for i=obj.cfg.instruments2run; i = i{1};
+        obj.instrument.(i).bin.tsw = table();
+        obj.instrument.(i).bin.fsw = table();
         if  any(strcmp(i,obj.cfg.bin.skip))
           fprintf('BIN: Skip %s (copy data to next level)\n', i);
           obj.instrument.(i).bin.tsw = obj.instrument.(i).raw.tsw;
@@ -463,7 +501,10 @@ classdef InLineAnalysis < handle
               fprintf('QC LOAD Global: %s\n', i);
               file_selection = loadjson([obj.instrument.(i).path.ui i '_QCGlobal_UserSelection.json']);
               % Convert datestr to datenum for newer format
-              if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
+              if ~isempty(file_selection.bad)
+                  file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)),...
+                      datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))];
+              end
               obj.instrument.(i).DeleteUserSelection(file_selection.bad);
             end
           end
@@ -474,9 +515,13 @@ classdef InLineAnalysis < handle
               file_selection = loadjson([obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json']);
               % Convert datestr to datenum for newer format
               try
-                  if ~isempty(file_selection.bad); file_selection.bad = [datenum(file_selection.bad(1)), datenum(file_selection.bad(2))]; end;
+                  if ~isempty(file_selection.bad)
+                      file_selection.bad = [datenum(file_selection.bad(1)), datenum(file_selection.bad(2))]; end
               catch
-                  if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
+                  if ~isempty(file_selection.bad)
+                      file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)),...
+                          datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))];
+                  end
               end
               obj.instrument.(i).DeleteUserSelection(file_selection.bad);
             end
@@ -534,7 +579,10 @@ classdef InLineAnalysis < handle
             fprintf('QC DI LOAD: %s\n', i);
             file_selection = loadjson([obj.instrument.(i).path.ui i '_QCDI_UserSelection.json']);
             % Convert datestr to datenum for newer format
-            if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
+            if ~isempty(file_selection.bad)
+                file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)),...
+                    datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))];
+            end
             obj.instrument.(i).DeleteUserSelection(file_selection.bad);
           end
         case 'skip'
@@ -737,9 +785,13 @@ classdef InLineAnalysis < handle
         file_selection = loadjson(filename);
         % Convert datestr to datenum for newer format
         try
-        if ~isempty(file_selection.bad); file_selection.bad = [datenum(file_selection.bad(1)), datenum(file_selection.bad(2))]; end
+            if ~isempty(file_selection.bad)
+                file_selection.bad = [datenum(file_selection.bad(1)), datenum(file_selection.bad(2))]; end
         catch
-        if ~isempty(file_selection.bad); file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)), datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))]; end;
+            if ~isempty(file_selection.bad)
+                file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)),...
+                    datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))];
+            end
         end
         if isfield(file_selection, 'bad') && ~isempty(file_selection.bad)
           % Remove old (days2run) selections
