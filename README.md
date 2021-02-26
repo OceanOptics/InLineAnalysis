@@ -33,6 +33,7 @@ Download and add the packages below in the `packages` folder:
 Install the [JSONlab toolbox](https://www.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files)
 
 Recommended Toolbox
+  + image processing toolbox
   + Finance
   + Parallel
 
