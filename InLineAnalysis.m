@@ -252,7 +252,7 @@ classdef InLineAnalysis < handle
           % Fresh selection does not take into account previous QC
           % TOTAL and FILTERED Sections
           fh = fig(31);
-          title('Select Total (red) and filtered (green) sections'); fprintf('Select Total (red) and filtered (green) sections\n');
+          title('Select Total (T; red) and Filtered (F; green) sections (Q to save)'); fprintf('Select Total (T; red) and filtered (F; green) sections (Q to save)\n');
           yyaxis('left');
           plot(obj.instrument.(obj.cfg.qcref.reference).data.dt,...
                obj.instrument.(obj.cfg.qcref.reference).data.(obj.instrument.(obj.cfg.qcref.reference).view.varname), 'k', 'LineWidth', obj.instrument.(obj.cfg.qcref.reference).view.varcol);
