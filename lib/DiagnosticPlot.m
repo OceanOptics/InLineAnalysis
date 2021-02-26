@@ -22,10 +22,19 @@ for j = 1:length(level)
             error('Data too large, please reduce date & time interval (dt)')
         end
         if contains(i,'BB')
-            visProd3D(wl, p.dt(idp,:), p.bbp(idp,:), false, 'Wavelength', false, j*2+1); zlabel([(level{j}) ' bb p (m^{-1})']); %, 'Wavelength', true
+            visProd3D(wl, p.dt(idp,:), p.bbp(idp,:), false, 'Wavelength', false, j*2+1);
+            zlabel([(level{j}) ' bb p (m^{-1})']);
+            xlabel('lambda (nm)');
+            ylabel('time');
         elseif contains(i,'AC')
-            visProd3D(wl, p.dt(idp,:), p.c(idp,:), false, 'Wavelength', false, j*2+1); zlabel([(level{j}) ' c p (m^{-1})']); %, 'Wavelength', true
-            visProd3D(wl, p.dt(idp,:), p.a(idp,:), false, 'Wavelength', false, j*3+10); zlabel([(level{j}) ' a p (m^{-1})']); %, 'Wavelength', true
+            visProd3D(wl, p.dt(idp,:), p.c(idp,:), false, 'Wavelength', false, j*2+1);
+            zlabel([(level{j}) ' c p (m^{-1})']);
+            xlabel('lambda (nm)');
+            ylabel('time');
+            visProd3D(wl, p.dt(idp,:), p.a(idp,:), false, 'Wavelength', false, j*3+10);
+            zlabel([(level{j}) ' a p (m^{-1})']);
+            xlabel('lambda (nm)');
+            ylabel('time');
         end
     else
         if all(isempty(data.(level{j}).tsw) & isempty(data.(level{j}).fsw))
@@ -48,47 +57,71 @@ for j = 1:length(level)
             if isempty(data.(level{j}).tsw)
                 visProd3D(wl, data.(level{j}).fsw.dt(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).fsw.beta(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*2+2);
-                zlabel([(level{j}) ' bb filt(m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' bb filt(m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
             elseif isempty(data.(level{j}).fsw)               
                 visProd3D(wl, data.(level{j}).tsw.dt(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).tsw.beta(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*2+1);
-                zlabel([(level{j}) ' bb tot (m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' bb tot (m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
             else
                 visProd3D(wl, data.(level{j}).tsw.dt(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).tsw.beta(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*2+1);
-                zlabel([(level{j}) ' bb tot (m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' bb tot (m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
                 visProd3D(wl, data.(level{j}).fsw.dt(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).fsw.beta(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*2+2);
-                zlabel([(level{j}) ' bb filt(m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' bb filt(m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
             end
         elseif contains(i,'AC')
             if isempty(data.(level{j}).tsw)
                 visProd3D(wlc, data.(level{j}).fsw.dt(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).fsw.c(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*2+2);
-                zlabel([(level{j}) ' c filt (m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' c filt (m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
                 visProd3D(wla, data.(level{j}).tsw.dt(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).tsw.a(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*3+10);
-                zlabel([(level{j}) ' a tot (m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' a tot (m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
             elseif isempty(data.(level{j}).fsw)
                 visProd3D(wlc, data.(level{j}).tsw.dt(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).tsw.c(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*2+1);
-                zlabel([(level{j}) ' c tot (m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' c tot (m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
                 visProd3D(wla, data.(level{j}).fsw.dt(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).fsw.a(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*3+11);
-                zlabel([(level{j}) ' a filt (m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' a filt (m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
             else
                 visProd3D(wlc, data.(level{j}).tsw.dt(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).tsw.c(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*2+1);
-                zlabel([(level{j}) ' c tot (m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' c tot (m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
                 visProd3D(wlc, data.(level{j}).fsw.dt(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).fsw.c(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*2+2);
-                zlabel([(level{j}) ' c filt (m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' c filt (m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
                 visProd3D(wla, data.(level{j}).tsw.dt(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).tsw.a(data.(level{j}).tsw.dt >= cell2mat(dt(1)) & data.(level{j}).tsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*3+10);
-                zlabel([(level{j}) ' a tot (m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' a tot (m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
                 visProd3D(wla, data.(level{j}).fsw.dt(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), ...
                     data.(level{j}).fsw.a(data.(level{j}).fsw.dt >= cell2mat(dt(1)) & data.(level{j}).fsw.dt <= cell2mat(dt(2)),:), false, 'Wavelength', false, j*3+11);
-                zlabel([(level{j}) ' a filt (m^{-1})']); %, 'Wavelength', true
+                zlabel([(level{j}) ' a filt (m^{-1})']);
+                xlabel('lambda (nm)');
+                ylabel('time');
             end
         end
     end
