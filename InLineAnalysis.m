@@ -257,10 +257,18 @@ classdef InLineAnalysis < handle
           plot(obj.instrument.(obj.cfg.qcref.reference).data.dt,...
                obj.instrument.(obj.cfg.qcref.reference).data.(obj.instrument.(obj.cfg.qcref.reference).view.varname), 'k', 'LineWidth', obj.instrument.(obj.cfg.qcref.reference).view.varcol);
           ylim([-0.1 1.1]);
-          yyaxis('right'); 
+          yyaxis('right');
           plot(obj.instrument.(obj.cfg.qcref.view).data.dt,...
                obj.instrument.(obj.cfg.qcref.view).data.(obj.instrument.(obj.cfg.qcref.view).view.varname)(:,obj.instrument.(obj.cfg.qcref.view).view.varcol),'.');
-          ylabel(obj.instrument.(obj.cfg.qcref.view).view.varname);
+          if contains(obj.cfg.qcref.view, 'AC')
+            ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname ' ' ...
+                num2str(round(obj.instrument.(obj.cfg.qcref.view).('lambda_ref')(obj.instrument.(obj.cfg.qcref.view).view.varcol),0)) 'nm'])
+          elseif contains(obj.cfg.qcref.view, 'BB')
+            ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname ' ' ...
+                num2str(round(obj.instrument.(obj.cfg.qcref.view).('lambda')(obj.instrument.(obj.cfg.qcref.view).view.varcol),0)) 'nm'])
+          else
+              ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname obj.instrument.(obj.cfg.qcref.view).view.varcol]);
+          end
           [user_selection_total, user_selection_filtered] = guiSelectOnTimeSeries(fh);
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection_total, 'total');
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection_filtered, 'filtered');

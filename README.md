@@ -28,6 +28,7 @@ Create the packages folder
 Download and add the packages below in the `packages` folder:
   + [Datetick Zoom, Pan & Subplot with Day of Year](https://www.mathworks.com/matlabcentral/fileexchange/25927-datetick-zoom--pan---subplot-with-day-of-year)
   + [Spectral and XYZ Color Functions](https://www.mathworks.com/matlabcentral/fileexchange/7021-spectral-and-xyz-color-functions?focused=5172034&tab=function)
+  + [Progress bar](https://github.com/JAAdrian/MatlabProgressBar)
 
 Install the [JSONlab toolbox](https://www.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files)
 
