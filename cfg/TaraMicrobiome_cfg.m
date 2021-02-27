@@ -133,8 +133,8 @@ cfg.process.split.reference = 'FTH';
 cfg.process.split.buffer = struct();
 cfg.process.split.buffer.ACS57 = [180, 60];
 cfg.process.split.buffer.BB31502 = [400, 220];
-% cfg.process.split.buffer.WSCD859 = [310, 20];
-cfg.process.split.skip = {'FTH','TSG','WSCD859'};
+cfg.process.split.buffer.WSCD859 = [310, 20];
+cfg.process.split.skip = {'FTH','TSG'};
 
 %%% Binning %%%
 cfg.process.bin = struct('bin_size', struct());

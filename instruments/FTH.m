@@ -65,8 +65,7 @@ classdef FTH < Instrument
         interp_spd (ism) = NaN;
 
         % Remove existing data from fth
-        obj.data(user_selection(i,1) <= obj.data.dt &...
-          obj.data.dt <= user_selection(i,2),:) = [];
+        obj.data(user_selection(i,1) <= obj.data.dt & obj.data.dt <= user_selection(i,2),:) = [];
 
         switch mode
           case 'total'
