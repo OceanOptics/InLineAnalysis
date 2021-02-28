@@ -166,8 +166,10 @@ cfg.process.flag.default.filt = struct('smooth_threshold', 2);
   
 %%% Manually QC %%%
 cfg.process.qc = struct();
-cfg.process.qc.StepQCLim.a = 3;
-cfg.process.qc.StepQCLim.c = 3;
+cfg.process.qc.StepQCLim.filtered.a = 3;
+cfg.process.qc.StepQCLim.filtered.c = 3;
+cfg.process.qc.StepQCLim.total.a = 3;
+cfg.process.qc.StepQCLim.total.c = 3;
 cfg.process.qc.StepQCLim.bb = 3;
 cfg.process.qc.Saturation_Threshold_bb = 4000; % (counts)
 cfg.process.qc.mode = 'ui';

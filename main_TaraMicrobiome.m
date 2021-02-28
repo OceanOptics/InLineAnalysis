@@ -12,8 +12,8 @@ ila = InLineAnalysis('cfg\TaraMicrobiome_cfg.m');
 
 %% ACS57
 % ila.cfg.days2run = datenum(2020,12,26,0,0,0):datenum(2021,1,5,0,0,0);
-% ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
-ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
+ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
+% ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
 
 %% BB31502
 % ila.cfg.days2run = datenum(2020,12,12,0,0,0):datenum(2021,1,5,0,0,0);
@@ -99,7 +99,7 @@ ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod);
 % Note: when redoing QC of a given period of time (days2run) the previous
 % QC during the same period of time is erased, QC done on other periods of
 % time is kept in the json file
-ila.cfg.qcref.mode='load'; % 'ui' or 'load'
+ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
 ila.QCRef();
 
 %% 4. Split fsw and tsw
@@ -112,9 +112,14 @@ ila.CheckDataStatus();
 ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 
 %% automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR values
-ila.cfg.qc.StepQCLim.a = 5; % ACS auto QC threshold varies between ACS must be >= 3 (default = 3)
-ila.cfg.qc.StepQCLim.c = 7; % ACS auto QC threshold varies between ACS must be >= 3 (default = 3)
-ila.cfg.qc.StepQCLim.bb = 3; % BB auto QC threshold must be >= 3 (default = 3)
+% fudge factor for auto QC ACS. Varies between ACS must be >= 3 (default = 3 = maximum filtration)
+ila.cfg.qc.StepQCLim.filtered.a = 6;
+ila.cfg.qc.StepQCLim.filtered.c = 15;
+ila.cfg.qc.StepQCLim.total.a = 4;
+ila.cfg.qc.StepQCLim.total.c = 12;
+% fudge factor for auto QC BB. Must be >= 3 (default = 3 = maximum filtration)
+ila.cfg.qc.StepQCLim.bb = 3;
+% remove saturated periods
 ila.cfg.qc.Saturation_Threshold_bb = 4000;
 ila.StepQC(ila.cfg.qc.StepQCLim, ila.cfg.qc.Saturation_Threshold_bb);
 ila.CheckDataStatus();
@@ -126,7 +131,7 @@ ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 %% 5. Bin
 % % Set settings directly in configuration file (no tunning at this step)
 % % run before re-bin only to clear qc tables
-% ila.instrument.BB3.qc.tsw = table(); ila.instrument.BB3.qc.fsw = table();
+ila.instrument.ACS57.qc.tsw = table(); ila.instrument.ACS57.qc.fsw = table();
 ila.cfg.bin.skip = {};
 ila.Bin()
 
@@ -152,7 +157,7 @@ ila.Flag() % Now deprecated will just copy data to next level
 %% 7. QC
 % Interactive or Loading previous qc selection
 ila.cfg.qc.mode='ui';  % load or ui
-ila.cfg.qc.specific.run = {'WSCD859'}; % 'FTH','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
+ila.cfg.qc.specific.run = {'ACS57'}; % 'FTH','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
 % QCmap(ila.cfg.days2run); % SST & latlon QC
 ila.QC();
 ila.CheckDataStatus();
@@ -257,9 +262,8 @@ ila.Write('prod')
 %%% ACS Chl %%%
 % fig(79);
 figure(79); hold('on');
-yyaxis('left'); plot(ACS.dt, ACS.chl, '.-'); ylabel('Chl (\mug L^{-1})');
-yyaxis('right'); plot(ACS.dt, ACS.gamma, '.-'); ylabel('\gamma');
-% yyaxis('right'); plot(ila.instrument.TSG.prod.a.dt, ila.instrument.TSG.prod.a.fchl, '.-'); ylabel('fchl (counts)');
+yyaxis('left'); plot(ila.instrument.ACS57.prod.p.dt, ila.instrument.ACS57.prod.p.chl, '.-'); ylabel('Chl (\mug L^{-1})');
+yyaxis('right'); plot(ila.instrument.ACS57.prod.p.dt, ila.instrument.ACS57.prod.p.gamma, '.-'); ylabel('\gamma');
 datetick2_doy(); set(datacursormode(figure(79)),'UpdateFcn',@data_cursor_display_date);
 set(gca, 'FontSize', 14, 'FontName', 'Helvetica Neue');
 % if save_figures; savefig([ila.instrument.ACS.path.prod 'ACS' datestr(ila.cfg.days2run(1), 'yyyymmdd') '_chl_gamma']); end

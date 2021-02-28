@@ -158,8 +158,10 @@ classdef InLineAnalysis < handle
     
     function StepQC (obj, fudge_factor, bb_threshold)
       if any(nargin < 2 | nargin < 3)
-          fudge_factor.a = 3;
-          fudge_factor.c = 3;
+          fudge_factor.filtered.a = 3;
+          fudge_factor.filtered.c = 3;
+          fudge_factor.total.a = 3;
+          fudge_factor.total.c = 3;
       end
       instru = fieldnames(obj.instrument);
       for i=obj.cfg.instruments2run; i = i{1};
@@ -174,7 +176,7 @@ classdef InLineAnalysis < handle
                 end
                 if any(contains(i,{'ACS','BB'}))
                 [obj.instrument.(i).raw.fsw, Nbad]= StepQC(obj.instrument.(i).raw.fsw,...
-                    lambda, fudge_factor, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
+                    lambda, fudge_factor.filtered, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
                     bb_threshold);
                 end
                 if  any(contains(i,'ACS'))
@@ -205,7 +207,7 @@ classdef InLineAnalysis < handle
                 end
                 if any(contains(i,{'ACS','BB'}))
                 [obj.instrument.(i).raw.tsw, Nbad]= StepQC(obj.instrument.(i).raw.tsw,...
-                    lambda, fudge_factor, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
+                    lambda, fudge_factor.total, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
                     bb_threshold);
                 end
                 if  any(contains(i,'ACS'))
