@@ -39,7 +39,7 @@ switch savefmt
         set(gcf,'renderer','Painters');
         print(fig_name, '-dsvg', ['-r' num2str(varargin{1})]);
     case 'fig'
-        saveas(gcf, fig_name, savefmt);
+        savefig(gcf, [fig_name '.' savefmt]);
     case 'png'
         if vers >= 2020
             exportgraphics(gcf, [fig_name '.png'])
