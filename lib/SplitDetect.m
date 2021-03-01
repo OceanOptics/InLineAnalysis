@@ -8,9 +8,9 @@ function [FTH] = SplitDetect (instrument, data, FTH, MinFiltPeriod)
 %   - instrument cell string of instrument name e.g. 'BB3' or 'ACS007'
 %   - data_in: instrument data <N Table> time series of data that must contains:
 %         - dt <Nx1 datenum> date and time precise to the second
-%         for each other field the folowwing field must exist:
-%         - bbp <NxM double> in column 2 for BB3
-%         - a <NxM double> in column 2 for ACS
+%         and either of the following variable must exist:
+%         - beta <NxM double> in column M for BB3
+%         - a <NxM double> in column M for ACS
 %   - FTH log <Nx3 double> time series of data that must contains:
 %         - dt <Nx1 datenum> date and time precise to the second
 %         - swt <Nx1 double> 0 and 1 values for switch position

@@ -30,8 +30,14 @@ classdef TSG < Instrument
           obj.data = iRead(@importPourquoiPasTSG, obj.path.raw, obj.path.wk, 'PP',...
                          days2run, 'PourquoiPasTSG', force_import, ~write, true);
         case 'Tara'
-          obj.data = iRead(@importTaraTSG, obj.path.raw, obj.path.wk, 'tsg_',...
-                         days2run, 'TaraTSG', force_import, ~write, true);
+          switch obj.logger
+            case {'Matlab', 'matlab', 'MATLAB'}
+              obj.data = iRead(@importTaraTSG, obj.path.raw, obj.path.wk, 'tsg_',...
+                             days2run, 'MatlabTSG', force_import, ~write, true);
+            case {'TeraTerm', 'teraterm', 'TERATERM'}
+              obj.data = iRead(@importTSGTeraTerm, obj.path.raw, obj.path.wk, 'TeraTerm_tsg_',...
+                             days2run, 'TeraTerm', force_import, ~write, true);
+          end
         case 'RRevelle'
           obj.data = iRead(@importRRevelleUnderway, obj.path.raw, obj.path.wk, '',...
                          days2run, 'RRevelleUnderway', force_import, ~write, true);

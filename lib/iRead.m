@@ -62,7 +62,6 @@ for i=1:length(dt)
       ddata = [];
 %       for j=1:size(l,1)
       parfor (j=1:size(l,1), parallel_flag)
-
         if isempty(otherargs)
           foo = fun([dir_in l{j}], verbose);
         else
@@ -170,7 +169,7 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
       % List all files in directory
       l = dir([dir_in filesep prefix dt_yymmdd(dt) '*' postfix '.MET']);
       filenames = {l.name}';
-    case 'TaraTSG'
+    case 'MatlabTSG'
       % List all files in directory
       l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.txt']);
       filenames = {l.name}';
