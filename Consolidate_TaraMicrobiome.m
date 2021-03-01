@@ -9,9 +9,16 @@ ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
 path_dev = [strrep(ila.instrument.FTH.path.prod, ...
   ['prod' filesep], '') 'DeviceFiles'];
 
+% create Graph folder if it doesn't exist
+if ~isfolder([ila.instrument.FTH.path.prod 'Graphs'])
+  mkdir([ila.instrument.FTH.path.prod 'Graphs'])
+end
+
+% whenever TSG is processed load with
+load([ila.instrument.FTH.path.prod cruise '_InLine_TSG_prod.mat'])
+
 % load lat lon vector
 % load([[ila.instrument.FTH.path.prod cruise '_LatLon.mat'])
-load([ila.instrument.FTH.path.prod cruise '_InLine_TSG_prod.mat'])
 % latlon=table(nav_data.dt_utc, nav_data.lat, nav_data.lon,'VariableNames',{'dt','lat','lon'});
 % % [tsg2, index] = unique(tsg.dt); 
 % % tsg = tsg(index,:);
@@ -52,7 +59,7 @@ yyaxis('right')
 scatter(tsg.dt, tsg.sss, 5, 'filled'); 
 ylabel([tsg.Properties.VariableNames{strcmp(tsg.Properties.VariableNames, 'sss')} ' (' ...
     tsg.Properties.VariableUnits{strcmp(tsg.Properties.VariableNames, 'sss')} ')'])
-saveGraph([ila.instrument.TSG.path.prod cruise '_tsg'], 'jpg')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_tsg'], 'jpg')
 close figure 1
 
 % save TSG prod
@@ -121,29 +128,17 @@ data_AC.product.(ref).Chl_lineheight(data_AC.product.(ref).Chl_lineheight < 0) =
 data_AC.product.(ref).cp_gamma(data_AC.product.(ref).cp_gamma < 0) = NaN;
 data_AC.product.(ref)(all(isnan(table2array(data_AC.product.(ref)(:,6:8))),2),:)=[];
 
-% load TaraPacific_InLine_ACS_prod.mat
-figure('WindowState', 'maximized')
-yyaxis('left')
-scatter(data_AC.product.(ref).dt,data_AC.product.(ref).POC_cp,10,[0 0 1],'filled'); ylabel('[POC] (mg.m^{-3})'); hold on;
-yyaxis('right')
-scatter(data_AC.product.(ref).dt,data_AC.product.(ref).Chl_lineheight,10,[0 1 0],'filled');
-scatter(data_AC.product.(ref).dt,data_AC.product.(ref).cp_gamma,10,[1 0 0],'filled'); ylabel('[chl a] (mg.m^{-3}) and gamma (unitless)');
-legend('[POC](mg.m^{-3})','[chl a](mg.m^{-3})','gamma (unitless)')
-saveGraph([ila.instrument.(list_instru{i}).path.prod cruise '_' (ref) '_prod_timeseries'], 'fig')
-saveGraph([ila.instrument.(list_instru{i}).path.prod cruise '_' (ref) '_prod_timeseries'], 'jpg')
-close figure 1
-
 visProd3D(ila.instrument.(list_instru{i}).lambda_a, data_AC.particulate.(ref).dt, ...
   data_AC.particulate.(ref).ap, false, 'Wavelength', false, 72);
 zlabel('a_p (m^{-1})'); xlabel('{\lambda} (nm)'); ylabel('Time');
-saveGraph([ila.instrument.(list_instru{i}).path.prod cruise '_' (ref) '_particulate_ap'], 'fig')
-saveGraph([ila.instrument.(list_instru{i}).path.prod cruise '_' (ref) '_particulate_ap'], 'jpg')
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_' (ref) '_particulate_ap'], 'fig')
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_' (ref) '_particulate_ap'], 'jpg')
 close figure 72
 visProd3D(ila.instrument.(list_instru{i}).lambda_c, data_AC.particulate.(ref).dt, ...
   data_AC.particulate.(ref).cp, false, 'Wavelength', false, 73);
 zlabel('c_p (m^{-1})'); xlabel('{\lambda} (nm)'); ylabel('Time');
-saveGraph([ila.instrument.(list_instru{i}).path.prod cruise '_' (ref) '_particulate_cp'], 'fig')
-saveGraph([ila.instrument.(list_instru{i}).path.prod cruise '_' (ref) '_particulate_cp'], 'jpg')
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_' (ref) '_particulate_cp'], 'fig')
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_' (ref) '_particulate_cp'], 'jpg')
 close figure 73
 
 % pause(2)
@@ -189,6 +184,30 @@ acs = acs(b,:);
 
 acs.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss', 'POC', 'chl', 'gamma'};
 
+% load TaraPacific_InLine_ACS_prod.mat
+figure('WindowState', 'maximized')
+yyaxis('left')
+scatter(acs.dt, acs.POC,10,[0 0 1],'filled'); ylabel('[POC] (mg.m^{-3})'); hold on;
+yyaxis('right')
+scatter(acs.dt, acs.chl,10,[0 1 0],'filled');
+scatter(acs.dt, acs.gamma,10,[1 0 0],'filled'); ylabel('[chl a] (mg.m^{-3}) and gamma (unitless)');
+legend('[POC](mg.m^{-3})','[chl a](mg.m^{-3})','gamma (unitless)')
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_ACS_prod_timeseries'], 'fig')
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_ACS_prod_timeseries'], 'jpg')
+close figure 1
+
+SimpleMap(acs.POC, acs(:,1:3), '[POC](mg.m^{-3})')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_POC_map'], 'jpg')
+close figure 1
+
+SimpleMap(acs.chl, acs(:,1:3), '[chl a](mg.m^{-3})')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_chl_map'], 'jpg')
+close figure 1
+
+SimpleMap(acs.gamma, acs(:,1:3), 'gamma (unitless)')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_gamma_map'], 'jpg')
+close figure 1
+
 % save AC prod
 fprintf('Export to mat and csv... ');
 save([ila.instrument.(list_instru{i}).path.prod ...
@@ -223,6 +242,13 @@ wscd = wscd(b,:);
 
 figure()
 scatter(wscd.dt, wscd.fdom, 5, 'filled'); ylabel('fdom ppb')
+saveGraph([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
+  'Graphs' filesep cruise '_FDOM_timeseries'], 'jpg')
+close figure 1
+
+SimpleMap(wscd.fdom, wscd(:,1:3), 'WSCD fdom ppb')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_WSCD_fdom_map'], 'jpg')
+close figure 1
 
 % % export product to SeaBASS format
 % ila.meta.documents = [cruise '_WSCD_ProcessingReport_V2.pdf';
@@ -238,7 +264,7 @@ wscd.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss','fdom','fdom_s
 % save WSCD prod
 fprintf('Export to mat and csv... ');
 save([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-    cruise '_InLine_WSCD_prod', 'fdom']);
+    cruise '_InLine_WSCD_prod'], 'wscd');
 writetable(wscd, [ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
     cruise '_InLine_WSCD_prod.csv']);
 fprintf('Done\n');
@@ -269,6 +295,9 @@ par = par(b,:);
 
 figure()
 scatter(par.dt, par.par, 5, 'filled'); ylabel('PAR (\muE.cm^{-2}.s^{-1})')
+saveGraph([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
+  'Graphs' filesep cruise '_PAR_timeseries'], 'jpg')
+close figure 1
 
 % export product to SeaBASS format
 ila.meta.documents = [cruise '_PAR_ProcessingReport_V2.pdf'];
@@ -345,11 +374,11 @@ hold on
 scatter(datenum(bb3.dt), bb3.VSF_124ang(:,2), 10, [0.3 0.8 0.3], 'filled');
 ylabel('VSF_124ang (532 nm) [m^-^1]')
 datetick2_doy()
-saveGraph([ila.instrument.TSG.path.prod cruise '_VSF_124ang_timeseries'], 'jpg')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_VSF_124ang_timeseries'], 'jpg')
 close figure 1
 
 SimpleMap(bb3.bbp(:,2), bb3(:,1:3), 'bbp (532 nm) [m^-^1]')
-saveGraph([ila.instrument.TSG.path.prod cruise '_bb3_bbp_map'], 'jpg')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_bb3_bbp_map'], 'jpg')
 close figure 1
 
 % export product to SeaBASS format
@@ -372,14 +401,14 @@ figure()
 scatter(bb3.dt, bb3.poc(:,1), 5, [0.3 0.3 0.8], 'filled'); hold on
 scatter(bb3.dt, bb3.poc(:,2), 5, [0.3 0.8 0.3], 'filled');
 scatter(bb3.dt, bb3.poc(:,3), 5, [0.8 0.3 0.3], 'filled'); ylabel('POC (mg.m^{-3})')
-saveGraph([ila.instrument.TSG.path.prod cruise '_POC_timeseries'], 'jpg')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_POC_timeseries'], 'jpg')
 close figure 1
 
 figure()
 scatter(bb3.dt, bb3.cphyto(:,1), 5, [0.3 0.3 0.8], 'filled'); hold on
 scatter(bb3.dt, bb3.cphyto(:,2), 5, [0.3 0.8 0.3], 'filled');
 scatter(bb3.dt, bb3.cphyto(:,3), 5, [0.8 0.3 0.3], 'filled'); ylabel('Cphyto (mg.m^{-3})')
-saveGraph([ila.instrument.TSG.path.prod cruise '_CPhyto_timeseries'], 'jpg')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_CPhyto_timeseries'], 'jpg')
 close figure 1
 
 % save BB3 prod
