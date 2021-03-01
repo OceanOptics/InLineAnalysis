@@ -8,22 +8,24 @@ ila = InLineAnalysis('cfg\TaraMicrobiome_cfg.m');
 % Quick Cfg update
 
 %% TSG
-% ila.cfg.days2run = datenum(2020,12,12,0,0,0):datenum(2021,1,5,0,0,0);
+ila.cfg.days2run = datenum(2020,12,12,0,0,0):datenum(2021,2,5,0,0,0);
 
 %% ACS57
 % ila.cfg.days2run = datenum(2020,12,26,0,0,0):datenum(2021,1,5,0,0,0);
-ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
+% ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
 
 %% BB31502
-% ila.cfg.days2run = datenum(2020,12,12,0,0,0):datenum(2021,1,5,0,0,0);
+% ila.cfg.days2run = datenum(2020,12,26,0,0,0):datenum(2021,1,5,0,0,0);
+% ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
+% ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
 
 %% WSCD859
-% ila.cfg.days2run = datenum(2020,12,12,0,0,0):datenum(2021,1,5,0,0,0);
+% ila.cfg.days2run = datenum(2020,12,12,0,0,0):datenum(2021,2,5,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FTH','ACS57'}; % 'FTH','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
-ila.cfg.qcref.view = 'ACS57';
+ila.cfg.instruments2run = {'FTH','TSG'}; % 'FTH','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
+ila.cfg.qcref.view = 'TSG';
 ila.cfg.parallel = Inf;
 
 %% 1. Import | Load raw data
@@ -47,13 +49,15 @@ ila.CheckDataStatus();
 % % TSG is assumed to be set at zero
 % % No noticeable difference was observed between the TSG of EXPORTS and the BB3
 % % ila.instrument.FTH.Sync(30);
-% ila.instrument.ACS007.Sync(10);
+% ila.instrument.ACS57.Sync(10);
 % % ila.instrument.ACS091.Sync(65);
 % % ila.instrument.ACS111.Sync(60);
 % % ila.instrument.ACS279.Sync(55);
 % % ila.instrument.BB3.Sync(0);
+% ila.instrument.BB31502.Sync(0);
 % % % ila.instrument.LISST.Sync(1);
 % % ila.instrument.WSCD1082P.Sync(40);
+% ila.instrument.WSCD859.Sync(40);
 % % ila.instrument.TSG.Sync(0);
 % % ila.instrument.ALFA.Sync(15); 
 % % Quick visualizzation to sync with TSG
@@ -80,7 +84,7 @@ ila.CheckDataStatus();
 % % % ylim([-0.1 0.2]);
 % % % Once settings are good set them in the configuration file.
 % % % The software is now doing the same with one line of code.
-% % ila.Sync()
+% ila.Sync()
 % % % ila.instrument.BB31502.Sync(-90);
 % % % ila.instrument.BB31502.Sync(-10);
 
@@ -99,7 +103,7 @@ ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod);
 % Note: when redoing QC of a given period of time (days2run) the previous
 % QC during the same period of time is erased, QC done on other periods of
 % time is kept in the json file
-ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
+ila.cfg.qcref.mode='load'; % 'ui' or 'load'
 ila.QCRef();
 
 %% 4. Split fsw and tsw
@@ -109,7 +113,7 @@ ila.CheckDataStatus();
 
 %% Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
+ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
 
 %% automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR values
 % fudge factor for auto QC ACS. Varies between ACS must be >= 3 (default = 3 = maximum filtration)
@@ -118,7 +122,8 @@ ila.cfg.qc.StepQCLim.filtered.c = 15;
 ila.cfg.qc.StepQCLim.total.a = 4;
 ila.cfg.qc.StepQCLim.total.c = 12;
 % fudge factor for auto QC BB. Must be >= 3 (default = 3 = maximum filtration)
-ila.cfg.qc.StepQCLim.bb = 3;
+ila.cfg.qc.StepQCLim.filtered.bb = 3;
+ila.cfg.qc.StepQCLim.total.bb = 3;
 % remove saturated periods
 ila.cfg.qc.Saturation_Threshold_bb = 4000;
 ila.StepQC(ila.cfg.qc.StepQCLim, ila.cfg.qc.Saturation_Threshold_bb);
@@ -126,7 +131,7 @@ ila.CheckDataStatus();
 
 %% Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
+ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
 
 %% 5. Bin
 % % Set settings directly in configuration file (no tunning at this step)
@@ -137,7 +142,7 @@ ila.Bin()
 
 %% Diagnostic Plot
 % check binned spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'bin'}); % AC or BB
+ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
 
 %% Write bin
 ila.Write('bin')
@@ -157,7 +162,7 @@ ila.Flag() % Now deprecated will just copy data to next level
 %% 7. QC
 % Interactive or Loading previous qc selection
 ila.cfg.qc.mode='ui';  % load or ui
-ila.cfg.qc.specific.run = {'ACS57'}; % 'FTH','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
+ila.cfg.qc.specific.run = {'TSG'}; % 'FTH','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
 % QCmap(ila.cfg.days2run); % SST & latlon QC
 ila.QC();
 ila.CheckDataStatus();
@@ -165,7 +170,7 @@ ila.CheckDataStatus();
 %% Diagnostic Plot
 % check QCed spectrums AC or BB sensors
 % {'raw','bin','qc','prod'}
-ila.DiagnosticPlot('AC',{'qc'}); % AC or BB
+ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
 
 %% Write qc
 ila.Write('qc')
@@ -262,8 +267,8 @@ ila.Write('prod')
 %%% ACS Chl %%%
 % fig(79);
 figure(79); hold('on');
-yyaxis('left'); plot(ila.instrument.ACS57.prod.p.dt, ila.instrument.ACS57.prod.p.chl, '.-'); ylabel('Chl (\mug L^{-1})');
-yyaxis('right'); plot(ila.instrument.ACS57.prod.p.dt, ila.instrument.ACS57.prod.p.gamma, '.-'); ylabel('\gamma');
+yyaxis('left'); scatter(ila.instrument.ACS57.prod.p.dt, ila.instrument.ACS57.prod.p.chl, 5, 'filled'); ylabel('Chl (\mug L^{-1})');
+yyaxis('right'); scatter(ila.instrument.ACS57.prod.p.dt, ila.instrument.ACS57.prod.p.gamma, 5, 'filled'); ylabel('\gamma');
 datetick2_doy(); set(datacursormode(figure(79)),'UpdateFcn',@data_cursor_display_date);
 set(gca, 'FontSize', 14, 'FontName', 'Helvetica Neue');
 % if save_figures; savefig([ila.instrument.ACS.path.prod 'ACS' datestr(ila.cfg.days2run(1), 'yyyymmdd') '_chl_gamma']); end
