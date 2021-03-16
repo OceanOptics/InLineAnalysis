@@ -198,7 +198,7 @@ if ~(~varargin{1} && size(data,2) == 3 && all(~isnan(data),'all') && max(data(:)
         S = load('mycmap.mat');
         colormap(S.mycmap);
     else
-        colormap(brewermap(NaN, '*Spectral'));
+        colormap(brewermap(128, '*Spectral'));
     end
 
     h = colorbar('eastoutside');
