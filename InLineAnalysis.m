@@ -151,8 +151,8 @@ classdef InLineAnalysis < handle
     
     function SplitDetect (obj, MinFiltPeriod)
         fprintf('Detecting %s filter events...\n', obj.cfg.qcref.view);
-        obj.instrument.FTH.data = SplitDetect(obj.cfg.qcref.view,...
-            obj.instrument.(obj.cfg.qcref.view).data, obj.instrument.FTH.data, MinFiltPeriod);
+        obj.instrument.FLOW.data = SplitDetect(obj.cfg.qcref.view,...
+            obj.instrument.(obj.cfg.qcref.view).data, obj.instrument.FLOW.data, MinFiltPeriod);
         fprintf('Done\n');
     end
     
@@ -235,7 +235,21 @@ classdef InLineAnalysis < handle
         end
       end
     end
-      
+    
+    function visProd_timeseries (obj)
+      for i=obj.cfg.instruments2run; i = i{1};
+        if  any(~contains(i, {'FLOW', 'FTH', 'Flow'}))
+          fprintf('%s products time series plots\n', i);
+          ifieldn = fieldnames(obj.instrument.(i).prod);
+          for j=1:size(ifieldn,1)
+            if ~strcmp(ifieldn{j}, 'QCfailed') && ~isempty(obj.instrument.(i).prod.(ifieldn{j}))
+              visProd_timeseries(obj.instrument.(i).prod.(ifieldn{j}), i);
+            end
+          end
+        end
+      end
+    end
+    
     function Stretch(obj)
       % Note: Run all days loaded (independent of days2run)
       for i=obj.cfg.instruments2run; i = i{1};
@@ -286,8 +300,8 @@ classdef InLineAnalysis < handle
               end
             catch
               if ~isempty(file_selection.total)
-                file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)),...
-                    datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))];
+                file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
+                    datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
               end
             end
             try
@@ -296,19 +310,19 @@ classdef InLineAnalysis < handle
               end
             catch
               if ~isempty(file_selection.filtered)
-                file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)),...
-                    datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))];
+                file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
+                    datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
               end
             end
-            % Remove old (days2run) selections
-            if ~isempty(file_selection.total)
-              sel = min(obj.cfg.days2run) <= file_selection.total(:,1) & file_selection.total(:,1) < max(obj.cfg.days2run) + 1;
-              file_selection.total(sel,:) = [];
-            end
-            if ~isempty(file_selection.filtered)
-              sel = min(obj.cfg.days2run) <= file_selection.filtered(:,1) & file_selection.filtered(:,1) < max(obj.cfg.days2run) + 1;
-              file_selection.filtered(sel,:) = [];
-            end
+%             % Remove old (days2run) selections REMOVED TO KEEP ALL HISTORY OF USER SELECTION
+%             if ~isempty(file_selection.total)
+%               sel = min(obj.cfg.days2run) <= file_selection.total(:,1) & file_selection.total(:,1) < max(obj.cfg.days2run) + 1;
+%               file_selection.total(sel,:) = [];
+%             end
+%             if ~isempty(file_selection.filtered)
+%               sel = min(obj.cfg.days2run) <= file_selection.filtered(:,1) & file_selection.filtered(:,1) < max(obj.cfg.days2run) + 1;
+%               file_selection.filtered(sel,:) = [];
+%             end
             % Add new user selection
             file_selection.total = [file_selection.total; user_selection_total];
             file_selection.filtered = [file_selection.filtered; user_selection_filtered];
@@ -323,7 +337,7 @@ classdef InLineAnalysis < handle
             file_selection.filtered = {datestr(file_selection.filtered(:,1)), datestr(file_selection.filtered(:,2))};
           end
           % Save user selection
-          if ~isdir(obj.instrument.(obj.cfg.qcref.reference).path.ui)
+          if ~isfolder(obj.instrument.(obj.cfg.qcref.reference).path.ui)
             mkdir(obj.instrument.(obj.cfg.qcref.reference).path.ui);
           end
           savejson('',file_selection,filename);  
@@ -338,8 +352,8 @@ classdef InLineAnalysis < handle
             end
           catch
             if ~isempty(file_selection.total)
-              file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'UniformOutput', false)),...
-                  datenum(cellfun(@(x) char(x), file_selection.total{2}', 'UniformOutput', false))];
+              file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
+                  datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
             end
           end
           try
@@ -348,8 +362,8 @@ classdef InLineAnalysis < handle
             end
           catch
             if ~isempty(file_selection.filtered)
-              file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'UniformOutput', false)),...
-                  datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'UniformOutput', false))];
+              file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
+                  datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
             end
           end
           % Remove selection from days before & after days2run
@@ -448,14 +462,18 @@ classdef InLineAnalysis < handle
         case 'ui'
           if obj.cfg.qc.global.active
             % Display interactive figure
-			foo = obj.instrument.(obj.cfg.qc.global.view);
-            fooflow = obj.instrument.FTH.bin.tsw;
+            foo = obj.instrument.(obj.cfg.qc.global.view);
+            if isempty(obj.instrument.FLOW.qc.tsw)
+              fooflow = obj.instrument.FLOW.bin.tsw;
+            else
+              fooflow = obj.instrument.FLOW.qc.tsw;
+            end
 
             fh=visFlag(foo.raw.tsw, foo.raw.fsw,...
                        foo.qc.tsw, foo.suspect.tsw,...
                        foo.qc.fsw, foo.suspect.fsw,...
                        foo.view.varname, foo.view.varco,...
-                       foo.raw.bad,fooflow);
+                       foo.raw.bad, fooflow);
             title('Global QC');
             user_selection = guiSelectOnTimeSeries(fh);
             % For each instrument 
@@ -475,20 +493,29 @@ classdef InLineAnalysis < handle
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               % Display interactive figure
               foo = obj.instrument.(i);
-              fooflow = obj.instrument.FTH.bin.tsw;
+              if ~isempty(obj.instrument.FLOW.qc.tsw)
+                fooflow = obj.instrument.FLOW.qc.tsw;
+              elseif ~isempty(obj.instrument.FLOW.bin.tsw)
+                fooflow = obj.instrument.FLOW.bin.tsw;
+              elseif ~isempty(obj.instrument.FLOW.raw.tsw)
+                fooflow = obj.instrument.FLOW.raw.tsw;
+              else
+                warning('Flow data not loaded')
+                fooflow = obj.instrument.FLOW.qc.tsw;
+              end
 
               if ~isempty(foo.raw.tsw)
                 fh=visFlag(foo.raw.tsw, foo.raw.fsw,...
                            foo.qc.tsw, foo.suspect.tsw,...
                            foo.qc.fsw, foo.suspect.fsw,...
                            foo.view.varname, foo.view.varcol,...
-                           foo.raw.bad,fooflow);
+                           foo.raw.bad, fooflow);
               else
                 fh=visFlag([], [],...
                            foo.qc.tsw, foo.suspect.tsw,...
                            foo.qc.fsw, foo.suspect.fsw,...
                            foo.view.varname, foo.view.varcol,...
-                           foo.raw.bad,fooflow);
+                           foo.raw.bad, fooflow);
               end
               title([i ' QC' newline 'Trash section pressing t (q to save)']);
               fprintf('Trash section pressing t (q to save)\n');
@@ -665,6 +692,25 @@ classdef InLineAnalysis < handle
       if nargin < 2; level = 'prod'; end
       % for each instrument
       for i=obj.cfg.instruments2run; i = i{1};
+        fprintf('%s %s flushed\n', i, level);
+        switch level
+          case 'data'
+            obj.instrument.(i).(level) = table();
+          case 'bin'
+            obj.instrument.(i).(level).tsw = table();
+            obj.instrument.(i).(level).fsw = table();
+          case 'qc'
+            obj.instrument.(i).(level).tsw = table();
+            obj.instrument.(i).(level).fsw = table();
+            obj.instrument.(i).(level).diw = table();
+          case 'prod'
+            fna = fieldnames(obj.instrument.(i).(level));
+            if ~isempty(fna)
+              obj.instrument.(i).(level).(fna{1}) = table();
+            end
+          otherwise
+            error('Level unknown')
+        end
         if  any(strcmp(i,obj.cfg.write.skip))
           fprintf('LOAD: Skip %s\n', i);
         else
@@ -676,7 +722,7 @@ classdef InLineAnalysis < handle
             case 'One day one file'
               % Read each day from days2run in independent files
               for d=obj.cfg.days2run
-                obj.instrument.(i).Read([i '_' datestr(d,'yyyymmdd')], d, level);
+                obj.instrument.(i).Read([i '*_' datestr(d,'yyyymmdd')], d, level);
               end
             otherwise
               error('Unknow loading mode.');

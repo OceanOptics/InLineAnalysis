@@ -28,11 +28,15 @@ X_p = 1.076; % Specific to ECO-BB3 with a scattering angle of 124
 % Compute backscattering
 p.bbp = 2 * pi * X_p .* p.betap;
 
+
 % Propagate error
 %   Note: Error is not propagated through Scattering & Residual temperature
 %         correction as required by SeaBASS
 p.betap_sd = param.slope .* sqrt(tot.beta_avg_sd + filt_interp.beta_avg_sd);
 p.betap_n = tot.beta_avg_n;
+
+% Estimate POC and Cphyto from bbp
+[p.poc, ~, ~, p.cphyto, ~, ~,] = estimatePOC_Cphyto(p.bbp, [470 532 650], 'soccom');
 
 % QC
 p(any(p.bbp < 0,2),:) = [];
@@ -84,3 +88,127 @@ if nargout > 1 && nargin > 4
   g.betag_n = filt.beta_avg_n;
 end
 end
+
+function [poc, poc_lower, poc_upper, cphyto, cphyto_lower, cphyto_upper] = estimatePOC_Cphyto(bbp, lambda, method, conf_int)
+%ESTIMATE_POC_CPHYTO Particulate Organic Carbon (POC) and Cphyto are leanearly
+%   proportional to particulate backscattering bbp, various empirical relationship exist,
+%   few of them are implemented in this function.
+%
+% /!\ The calculations used are applicable only in the top layer
+%     with a maximum depth defined by max(MLD, Zeu).
+%
+%Syntax:  [ poc ] = estimate_poc( bbp, lambda, method, true )
+%Syntax:  [ poc, cphyto ] = estimate_poc( bbp, lambda, method, true )
+%
+%Inputs:
+%    Required:
+%        bbp NxM double corresponding to the values of the VSF at one angle in m^{-1}
+%    Optional:
+%        lambda 1x1 or 1xM double corresponding to the wavelength in nm
+%           default: 700
+%        method string of the name of the method to use for poc estimation
+%           default: 'soccom'
+%           soccom: POC = 3.23e4 x bbp(700) + 2.76
+%           an emprirical relationship built for the SOCCOM floats based on
+%           the relationship between the first profile of the floats and
+%           in-situ measurements taken during deployement
+%           (cruises: PS89, P16S and IN2015v1)
+%           NAB08_down or NAB08_up: Specific to North Atlantic in Spring
+%           based on empirical relationship (n=321), with data points
+%           ranging between 0-600 m, recommend downast
+%
+%Outputs:
+%     - poc NxM double corresponding to poc in mg.m^{-3}
+%     - poc_lower NxM double with corresponding to the lower poc estimation
+%     - poc_upper NxM double with corresponding to the upper poc estimation
+%     - cphyto NxM double corresponding to cphyto in mg.m^{-3}
+%     - cphyto_lower NxM double with corresponding to the lower cphyto estimation
+%     - cphyto_upper NxM double with corresponding to the upper cphyto estimation
+%
+%Examples:
+% [poc] = estimate_poc(bbp);
+% [poc] = estimate_poc(bbp, 700,'soccom', true);
+% [poc, cphyto] = estimate_poc(bbp);
+% [poc, cphyto] = estimate_poc(bbp, 700,'soccom', false);
+%
+%References:
+%   - Graff, J.R. et al., 2015. Analytical phytoplankton carbon measurements 
+%   spanning diverse ecosystems. Deep Sea Research Part I: Oceanographic 
+%   Research Papers 102, 16–25. https://doi.org/10.1016/j.dsr.2015.04.006
+
+%   - Cetinic I. et al., 2012. Particulate organic carbon and inherent optical
+%   properties during 2008 North Atlantic bloom experiment.
+%   J. Geophys. Res. Ocean. 117, doi:10.1029/2011JC007771.
+
+%   - Boss E. et al., 2013. The characteristics of particulate absorption,
+%   scattering and attenuation coefficients in the surface ocean;
+%   Contribution of the Tara Oceans expedition. Methods in Oceanography, 7:52?62
+%   ISSN 22111220. doi: 10.1016/j.mio.2013.11.002.
+%   URL http://dx.doi. org/10.1016/j.mio.2013.11.002.
+%
+% Tested with: Matlab R2015b & R2020b
+%
+% Author: Nils Haentjens, Ms, University of Maine
+% modified Guillaume Bourdin
+% Email: nils.haentjens@maine.edu / guillaume.bourdin@maine.edu
+% Created: February 5th 2016
+% modified: March 2020
+
+% Check Nargin
+if nargin > 4
+   error('Too many input arguments.')
+elseif nargin < 1
+   error('Not enough input arguments.')
+end
+% Set default param
+if ~exist('lambda','var')
+  lambda = 700;
+end
+if ~exist('method','var') || isempty(method)
+  method = 'soccom';
+end
+if ~exist('conf_int','var') || isempty(conf_int)
+  conf_int = true;
+end
+
+% Check size of input/content of input
+if size(bbp,2) ~= size(lambda,2) || size(lambda,1) ~= 1
+  error('bbp should be NxM and lambda should be 1xM');
+end
+
+% Resize lambda
+lambda = bsxfun(@times, ones(size(bbp)), lambda);
+
+% Estimate poc
+switch method
+  case 'soccom'
+    % switch to bbp(700)
+    bbp_700 = bbp .* (700 ./ lambda) .^ (-0.78);
+    % estimate poc from bbp(700)
+    poc = 3.23 * 10^4 * bbp_700 + 2.76;
+    poc_lower = poc * 0.95;
+    poc_upper = poc * 1.05;
+  case 'NAB08_up'
+    % upcast
+    bbp_700 = bbp .* (700 ./ lambda) .^ (-0.78);
+    poc = 43317 * bbp_700 - 18.4;
+    poc_lower = (43317-2092) * bbp_700 - (18.4+5.8);
+    poc_upper = (43317+2092) * bbp_700 - (18.4-5.8);
+  case 'NAB08_down'
+    % downcast
+    bbp_700 = bbp .* (700 ./ lambda) .^ (-0.78);
+    poc = 35422 * bbp_700 - 14.4; 
+    poc_lower = (35422-1754) * bbp_700 - (14.4+5.8);
+    poc_upper = (35422+1754) * bbp_700 - (14.4-5.8);
+  otherwise
+    error('Unknown method %s', method);
+end
+% Estimate cphyto
+% switch to bbp(470)
+bbp_470 = bbp .* (470 ./ lambda) .^ (-0.78);
+% estimate cphyto from bbp(470)
+cphyto = 12128 * bbp_470 + 0.59;
+cphyto_lower = cphyto * 0.95;
+cphyto_upper = cphyto * 1.05;
+end
+

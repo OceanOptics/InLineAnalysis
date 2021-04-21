@@ -1,6 +1,6 @@
 % TaraPacific Configuration file
-% author: Nils
-% created: Aug 16, 2018
+% author: Guillaume Bourdin
+% created: Aug 16, 2019
 
 cfg = struct('meta', struct(), 'instruments', struct(), 'process', struct());
 
@@ -25,147 +25,123 @@ cfg.meta.measurement_depth = 1.5;
 %%%%%%%%%%%%%%%%%
 
 PATH_ROOT = 'C:\Users\Gui\Documents\MATLAB\InLineAnalysis\';
+PATH_DATA = 'D:\Data\TaraPacific\';
 
 %%% TSG + GPS %%%
 cfg.instruments.TSG = struct();
 cfg.instruments.TSG.model = 'TSG';
 cfg.instruments.TSG.boat = 'Tara';
-cfg.instruments.TSG.path = struct('raw',  [PATH_ROOT 'raw' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'Underway' filesep]);
+cfg.instruments.TSG.logger = 'Matlab'; % TeraTerm Matlab
+cfg.instruments.TSG.path = struct('raw',  [PATH_DATA 'raw' filesep 'TSG' filesep],...
+                                  'wk',   [PATH_DATA 'wk' filesep 'TSG' filesep],...
+                                  'prod', [PATH_DATA 'prod' filesep],...
+                                  'ui', [PATH_DATA 'ui' filesep 'TSG' filesep]);
 cfg.instruments.TSG.view = struct('varname', 't');
 
-%%% FTH (FlowControl) %%%
-cfg.instruments.FTH = struct();
-cfg.instruments.FTH.model = 'FTH';
-cfg.instruments.FTH.logger = 'FlowControl';
-cfg.instruments.FTH.LoadPrevious = true;
-cfg.instruments.FTH.path = struct('raw',  [PATH_ROOT 'raw' filesep 'flow' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'FlowControl' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'FlowControl' filesep]);
-cfg.instruments.FTH.view = struct('varname', 'swt');
-
-% cfg.instruments.FTH = struct();
-% cfg.instruments.FTH.model = 'FTHv';
-% cfg.instruments.FTH.logger = 'FlowControl';
-% cfg.instruments.FTH.LoadPrevious = true;
-% cfg.instruments.FTH.path = struct('raw',  [PATH_ROOT 'raw' filesep 'flow' filesep],...
-%                                   'wk',   [PATH_ROOT 'wk' filesep 'FlowControl' filesep],...
-%                                   'prod', [PATH_ROOT 'prod' filesep],...
-%                                   'ui', [PATH_ROOT 'ui' filesep 'FlowControl' filesep]);
-% cfg.instruments.FTH.view = struct('varname', 'swt');
+%%% FLOW (FlowControl) %%%
+cfg.instruments.FLOW = struct();
+cfg.instruments.FLOW.model = 'FTH';
+cfg.instruments.FLOW.logger = 'FlowControl';
+cfg.instruments.FLOW.LoadPrevious = true;
+cfg.instruments.FLOW.path = struct('raw',  [PATH_DATA 'raw' filesep 'FlowControl' filesep],...
+                                  'wk',   [PATH_DATA 'wk' filesep 'FlowControl' filesep],...
+                                  'prod', [PATH_DATA 'prod' filesep],...
+                                  'ui', [PATH_DATA 'ui' filesep 'FlowControl' filesep]);
+cfg.instruments.FLOW.view = struct('varname', 'swt');
 
 %%% AC9 %%%
+SN = '245';
 cfg.instruments.AC9 = struct();
 cfg.instruments.AC9.model = 'AC9';
-cfg.instruments.AC9.sn = '245';
+cfg.instruments.AC9.sn = SN;
 cfg.instruments.AC9.logger = 'WetView';
-% cfg.instruments.AC9.device_file = [PATH_ROOT 'acs091_20170410_20170904.dev']; % acs091_20180530_20180818
-% cfg.instruments.AC9.lambda_reference = [400.9, 404.6, 408.4, 411.7, 415.5, 419.2, 423.7, 428.1, 432.2, 435.9, 440, 444, 449, 453.4, 457.6, 462, 466.2, 470.8, 475.7, 480.3, 485.2, 489.4, 493.7, 497.7, 502.1, 506.6, 511.4, 515.9, 520.6, 524.9, 529.2, 533.4, 537.5, 541.5, 545.7, 550, 554.3, 558.6, 562.8, 566.9, 570.7, 574.1, 578, 582.2, 586.1, 590.3, 594.5, 599.1, 603.8, 608.1, 612.7, 617.4, 621.7, 626, 630.5, 634.7, 639, 643.3, 647.8, 652.4, 656.8, 661.4, 665.9, 670.3, 674.4, 678.8, 682.8, 687.1, 691, 694.7, 698.4, 702.5, 706.2, 710, 713.7, 717.6, 721.4, 725.1, 728.8, 732.6, 736.2, 739.6];
-% cfg.instruments.AC9.lambda_a = [400.9, 404.6, 408.4, 411.7, 415.5, 419.2, 423.7, 428.1, 432.2, 435.9, 440, 444, 449, 453.4, 457.6, 462, 466.2, 470.8, 475.7, 480.3, 485.2, 489.4, 493.7, 497.7, 502.1, 506.6, 511.4, 515.9, 520.6, 524.9, 529.2, 533.4, 537.5, 541.5, 545.7, 550, 554.3, 558.6, 562.8, 566.9, 570.7, 574.1, 578, 582.2, 586.1, 590.3, 594.5, 599.1, 603.8, 608.1, 612.7, 617.4, 621.7, 626, 630.5, 634.7, 639, 643.3, 647.8, 652.4, 656.8, 661.4, 665.9, 670.3, 674.4, 678.8, 682.8, 687.1, 691, 694.7, 698.4, 702.5, 706.2, 710, 713.7, 717.6, 721.4, 725.1, 728.8, 732.6, 736.2, 739.6];
-% cfg.instruments.AC9.lambda_c = [400.9, 404.6, 408.4, 411.7, 415.5, 419.2, 423.7, 428.1, 432.2, 435.9, 440, 444, 449, 453.4, 457.6, 462, 466.2, 470.8, 475.7, 480.3, 485.2, 489.4, 493.7, 497.7, 502.1, 506.6, 511.4, 515.9, 520.6, 524.9, 529.2, 533.4, 537.5, 541.5, 545.7, 550, 554.3, 558.6, 562.8, 566.9, 570.7, 574.1, 578, 582.2, 586.1, 590.3, 594.5, 599.1, 603.8, 608.1, 612.7, 617.4, 621.7, 626, 630.5, 634.7, 639, 643.3, 647.8, 652.4, 656.8, 661.4, 665.9, 670.3, 674.4, 678.8, 682.8, 687.1, 691, 694.7, 698.4, 702.5, 706.2, 710, 713.7, 717.6, 721.4, 725.1, 728.8, 732.6, 736.2, 739.6];
-cfg.instruments.AC9.path = struct('raw',  [PATH_ROOT 'raw' filesep 'AC9' filesep],...
-                                  'di',  [PATH_ROOT 'raw' filesep 'AC9' filesep 'DI' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'AC9' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'AC9' filesep]);
+cfg.instruments.AC9.device_file = [PATH_DATA filesep 'DeviceFiles' filesep 'ac9245_20160816_20161002.dev']; % acs091_20170410_20170904 acs091_20180530_20180818 
+cfg.instruments.AC9.path = struct('raw',  [PATH_DATA 'raw' filesep 'AC9' filesep],...
+                                  'di',  [PATH_DATA 'raw' filesep 'AC9' filesep 'DI' filesep],...
+                                  'wk',   [PATH_DATA 'wk' filesep 'AC9' filesep],...
+                                  'prod', [PATH_DATA 'prod' filesep],...
+                                  'ui', [PATH_DATA 'ui' filesep 'AC9' filesep]);
 cfg.instruments.AC9.view = struct('varname', 'a', 'varcol', 9);
 
 %%% ACS 091 %%% (Aug 20 to ...)
-cfg.instruments.ACS091 = struct();
-cfg.instruments.ACS091.model = 'ACS';
-cfg.instruments.ACS091.sn = '091';
-cfg.instruments.ACS091.logger = 'Compass_2.1rc_scheduled_bin';
-cfg.instruments.ACS091.device_file = [PATH_ROOT 'acs091_20180530_20180818.dev']; % acs091_20170410_20170904 acs091_20180530_20180818 
-% cfg.instruments.ACS091.logger = 'Compass_2.1rc_scheduled';
-% cfg.instruments.ACS091.lambda_reference = [400.9, 404.6, 408.4, 411.7, 415.5, 419.2, 423.7, 428.1, 432.2, 435.9, 440, 444, 449, 453.4, 457.6, 462, 466.2, 470.8, 475.7, 480.3, 485.2, 489.4, 493.7, 497.7, 502.1, 506.6, 511.4, 515.9, 520.6, 524.9, 529.2, 533.4, 537.5, 541.5, 545.7, 550, 554.3, 558.6, 562.8, 566.9, 570.7, 574.1, 578, 582.2, 586.1, 590.3, 594.5, 599.1, 603.8, 608.1, 612.7, 617.4, 621.7, 626, 630.5, 634.7, 639, 643.3, 647.8, 652.4, 656.8, 661.4, 665.9, 670.3, 674.4, 678.8, 682.8, 687.1, 691, 694.7, 698.4, 702.5, 706.2, 710, 713.7, 717.6, 721.4, 725.1, 728.8, 732.6, 736.2, 739.6];
-% cfg.instruments.ACS091.lambda_a = [400.9, 404.6, 408.4, 411.7, 415.5, 419.2, 423.7, 428.1, 432.2, 435.9, 440, 444, 449, 453.4, 457.6, 462, 466.2, 470.8, 475.7, 480.3, 485.2, 489.4, 493.7, 497.7, 502.1, 506.6, 511.4, 515.9, 520.6, 524.9, 529.2, 533.4, 537.5, 541.5, 545.7, 550, 554.3, 558.6, 562.8, 566.9, 570.7, 574.1, 578, 582.2, 586.1, 590.3, 594.5, 599.1, 603.8, 608.1, 612.7, 617.4, 621.7, 626, 630.5, 634.7, 639, 643.3, 647.8, 652.4, 656.8, 661.4, 665.9, 670.3, 674.4, 678.8, 682.8, 687.1, 691, 694.7, 698.4, 702.5, 706.2, 710, 713.7, 717.6, 721.4, 725.1, 728.8, 732.6, 736.2, 739.6];
-% cfg.instruments.ACS091.lambda_c = [400.9, 404.6, 408.4, 411.7, 415.5, 419.2, 423.7, 428.1, 432.2, 435.9, 440, 444, 449, 453.4, 457.6, 462, 466.2, 470.8, 475.7, 480.3, 485.2, 489.4, 493.7, 497.7, 502.1, 506.6, 511.4, 515.9, 520.6, 524.9, 529.2, 533.4, 537.5, 541.5, 545.7, 550, 554.3, 558.6, 562.8, 566.9, 570.7, 574.1, 578, 582.2, 586.1, 590.3, 594.5, 599.1, 603.8, 608.1, 612.7, 617.4, 621.7, 626, 630.5, 634.7, 639, 643.3, 647.8, 652.4, 656.8, 661.4, 665.9, 670.3, 674.4, 678.8, 682.8, 687.1, 691, 694.7, 698.4, 702.5, 706.2, 710, 713.7, 717.6, 721.4, 725.1, 728.8, 732.6, 736.2, 739.6];
-cfg.instruments.ACS091.path = struct('raw',  [PATH_ROOT 'raw' filesep 'ACS' filesep],...
-                                  'di',  [PATH_ROOT 'raw' filesep 'ACS' filesep 'DI' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'ACS' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'ACS' filesep]);
-cfg.instruments.ACS091.view = struct('varname', 'a', 'varcol', 40);
+SN = '091';
+cfg.instruments.(['ACS' SN]) = struct();
+cfg.instruments.(['ACS' SN]).model = 'ACS';
+cfg.instruments.(['ACS' SN]).sn = SN;
+cfg.instruments.(['ACS' SN]).logger = 'Compass_2.1rc_scheduled_bin';
+cfg.instruments.(['ACS' SN]).device_file = [PATH_DATA filesep 'DeviceFiles' filesep 'acs091_20170410_20170904.dev']; % acs091_20170410_20170904 acs091_20180530_20180818 
+cfg.instruments.(['ACS' SN]).path = struct('raw',  [PATH_DATA 'raw' filesep 'ACS' filesep],...
+                                  'di',  [PATH_DATA 'raw' filesep 'ACS' filesep 'DI' filesep],...
+                                  'wk',   [PATH_DATA 'wk' filesep 'ACS' filesep],...
+                                  'prod', [PATH_DATA 'prod' filesep],...
+                                  'ui', [PATH_DATA 'ui' filesep 'ACS' filesep]);
+cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 
 %%% ACS 111 %%% (Aug 11 to Aug 20)
-cfg.instruments.ACS111 = struct();
-cfg.instruments.ACS111.model = 'ACS';
-cfg.instruments.ACS111.sn = '111';
-cfg.instruments.ACS111.ila_prefix = 'ACS';
-cfg.instruments.ACS111.logger = 'Compass_2.1rc_scheduled_bin';
-cfg.instruments.ACS111.device_file = [PATH_ROOT 'acs111_20171212_20180530.dev'];
-% cfg.instruments.ACS111.logger = 'Compass_2.1rc_scheduled';
-% cfg.instruments.ACS111.lambda_reference = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-% cfg.instruments.ACS111.lambda_a = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-% cfg.instruments.ACS111.lambda_c = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-cfg.instruments.ACS111.path = struct('raw',  [PATH_ROOT 'raw' filesep 'ACS' filesep],...
-                                  'di',  [PATH_ROOT 'raw' filesep 'ACS' filesep 'DI' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'ACS' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'ACS' filesep]);
-cfg.instruments.ACS111.view = struct('varname', 'a', 'varcol', 40);
+SN = '111';
+cfg.instruments.(['ACS' SN]) = struct();
+cfg.instruments.(['ACS' SN]).model = 'ACS';
+cfg.instruments.(['ACS' SN]).sn = '111';
+cfg.instruments.(['ACS' SN]).ila_prefix = 'ACS';
+cfg.instruments.(['ACS' SN]).logger = 'Compass_2.1rc_scheduled_bin';
+cfg.instruments.(['ACS' SN]).device_file = [PATH_DATA filesep 'DeviceFiles' filesep 'acs111_20171212_20180530.dev'];
+cfg.instruments.(['ACS' SN]).path = struct('raw',  [PATH_DATA 'raw' filesep 'ACS' filesep],...
+                                  'di',  [PATH_DATA 'raw' filesep 'ACS' filesep 'DI' filesep],...
+                                  'wk',   [PATH_DATA 'wk' filesep 'ACS' filesep],...
+                                  'prod', [PATH_DATA 'prod' filesep],...
+                                  'ui', [PATH_DATA 'ui' filesep 'ACS' filesep]);
+cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 
 %%% ACS 007 %%% (Aug 11 to Aug 20)
-cfg.instruments.ACS007 = struct();
-cfg.instruments.ACS007.model = 'ACS'; 
-cfg.instruments.ACS007.sn = '007';
-cfg.instruments.ACS007.ila_prefix = 'ACS';
-cfg.instruments.ACS007.logger = 'WetView'; % 'WetView' 'Compass_2.1rc' 'Compass_2.1rc_scheduled' 'Compass_2.1rc_scheduled_bin'
-cfg.instruments.ACS007.device_file = [PATH_ROOT 'acs007_20161101_20170220.dev']; % acs007_20160528_20160704  
-% cfg.instruments.ACS007.logger = 'Compass_2.1rc_scheduled';
-% cfg.instruments.ACS007.lambda_reference = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-% cfg.instruments.ACS007.lambda_a = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-% cfg.instruments.ACS007.lambda_c = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-cfg.instruments.ACS007.path = struct('raw',  [PATH_ROOT 'raw' filesep 'ACS' filesep],...
-                                  'di',  [PATH_ROOT 'raw' filesep 'ACS' filesep 'DI' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'ACS' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'ACS' filesep]);
-cfg.instruments.ACS007.view = struct('varname', 'a', 'varcol', 40);
+SN = '007';
+cfg.instruments.(['ACS' SN]) = struct();
+cfg.instruments.(['ACS' SN]).model = 'ACS'; 
+cfg.instruments.(['ACS' SN]).sn = SN;
+cfg.instruments.(['ACS' SN]).ila_prefix = 'ACS';
+cfg.instruments.(['ACS' SN]).logger = 'WetView'; % 'WetView' 'Compass_2.1rc' 'Compass_2.1rc_scheduled' 'Compass_2.1rc_scheduled_bin'
+cfg.instruments.(['ACS' SN]).device_file = [PATH_DATA filesep 'DeviceFiles' filesep 'acs007_20161101_20170220.dev']; % acs007_20160528_20160704 acs007_20161101_20170220
+cfg.instruments.(['ACS' SN]).path = struct('raw',  [PATH_DATA 'raw' filesep 'ACS' filesep],...
+                                  'di',  [PATH_DATA 'raw' filesep 'ACS' filesep 'DI' filesep],...
+                                  'wk',   [PATH_DATA 'wk' filesep 'ACS' filesep],...
+                                  'prod', [PATH_DATA 'prod' filesep],...
+                                  'ui', [PATH_DATA 'ui' filesep 'ACS' filesep]);
+cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 
 %%% ACS 057 %%% (Aug 11 to Aug 20)
-cfg.instruments.ACS057 = struct();
-cfg.instruments.ACS057.model = 'ACS';
-cfg.instruments.ACS057.sn = '057';
-cfg.instruments.ACS057.ila_prefix = 'ACS';
-cfg.instruments.ACS057.logger = 'Compass_2.1rc_scheduled_bin';
-cfg.instruments.ACS057.device_file = [PATH_ROOT 'acs057_20160704_20160720.dev'];
-% cfg.instruments.ACS057.logger = 'Compass_2.1rc_scheduled';
-% cfg.instruments.ACS057.lambda_reference = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-% cfg.instruments.ACS057.lambda_a = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-% cfg.instruments.ACS057.lambda_c = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-cfg.instruments.ACS057.path = struct('raw',  [PATH_ROOT 'raw' filesep 'ACS' filesep],...
-                                  'di',  [PATH_ROOT 'raw' filesep 'ACS' filesep 'DI' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'ACS' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'ACS' filesep]);
-cfg.instruments.ACS057.view = struct('varname', 'a', 'varcol', 40);
+SN = '057';
+cfg.instruments.(['ACS' SN]) = struct();
+cfg.instruments.(['ACS' SN]).model = 'ACS';
+cfg.instruments.(['ACS' SN]).sn = SN;
+cfg.instruments.(['ACS' SN]).ila_prefix = 'ACS';
+cfg.instruments.(['ACS' SN]).logger = 'Compass_2.1rc_scheduled_bin';
+cfg.instruments.(['ACS' SN]).device_file = [PATH_DATA filesep 'DeviceFiles' filesep 'acs057_20160704_20160720.dev'];
+cfg.instruments.(['ACS' SN]).path = struct('raw',  [PATH_DATA 'raw' filesep 'ACS' filesep],...
+                                  'di',  [PATH_DATA 'raw' filesep 'ACS' filesep 'DI' filesep],...
+                                  'wk',   [PATH_DATA 'wk' filesep 'ACS' filesep],...
+                                  'prod', [PATH_DATA 'prod' filesep],...
+                                  'ui', [PATH_DATA 'ui' filesep 'ACS' filesep]);
+cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 
 %%% ACS 279 %%% (Aug 11 to Aug 20)
-cfg.instruments.ACS279 = struct();
-cfg.instruments.ACS279.model = 'ACS';
-cfg.instruments.ACS279.sn = '279';
-cfg.instruments.ACS279.ila_prefix = 'ACS';
-cfg.instruments.ACS279.logger = 'Compass_2.1rc_scheduled_bin';
-cfg.instruments.ACS279.device_file = [PATH_ROOT 'acs279_20180821_20180920.dev']; % acs279_20170902_20171213 acs279_20180821_20180920
-% cfg.instruments.ACS279.logger = 'Compass_2.1rc_scheduled';
-% cfg.instruments.ACS279.lambda_reference = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-% cfg.instruments.ACS279.lambda_a = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-% cfg.instruments.ACS279.lambda_c = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-cfg.instruments.ACS279.path = struct('raw',  [PATH_ROOT 'raw' filesep 'ACS' filesep],...
-                                  'di',  [PATH_ROOT 'raw' filesep 'ACS' filesep 'DI' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'ACS' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'ACS' filesep]);
-cfg.instruments.ACS279.view = struct('varname', 'a', 'varcol', 40);
+SN = '279';
+cfg.instruments.(['ACS' SN]) = struct();
+cfg.instruments.(['ACS' SN]).model = 'ACS';
+cfg.instruments.(['ACS' SN]).sn = SN;
+cfg.instruments.(['ACS' SN]).ila_prefix = 'ACS';
+cfg.instruments.(['ACS' SN]).logger = 'Compass_2.1rc_scheduled_bin';
+cfg.instruments.(['ACS' SN]).device_file = [PATH_DATA filesep 'DeviceFiles' filesep 'acs279_20170902_20171213.dev']; % acs279_20170902_20171213 acs279_20180821_20180920
+cfg.instruments.(['ACS' SN]).path = struct('raw',  [PATH_DATA 'raw' filesep 'ACS' filesep],...
+                                  'di',  [PATH_DATA 'raw' filesep 'ACS' filesep 'DI' filesep],...
+                                  'wk',   [PATH_DATA 'wk' filesep 'ACS' filesep],...
+                                  'prod', [PATH_DATA 'prod' filesep],...
+                                  'ui', [PATH_DATA 'ui' filesep 'ACS' filesep]);
+cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 
 %%% BB3 %%%
+SN = '1502';
 cfg.instruments.BB3 = struct();
 cfg.instruments.BB3.model = 'BB';
-cfg.instruments.BB3.sn = '1502';
+cfg.instruments.BB3.sn = SN;
 cfg.instruments.BB3.ila_prefix = 'BB3';
 cfg.instruments.BB3.logger = 'InlininoBB3';
 cfg.instruments.BB3.lambda = [470,532,650];
@@ -173,41 +149,42 @@ cfg.instruments.BB3.theta = 124;
 cfg.instruments.BB3.slope = [1.066E-05,7.076E-06,3.569E-06];
 % cfg.instruments.BB3.slope = [8.407E-06,4.624E-06,4.090E-06];
 cfg.instruments.BB3.dark = [50,44,45];
-cfg.instruments.BB3.path = struct('raw',  [PATH_ROOT 'raw' filesep 'BB3' filesep],...
-                                  'di',  [PATH_ROOT 'raw' filesep 'BB3' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'BB3' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'BB3' filesep]);
+cfg.instruments.BB3.path = struct('raw',  [PATH_DATA 'raw' filesep 'BB3' filesep],...
+                                  'di',  [PATH_DATA 'raw' filesep 'BB3' filesep],...
+                                  'wk',   [PATH_DATA 'wk' filesep 'BB3' filesep],...
+                                  'prod', [PATH_DATA 'prod' filesep],...
+                                  'ui', [PATH_DATA 'ui' filesep 'BB3' filesep]);
 cfg.instruments.BB3.view = struct('varname', 'beta', 'varcol', 2);
 
 %%% WSCD %%% (Mai 2016 to Oct 2018)
+SN = '1082P';
 cfg.instruments.WSCD1082P = struct();
 cfg.instruments.WSCD1082P.model = 'CD';
-cfg.instruments.WSCD1082P.sn = '1082P';
+cfg.instruments.WSCD1082P.sn = SN;
 cfg.instruments.WSCD1082P.ila_prefix = 'WSCD';
 cfg.instruments.WSCD1082P.logger = 'InlininoWSCD';
 cfg.instruments.WSCD1082P.slope = 62;
 cfg.instruments.WSCD1082P.dark = 0.059;
-cfg.instruments.WSCD1082P.path = struct('raw',  [PATH_ROOT 'raw' filesep 'WSCD' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'WSCD' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'WSCD' filesep]);
+cfg.instruments.WSCD1082P.path = struct('raw',  [PATH_DATA 'raw' filesep 'WSCD' filesep],...
+                                  'wk',   [PATH_DATA 'wk' filesep 'WSCD' filesep],...
+                                  'prod', [PATH_DATA 'prod' filesep],...
+                                  'ui', [PATH_DATA 'ui' filesep 'WSCD' filesep]);
 cfg.instruments.WSCD1082P.view = struct('varname', 'fdom');
 
-% %%% WSCD %%% (Aug 11 to 17)
-% cfg.instruments.WSCD859 = struct();
-% cfg.instruments.WSCD859.model = 'CD';
-% cfg.instruments.WSCD859.sn = '859';
-% cfg.instruments.WSCD859.ila_prefix = 'WSCD';
-% cfg.instruments.WSCD859.logger = 'InlininoWSCD';
-% cfg.instruments.WSCD859.slope = 0.0909;
-% cfg.instruments.WSCD859.dark = 44;
-% cfg.instruments.WSCD859.path = struct('raw',  [PATH_ROOT 'raw/WSCD859/'],...
-%                                   'wk',   [PATH_ROOT 'wk/WSCD859/'],...
-%                                   'prod', [PATH_ROOT 'prod/'],...
-%                                   'ui', [PATH_ROOT 'ui/WSCD859/']);
-% cfg.instruments.WSCD859.view = struct('varname', 'fdom');
-% 
+%%% PAR %%% (Mai 2016 to Oct 2018)
+SN = '50168';
+cfg.instruments.PAR = struct();
+cfg.instruments.PAR.model = 'PAR';
+cfg.instruments.PAR.sn = SN;
+cfg.instruments.PAR.logger = 'Inlinino';
+cfg.instruments.PAR.scale = 6.451E-04; % Volts/(uE/m²sec)
+cfg.instruments.PAR.dark = 9.7E-03;
+cfg.instruments.PAR.path = struct('raw',  [PATH_DATA 'raw' filesep 'PAR' filesep],...
+                                  'wk',   [PATH_DATA 'wk' filesep 'PAR' filesep],...
+                                  'prod', [PATH_DATA 'prod' filesep],...
+                                  'ui', [PATH_DATA 'ui' filesep 'PAR' filesep]);
+cfg.instruments.PAR.view = struct('varname', 'par');
+
 % %%% LISST %%%
 % cfg.instruments.LISST = struct();
 % cfg.instruments.LISST.model = 'LISST';
@@ -242,26 +219,15 @@ cfg.instruments.WSCD1082P.view = struct('varname', 'fdom');
 %                                   'ui', [PATH_ROOT 'ui/ALFA011/']);
 % cfg.instruments.ALFA.view = struct('varname', 'FvFm');
 
-%%% PAR %%% (Mai 2016 to Oct 2018)
-cfg.instruments.PAR = struct();
-cfg.instruments.PAR.model = 'PAR';
-cfg.instruments.PAR.sn = '50168';
-cfg.instruments.PAR.logger = 'Inlinino';
-cfg.instruments.PAR.scale = 6.451E-04; % Volts/(uE/m²sec)
-cfg.instruments.PAR.dark = 9.7E-03;
-cfg.instruments.PAR.path = struct('raw',  [PATH_ROOT 'raw' filesep 'PAR' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'PAR' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'PAR' filesep]);
-cfg.instruments.PAR.view = struct('varname', 'par');
+
 %%%%%%%%%%%%%
 %% PROCESS %%
 %%%%%%%%%%%%%
 
 %%% General parameters %%%
 cfg.process.days2run = datenum(2018,5,30,0,0,0):datenum(2018,6,20,0,0,0);
-cfg.process.instruments2run = {'FTH', 'TSG', 'ACS007','BB3','PAR'};
-% cfg.process.instruments2run = {'FTH', 'PAR'};
+cfg.process.instruments2run = {'FLOW', 'TSG', 'ACS007','BB3','PAR', 'WSCD1082P'};
+% cfg.process.instruments2run = {'FLOW', 'PAR'};
 cfg.process.write = true;
 cfg.process.force_import = false;
 cfg.process.parallel = Inf; % 0: disable parallel or Inf: as many thread available
@@ -273,7 +239,7 @@ cfg.process.di.bin = struct('bin_size', 30);
 %%% Synchronization %%%
 cfg.process.sync = struct();
 cfg.process.sync.delay = struct();
-cfg.process.sync.delay.FTH = 30;
+cfg.process.sync.delay.FLOW = 30;
 cfg.process.sync.delay.AC9 = 60; % 
 cfg.process.sync.delay.ACS007 = 60; % 
 cfg.process.sync.delay.ACS057 = 60; % 
@@ -287,16 +253,16 @@ cfg.process.sync.delay.WSCD1082P = 40;
 % cfg.process.sync.delay.ALFA = 15;
 cfg.process.sync.skip = {'TSG','PAR'};
 
-%%% QC Reference (Flow Control/FTH) %%%
+%%% QC Reference (Flow Control/FLOW) %%%
 cfg.process.qcref = struct();
-cfg.process.qcref.reference = 'FTH';
-cfg.process.qcref.view = 'WSCD1082P';
+cfg.process.qcref.reference = 'FLOW';
+cfg.process.qcref.view = 'PAR';
 cfg.process.qcref.mode = 'ui'; % load or ui
 cfg.process.qcref.MinFiltPeriod = 50; % filter even period in minute
 
 %%% Split total/filtered %%%
 cfg.process.split = struct();
-cfg.process.split.reference = 'FTH';
+cfg.process.split.reference = 'FLOW';
 cfg.process.split.buffer = struct();
 cfg.process.split.buffer.AC9 = [180, 60];
 cfg.process.split.buffer.ACS279 = [180, 60];
@@ -309,18 +275,18 @@ cfg.process.split.buffer.BB3 = [400, 220];
 % cfg.process.split.buffer.WSCD859 = [310, 20];
 cfg.process.split.buffer.WSCD1082P = [310, 20];
 % cfg.process.split.buffer.ALFA = [180, 30];
-% cfg.process.split.skip = {'FTH', 'TSG','WSCD1082P','PAR','ACS279'};
-cfg.process.split.skip = {'FTH', 'TSG','WSCD1082P','PAR'};
+% cfg.process.split.skip = {'FLOW', 'TSG','WSCD1082P','PAR','ACS279'};
+cfg.process.split.skip = {'FLOW', 'TSG','WSCD1082P','PAR'};
 
 %%% Binning %%%
 cfg.process.bin = struct('bin_size', struct());
 cfg.process.bin.prctile_detection = [2.5, 97.5];
 % if StepQC with ACS: prctile_average = [2.5, 97.5]; otherwise prctile_average = [5, 75];
-cfg.process.bin.prctile_average = [5, 75];
+cfg.process.bin.prctile_average = [2.5, 97.5];
 % Bin mode does not affect the outcome of the data but just the way the data is presented to the computer
 % cfg.process.bin.mode = 'OneShot'; % Faster for small dataset fiting in the memory of the computer
 cfg.process.bin.mode = 'ByDay'; % Slightly slower but can handle a lot more data at once as it will be binned one day at a time
-cfg.process.bin.bin_size.FTH = 1;
+cfg.process.bin.bin_size.FLOW = 1;
 cfg.process.bin.bin_size.AC9 = 1;
 cfg.process.bin.bin_size.ACS007 = 1;
 cfg.process.bin.bin_size.ACS057 = 1;
@@ -338,7 +304,7 @@ cfg.process.bin.skip = {'TSG'};
 
 %%% Automatically flagging %%%
 cfg.process.flag = struct();
-cfg.process.flag.skip = {'FTH', 'TSG', 'AC9', 'ACS007', 'ACS057','ACS091', 'ACS111', 'ACS279', 'BB3', 'LISST', 'WSCD859', 'WSCD1082P', 'ALFA','PAR'};
+cfg.process.flag.skip = {'FLOW', 'TSG', 'AC9', 'ACS007', 'ACS057','ACS091', 'ACS111', 'ACS279', 'BB3', 'LISST', 'WSCD859', 'WSCD1082P', 'ALFA','PAR'};
 % Default: parameters set to all instruments if not specific parameters set
 cfg.process.flag.default = struct();
 cfg.process.flag.default.maximum_fudge_factor = 4;
@@ -353,9 +319,12 @@ cfg.process.flag.default.filt = struct('smooth_threshold', 2);
   
 %%% Manually QC %%%
 cfg.process.qc = struct();
-cfg.process.qc.StepQCLim.a = 3;
-cfg.process.qc.StepQCLim.c = 3;
-cfg.process.qc.StepQCLim.bb = 3;
+cfg.process.qc.StepQCLim.filtered.a = 3;
+cfg.process.qc.StepQCLim.filtered.c = 3;
+cfg.process.qc.StepQCLim.total.a = 3;
+cfg.process.qc.StepQCLim.total.c = 3;
+cfg.process.qc.StepQCLim.filtered.bb = 3;
+cfg.process.qc.StepQCLim.total.bb = 3;
 cfg.process.qc.Saturation_Threshold_bb = 4000; % (counts)
 cfg.process.qc.mode = 'ui';
 cfg.process.qc.global = struct();
@@ -371,12 +340,32 @@ cfg.process.calibrate = struct();
 cfg.process.calibrate.ACS007 = struct('compute_dissolved', false,...
                                   'interpolation_method', 'linear', ...
                                   'CDOM_source', 'WSCD1082P',... % Pay attention to serial number (could merge WSCD products first)
-                                  'FTH_source', 'FTH');
+                                  'FTH_source', 'FLOW');
+cfg.process.calibrate.AC9 = struct('compute_dissolved', false,...
+                                  'interpolation_method', 'linear', ...
+                                  'CDOM_source', 'WSCD1082P',... % Pay attention to serial number (could merge WSCD products first)
+                                  'FTH_source', 'FLOW');
+cfg.process.calibrate.ACS057 = struct('compute_dissolved', false,...
+                                  'interpolation_method', 'linear', ...
+                                  'CDOM_source', 'WSCD1082P',... % Pay attention to serial number (could merge WSCD products first)
+                                  'FTH_source', 'FLOW');
+cfg.process.calibrate.ACS091 = struct('compute_dissolved', false,...
+                                  'interpolation_method', 'linear', ...
+                                  'CDOM_source', 'WSCD1082P',... % Pay attention to serial number (could merge WSCD products first)
+                                  'FTH_source', 'FLOW');
+cfg.process.calibrate.ACS111 = struct('compute_dissolved', false,...
+                                  'interpolation_method', 'linear', ...
+                                  'CDOM_source', 'WSCD1082P',... % Pay attention to serial number (could merge WSCD products first)
+                                  'FTH_source', 'FLOW');
+cfg.process.calibrate.ACS279 = struct('compute_dissolved', false,...
+                                  'interpolation_method', 'linear', ...
+                                  'CDOM_source', 'WSCD1082P',... % Pay attention to serial number (could merge WSCD products first)
+                                  'FTH_source', 'FLOW');
 cfg.process.calibrate.BB3 = struct('compute_dissolved', false,...
                                    'TSG_source', 'TSG',...
                                    'di_method', 'constant');
-% cfg.process.calibrate.skip = {'FTH', 'TSG'};
-cfg.process.calibrate.skip = {'FTH', 'TSG'};
+% cfg.process.calibrate.skip = {'FLOW', 'TSG'};
+cfg.process.calibrate.skip = {'FLOW', 'TSG'};
 
 %%% Write %%%
 cfg.process.write = struct();

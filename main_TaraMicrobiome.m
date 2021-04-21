@@ -1,17 +1,20 @@
 % Main InLine Analysis Script
 % author: Guillaume Bourdin
 % created: Jan 05, 2021
-cd('C:\Users\Gui\Documents\MATLAB\InLineAnalysis\InLineAnalysis-master\');
+cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master/')
 
 % Load InLineAnalysis and the configuration
-ila = InLineAnalysis('cfg\TaraMicrobiome_cfg.m');
-% Quick Cfg update
+ila = InLineAnalysis('cfg/TaraMicrobiome_cfg.m');
 
+% Quick cfg update
 %% TSG
-ila.cfg.days2run = datenum(2020,12,12,0,0,0):datenum(2021,2,5,0,0,0);
+% ila.instrument.TSG.logger = 'Matlab';
+% ila.cfg.days2run = datenum(2020,12,12,0,0,0):datenum(2021,2,5,0,0,0);
+% ila.instrument.TSG.logger = 'TeraTerm';
+% ila.cfg.days2run = datenum(2021,1,10,0,0,0):datenum(2021,1,15,0,0,0);
 
 %% ACS57
-% ila.cfg.days2run = datenum(2020,12,26,0,0,0):datenum(2021,1,5,0,0,0);
+ila.cfg.days2run = datenum(2020,12,26,0,0,0):datenum(2021,1,5,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
 
@@ -24,8 +27,8 @@ ila.cfg.days2run = datenum(2020,12,12,0,0,0):datenum(2021,2,5,0,0,0);
 % ila.cfg.days2run = datenum(2020,12,12,0,0,0):datenum(2021,2,5,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FTH','TSG'}; % 'FTH','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
-ila.cfg.qcref.view = 'TSG';
+ila.cfg.instruments2run = {'FLOW','ACS57'}; % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
+ila.cfg.qcref.view = 'ACS57';
 ila.cfg.parallel = Inf;
 
 %% 1. Import | Load raw data
@@ -48,7 +51,7 @@ ila.CheckDataStatus();
 % % Play with delay of synchronisation
 % % TSG is assumed to be set at zero
 % % No noticeable difference was observed between the TSG of EXPORTS and the BB3
-% % ila.instrument.FTH.Sync(30);
+% % ila.instrument.FLOW.Sync(30);
 % ila.instrument.ACS57.Sync(10);
 % % ila.instrument.ACS091.Sync(65);
 % % ila.instrument.ACS111.Sync(60);
@@ -65,20 +68,20 @@ ila.CheckDataStatus();
 % % yyaxis('left'); plot(ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t); ylabel('Temperature (^o C)');
 % % yyaxis('right'); plot(ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,2)); ylabel('\beta (m^{-1} sr^{-1})'); ylim([80 300]);
 % % datetick2_doy();
-% visSync(ila.instrument.FTH.data, ila.instrument.ACS007.data.dt, ila.instrument.ACS007.data.a(:,20), 'a (m^{-1})');
-% visSync(ila.instrument.FTH.data, ila.instrument.ACS007.data.dt, ila.instrument.ACS007.data.c(:,40), 'c (m^{-1})');
-% % visSync(ila.instrument.FTH.data, ila.instrument.ACS091.data.dt, ila.instrument.ACS091.data.a(:,20), 'a (m^{-1})');
-% % visSync(ila.instrument.FTH.data, ila.instrument.ACS091.data.dt, ila.instrument.ACS091.data.c(:,40), 'c (m^{-1})');
-% % visSync(ila.instrument.FTH.data, ila.instrument.ACS111.data.dt, ila.instrument.ACS111.data.a(:,20), 'a (m^{-1})');
-% % visSync(ila.instrument.FTH.data, ila.instrument.ACS111.data.dt, ila.instrument.ACS111.data.c(:,40), 'c (m^{-1})');
-% % visSync(ila.instrument.FTH.data, ila.instrument.ACS279.data.dt, ila.instrument.ACS279.data.a(:,20), 'a (m^{-1})');
-% % visSync(ila.instrument.FTH.data, ila.instrument.ACS279.data.dt, ila.instrument.ACS279.data.c(:,40), 'c (m^{-1})');
-% % visSync(ila.instrument.('FTH').data, ila.instrument.('BB3').data.dt, ila.instrument.('BB3').data.beta(:,1), '\beta (counts)');
-% % visSync(ila.instrument.('FTH').data, ila.instrument.('LISST').data.dt, ila.instrument.('LISST').data.beta(:,10), '\beta (counts)');
-% % visSync(ila.instrument.('FTH').data, ila.instrument.('WSCD').data.dt, ila.instrument.('WSCD').data.fdom, 'FDOM (counts)');
-% % visSync(ila.instrument.('FTH').data, ila.instrument.('WSCD1082P').data.dt, ila.instrument.('WSCD1082P').data.fdom, 'FDOM (counts)');
+% visSync(ila.instrument.FLOW.data, ila.instrument.ACS007.data.dt, ila.instrument.ACS007.data.a(:,20), 'a (m^{-1})');
+% visSync(ila.instrument.FLOW.data, ila.instrument.ACS007.data.dt, ila.instrument.ACS007.data.c(:,40), 'c (m^{-1})');
+% % visSync(ila.instrument.FLOW.data, ila.instrument.ACS091.data.dt, ila.instrument.ACS091.data.a(:,20), 'a (m^{-1})');
+% % visSync(ila.instrument.FLOW.data, ila.instrument.ACS091.data.dt, ila.instrument.ACS091.data.c(:,40), 'c (m^{-1})');
+% % visSync(ila.instrument.FLOW.data, ila.instrument.ACS111.data.dt, ila.instrument.ACS111.data.a(:,20), 'a (m^{-1})');
+% % visSync(ila.instrument.FLOW.data, ila.instrument.ACS111.data.dt, ila.instrument.ACS111.data.c(:,40), 'c (m^{-1})');
+% % visSync(ila.instrument.FLOW.data, ila.instrument.ACS279.data.dt, ila.instrument.ACS279.data.a(:,20), 'a (m^{-1})');
+% % visSync(ila.instrument.FLOW.data, ila.instrument.ACS279.data.dt, ila.instrument.ACS279.data.c(:,40), 'c (m^{-1})');
+% % visSync(ila.instrument.('FLOW').data, ila.instrument.('BB3').data.dt, ila.instrument.('BB3').data.beta(:,1), '\beta (counts)');
+% % visSync(ila.instrument.('FLOW').data, ila.instrument.('LISST').data.dt, ila.instrument.('LISST').data.beta(:,10), '\beta (counts)');
+% % visSync(ila.instrument.('FLOW').data, ila.instrument.('WSCD').data.dt, ila.instrument.('WSCD').data.fdom, 'FDOM (counts)');
+% % visSync(ila.instrument.('FLOW').data, ila.instrument.('WSCD1082P').data.dt, ila.instrument.('WSCD1082P').data.fdom, 'FDOM (counts)');
 % % visSync(ila.instrument.('BB3').data, ila.instrument.('TSG').data.dt, ila.instrument.('TSG').data.t, 'Temp (C)');
-% % % visSync(ila.instrument.FTH.data, ila.instrument.ALFA.data.dt, ila.instrument.ALFA.data.Chlb, 'chlb');yyaxis('left'); ylim([0 2]);
+% % % visSync(ila.instrument.FLOW.data, ila.instrument.ALFA.data.dt, ila.instrument.ALFA.data.Chlb, 'chlb');yyaxis('left'); ylim([0 2]);
 % % 
 % % % xlim([datenum(2018,08,14,9,55,0) datenum(2018,08,14,11,05,0)]);
 % % % ylim([-0.1 0.2]);
@@ -91,8 +94,7 @@ ila.CheckDataStatus();
 %% Automatic detection of filter events for AC and BB sensors
 % data = ila.instrument.(ila.cfg.qcref.view).data;
 % instrument = ila.cfg.qcref.view;
-% FTH = ila.instrument.FTH.data;
-% MinFiltPeriod=ila.cfg.qcref.MinFiltPeriod;
+% FLOW = ila.instrument.FLOW.data;
 
 ila.cfg.qcref.MinFiltPeriod = 65; % filter even period in minute % ACS: 55 % BB3: 60
 ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod);
@@ -107,21 +109,23 @@ ila.cfg.qcref.mode='load'; % 'ui' or 'load'
 ila.QCRef();
 
 %% 4. Split fsw and tsw
-ila.cfg.split.skip = {'FTH','TSG'};
+ila.cfg.split.skip = {'FLOW','TSG'};
 ila.Split();
 ila.CheckDataStatus();
 
 %% Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
+ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 
 %% automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR values
-% fudge factor for auto QC ACS. Varies between ACS must be >= 3 (default = 3 = maximum filtration)
-ila.cfg.qc.StepQCLim.filtered.a = 6;
-ila.cfg.qc.StepQCLim.filtered.c = 15;
-ila.cfg.qc.StepQCLim.total.a = 4;
-ila.cfg.qc.StepQCLim.total.c = 12;
-% fudge factor for auto QC BB. Must be >= 3 (default = 3 = maximum filtration)
+% fudge factor for auto QC ACS.
+% Varies between ACS: 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
+ila.cfg.qc.StepQCLim.filtered.a = 3; % 6
+ila.cfg.qc.StepQCLim.filtered.c = 10; % 15
+ila.cfg.qc.StepQCLim.total.a = 2; % 4
+ila.cfg.qc.StepQCLim.total.c = 12; % 12
+% fudge factor for auto QC BB.
+% 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
 ila.cfg.qc.StepQCLim.filtered.bb = 3;
 ila.cfg.qc.StepQCLim.total.bb = 3;
 % remove saturated periods
@@ -131,38 +135,38 @@ ila.CheckDataStatus();
 
 %% Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
+ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 
 %% 5. Bin
 % % Set settings directly in configuration file (no tunning at this step)
 % % run before re-bin only to clear qc tables
-ila.instrument.ACS57.qc.tsw = table(); ila.instrument.ACS57.qc.fsw = table();
+% ila.instrument.ACS57.qc.tsw = table(); ila.instrument.ACS57.qc.fsw = table();
 ila.cfg.bin.skip = {};
 ila.Bin()
+ila.CheckDataStatus();
 
 %% Diagnostic Plot
 % check binned spectrums AC or BB sensors
-ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
+ila.DiagnosticPlot('AC',{'bin'}); % AC or BB
 
 %% Write bin
 ila.Write('bin')
 ila.CheckDataStatus();
 
-%% 5.1 Read Raw and Bin data
-% ila.Read('raw');
+%% 5.1 Load data from mat files: 'data' = Raw | 'bin' = Bin | 'qc' = QCed | 'prod' = product
+% ila.Read('data');
 % ila.Read('bin');
 % ila.Read('qc');
 % ila.Read('prod');
 
-% ila.instrument.ACS091.ReadDeviceFile()
-
 %% 6. Flag
 ila.Flag() % Now deprecated will just copy data to next level
+ila.CheckDataStatus();
 
 %% 7. QC
 % Interactive or Loading previous qc selection
 ila.cfg.qc.mode='ui';  % load or ui
-ila.cfg.qc.specific.run = {'TSG'}; % 'FTH','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
+ila.cfg.qc.specific.run = ila.cfg.instruments2run(~contains(ila.cfg.instruments2run, 'FLOW')); % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
 % QCmap(ila.cfg.days2run); % SST & latlon QC
 ila.QC();
 ila.CheckDataStatus();
@@ -170,7 +174,7 @@ ila.CheckDataStatus();
 %% Diagnostic Plot
 % check QCed spectrums AC or BB sensors
 % {'raw','bin','qc','prod'}
-ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
+ila.DiagnosticPlot('AC',{'qc'}); % AC or BB
 
 %% Write qc
 ila.Write('qc')
@@ -179,7 +183,7 @@ ila.CheckDataStatus();
 %% 8. Calibrate
 % ila.cfg.calibrate.ACS.compute_dissolved = false;
 % ila.cfg.calibrate.BB3.compute_dissolved = false;
-
+ila.cfg.calibrate.skip = {'FLOW', 'TSG'};
 ila.Calibrate();
 ila.CheckDataStatus();
 % % Calibrate LISST only
@@ -189,7 +193,7 @@ ila.CheckDataStatus();
 % ila.instrument.ACS111.Calibrate(ila.cfg.calibrate.ACS111.compute_dissolved,...
 %                              ila.cfg.calibrate.ACS111.interpolation_method,...
 %                              ila.instrument.(ila.cfg.calibrate.ACS111.CDOM_source),...
-%                              ila.instrument.(ila.cfg.calibrate.ACS111.FTH_source))
+%                              ila.instrument.(ila.cfg.calibrate.ACS111.FLOW_source))
 % 
 % % Compute NAAMES specific chl
 % wl = ila.instrument.ACS111.lambda_ref; ACS = ila.instrument.ACS111.prod;
@@ -210,29 +214,17 @@ ila.CheckDataStatus();
 % % ila.instrument.ACS298.prod.p.chl_exports = 138.14 * line_height.^1.11; % EXPORTS relation
 % ila.instrument.ACS111.prod.p.chl_exports = 138.14 * line_height.^1.11; % EXPORTS relation
 
-%% 3D QC plots
+%% prod QC plots
 % save_figures = true;
 
-%%% ACS %%%
+%%% ACS 3D %%%
 ila.DiagnosticPlot('AC',{'prod'}); % AC or BB
 
-%%% BB %%%
-ila.DiagnosticPlot('BB',{'prod'}); % AC or BB
+%%% BB 3D %%%
+% ila.DiagnosticPlot('BB',{'prod'}); % AC or BB
 
-%%% PAR %%%
-% figure(77);
-% scatter(datetime(ila.instrument.PAR.prod.a.dt,'ConvertFrom','datenum'), ila.instrument.PAR.prod.a.par, 4, 'filled'); ylabel('PAR (\muE.m^-^2.s^-^1)');
-
-%% WSCD %%%
-figure(78);
-scatter(datetime(ila.instrument.WSCD859.prod.pd.dt,'ConvertFrom','datenum'), ila.instrument.WSCD859.prod.pd.fdom, 4, 'filled'); ylabel('fdom ppb');
-
-%%% TSG %%%
-figure(79);
-yyaxis('left')
-scatter(datetime(ila.instrument.TSG.prod.a.dt,'ConvertFrom','datenum'), ila.instrument.TSG.prod.a.t, 4, 'filled'); ylabel('TSG T (DegC)');
-yyaxis('right')
-scatter(datetime(ila.instrument.TSG.prod.a.dt,'ConvertFrom','datenum'), ila.instrument.TSG.prod.a.s, 4, 'filled'); ylabel('TSG S (PSU)');
+%%% ACS BB3 TSG PAR WSCD final product visualisation %%%
+ila.visProd_timeseries()
 
 %% 9. Save products
 ila.Write('prod')
@@ -240,6 +232,9 @@ ila.Write('prod')
 % % Notify with a song that the job is done
 % notif_sound = load('gong'); sound(notif_sound.y, notif_sound.Fs); % handel
 % return
+
+
+
 
 %% 9.1 Save as one file
 % tsg = ila.instrument.TSG.prod.a;
@@ -264,20 +259,8 @@ ila.Write('prod')
 % Display 676 line on 3D plot
 % hold('on'); fill3([676 676 676 676], [736961 736937 736937 736961], [0.14 0.14 -0.02 -0.02], [1 1 1 1])
 
-%%% ACS Chl %%%
-% fig(79);
-figure(79); hold('on');
-yyaxis('left'); scatter(ila.instrument.ACS57.prod.p.dt, ila.instrument.ACS57.prod.p.chl, 5, 'filled'); ylabel('Chl (\mug L^{-1})');
-yyaxis('right'); scatter(ila.instrument.ACS57.prod.p.dt, ila.instrument.ACS57.prod.p.gamma, 5, 'filled'); ylabel('\gamma');
-datetick2_doy(); set(datacursormode(figure(79)),'UpdateFcn',@data_cursor_display_date);
-set(gca, 'FontSize', 14, 'FontName', 'Helvetica Neue');
-% if save_figures; savefig([ila.instrument.ACS.path.prod 'ACS' datestr(ila.cfg.days2run(1), 'yyyymmdd') '_chl_gamma']); end
-% save_fig([ila.instrument.ACS.path.prod 'ACS_stnP_chl_gamma'], 1280, 600);
-
 % Check ACS wl registration
-fig(78); hold('on'); plot(wl, ACS111.p.ap(2000:2010, :), 'o-'); plot([676 676], ylim(), 'k'); plot([675 675], ylim(), 'k');
-
-
+% fig(78); hold('on'); plot(wl, ACS111.p.ap(2000:2010, :), 'o-'); plot([676 676], ylim(), 'k'); plot([675 675], ylim(), 'k');
 
 % %% LISST particulate %%%
 % % ila.Calibrate();

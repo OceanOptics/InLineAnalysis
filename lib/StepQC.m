@@ -55,7 +55,7 @@ end
 if any(strcmp(data.Properties.VariableNames, 'a') | ...
         strcmp(data.Properties.VariableNames, 'c'))
     if any(fudge_factor.a < 3 | fudge_factor.c < 3)
-        error('QC threshold ACS too low (minimum 3)');
+        warning('QC threshold might be too low, data might be lost');
     end
 
     % lambda.a = ila.instrument.ACS091.lambda_a; lambda.c = ila.instrument.ACS091.lambda_c;

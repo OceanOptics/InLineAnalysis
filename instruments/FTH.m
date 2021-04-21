@@ -52,7 +52,11 @@ classdef FTH < Instrument
         dt = (dt_st:1/obj.SAMPLING_FREQUENCY/3600/24:dt_end)';
         
         % delete data with duplicats timestamp
-        [~, I] = unique(obj.data.dt, 'first');
+        if ~ isempty(obj.data.dt)
+          [~, I] = unique(obj.data.dt, 'first');
+        else
+          error('Raw data not loaded')
+        end
         x = 1:length(obj.data.dt);
         x(I) = [];
         obj.data(x,:) = [];

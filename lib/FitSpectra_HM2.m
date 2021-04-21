@@ -8,9 +8,9 @@ lambda = lambda(:)';
 
 if length(lambda)~=nlambd, error('Invalid lambda'); end
 
-cp0 = repmat(nan, nspect,1);
-gamma = repmat(nan, nspect,1);
-fiterr = repmat(nan, nspect,1);
+cp0 = NaN(nspect,1);
+gamma = NaN(nspect,1);
+fiterr = NaN(nspect,1);
 
 %setting options for fmisearch
 opts = optimset('fminsearch');      
@@ -19,7 +19,7 @@ opts = optimset(opts,'MaxFunEvals',2000);   % usually 100*number of params
 opts = optimset(opts,'TolFun',1e-9);
 %opts = optimset('LevenbergMarquardt','on');
 
-for k = 1:nspect
+parfor k = 1:nspect
 
     if all(isfinite(cpmeas(k,:)))
         % guess for paramters (beamc at lambda0, beamc slope)

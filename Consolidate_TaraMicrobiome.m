@@ -6,8 +6,8 @@
 cd 'C:\Users\Gui\Documents\MATLAB\InLineAnalysis\InLineAnalysis-master'
 cruise = 'TaraMicrobiome';
 ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
-path_dev = [strrep(ila.instrument.FTH.path.prod, ...
-  ['prod' filesep], '') 'DeviceFiles'];
+path_dev = strrep(ila.instrument.FTH.path.prod, ...
+  'prod', 'DeviceFiles');
 
 % create Graph folder if it doesn't exist
 if ~isfolder([ila.instrument.FTH.path.prod 'Graphs'])
@@ -62,6 +62,14 @@ ylabel([tsg.Properties.VariableNames{strcmp(tsg.Properties.VariableNames, 'sss')
 saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_tsg'], 'jpg')
 close figure 1
 
+SimpleMap(tsg.sst, tsg(:,1:3), 'SST (°C)')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_TSG_SST_map'], 'jpg')
+close figure 1
+
+SimpleMap(tsg.sss, tsg(:,1:3), 'SSS (PSU)')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_TSG_SSS_map'], 'jpg')
+close figure 1
+
 % save TSG prod
 fprintf('Export to mat and csv... ');
 save([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
@@ -69,6 +77,20 @@ save([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
 writetable(tsg, [ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
     cruise '_InLine_TSG_prod.csv']);
 fprintf('Done\n');
+
+% % add missing lat/lon from meteo file
+% load([ila.instrument.FTH.path.prod cruise '_meteo_prod.mat'])
+% load([ila.instrument.FTH.path.prod cruise '_InLine_TSG_prod.mat'])
+% meteo_merged_tsg = MergeTimeSeries(tsg.dt, {meteo_ftp}, {'meteo_ftp'});
+% tsg.lat(isnan(tsg.lat)) = meteo_merged_tsg.lat(isnan(tsg.lat));
+% tsg.lon(isnan(tsg.lon)) = meteo_merged_tsg.lon(isnan(tsg.lon));
+% % save TSG prod
+% fprintf('Export to mat and csv... ');
+% save([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
+%     cruise '_InLine_TSG_prod'], 'tsg');
+% writetable(tsg, [ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
+%     cruise '_InLine_TSG_prod.csv']);
+% fprintf('Done\n');
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% AC %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 list_leg = {...
@@ -196,11 +218,62 @@ saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_A
 saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_ACS_prod_timeseries'], 'jpg')
 close figure 1
 
+figure('WindowState', 'maximized')
+clf
+subplot(3,1,1)
+hold on
+yyaxis('left')
+scatter(acs.dt, data.gamma, 6, 'filled')
+ylabel('gamma (unitless)')
+yyaxis('right')
+scatter(acs.dt, data.HH_G50, 6, 'filled')
+ylabel('H&H phytoplankton G50: cross-sectional area (\mum)')
+legend('gamma', 'H&H phytoplankton G50')
+hold off
+subplot(3,1,2)
+hold on
+scatter(acs.dt, data.Halh_chl, 6, 'filled')
+scatter(acs.dt, data.chl, 6, 'filled')
+ylabel('[chl] (mg.m^{-3})')
+legend('Houskeeper [chl]', 'a_{p676}[chl]')
+hold off
+subplot(3,1,3)
+scatter(acs.dt, data.poc, 6, 'filled')
+ylabel('[poc] (mg.m^{-3})')
+xlim([min(acs.dt) max(acs.dt)]);
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_ACS_prod_timeseries'], 'fig')
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_ACS_prod_timeseries'], 'jpg')
+close figure 1
+
+figure('WindowState', 'maximized');
+clf
+subplot(1,2,1)
+scatter(acs.gamma, data.HH_G50, 6, 'filled')
+set(gca, 'XScale', 'log', 'YScale', 'log')
+xlabel('gamma (unitless)')
+ylabel('H&H phytoplankton G50: cross-sectional area (\mum)')
+subplot(1,2,2)
+scatter(acs.chl, data.Halh_chl, 6, 'filled')
+set(gca, 'XScale', 'log', 'YScale', 'log')
+xlabel('a_{p676}[chl] (mg.m^{-3})')
+ylabel('Houskeeper [chl] (mg.m^{-3})')
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_ACS_gamma_H&H'], 'fig')
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_ACS_gamma_H&H'], 'jpg')
+close figure 1
+
+SimpleMap(acs.Halh_chl, acs(:,1:3), 'Houskeeper [chl] (mg.m^{-3})')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_chl_Houskeeper_map'], 'jpg')
+close figure 1
+
+SimpleMap(acs.HH_G50, acs(:,1:3), 'H&H phytoplankton G50: cross-sectional area (\mum)')
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_H&H_map'], 'jpg')
+close figure 1
+
 SimpleMap(acs.POC, acs(:,1:3), '[POC](mg.m^{-3})')
 saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_POC_map'], 'jpg')
 close figure 1
 
-SimpleMap(acs.chl, acs(:,1:3), '[chl a](mg.m^{-3})')
+SimpleMap(acs.chl, acs(:,1:3), 'a_{p676} [chl a] (mg.m^{-3})')
 saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_chl_map'], 'jpg')
 close figure 1
 
@@ -247,7 +320,7 @@ saveGraph([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
 close figure 1
 
 SimpleMap(wscd.fdom, wscd(:,1:3), 'WSCD fdom ppb')
-saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_WSCD_fdom_map'], 'jpg')
+saveGraph([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod 'Graphs' filesep cruise '_WSCD_fdom_map'], 'jpg')
 close figure 1
 
 % % export product to SeaBASS format
@@ -271,57 +344,57 @@ fprintf('Done\n');
 
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PAR %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
-ila.cfg.instruments2run = {'PAR'}; % {'FTH', 'TSG', 'BB3','PAR', 'WSCD1082P'}
-ila.cfg.days2run = datenum(2020,12,24):datenum(2021,02,05);
-
-% populate ila.instrument
-ila.Read('prod');
-
-% interpolate SST / SSS / LatLon
-par_temp = ila.instrument.(cell2mat(ila.cfg.instruments2run)).prod.a;
-par_temp.dt = datetime(par_temp.dt,'ConvertFrom','datenum');
-latlon_interp = interp1(latlon.dt, [latlon.lat, latlon.lon], par_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
-tsg_interp = interp1(tsg.dt, [tsg.sst, tsg.sss_adj], par_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
-
-% par Products in uE/cm^2/s for SeaBASS
-par = table(par_temp.dt, latlon_interp(:,1), latlon_interp(:,2), tsg_interp(:,1), tsg_interp(:,2), par_temp.par./10000, par_temp.par_sd./10000, par_temp.par_n,...
-             'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'par','par_sd','bincount'});
-par.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'uE/cm^2/s', 'uE/cm^2/s', 'none'};
-par.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f', '%.2f'};
-
-[~,b] = sort(par.dt); % sort by date
-par = par(b,:);
-
-figure()
-scatter(par.dt, par.par, 5, 'filled'); ylabel('PAR (\muE.cm^{-2}.s^{-1})')
-saveGraph([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-  'Graphs' filesep cruise '_PAR_timeseries'], 'jpg')
-close figure 1
-
-% export product to SeaBASS format
-ila.meta.documents = [cruise '_PAR_ProcessingReport_V2.pdf'];
-ila.meta.calibration_files = 'PAR-50168_CalSheet.pdf';
-exportSeaBASS([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod cruise '_InLine_' cell2mat(ila.cfg.instruments2run) '_Product.sb'],...
-    ila.meta,...
-    par,...
-    {'', '', ''});
-sprintf('%s_InLine_%s_Product.sb saved', cruise, cell2mat(ila.cfg.instruments2run))
-
-par.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss', 'par', 'par_sd', 'par_n'};
-
-% convert to uE/m^2/s for mat file
-par.par = par.par.*10000;
-par.par_sd = par.par_sd.*10000;
-par.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'uE/m^2/s', 'uE/m^2/s', 'none'};
-
-% save PAR prod
-fprintf('Export to mat and csv... ');
-save([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-    cruise '_InLine_PAR_prod'], 'par');
-writetable(par, [ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-    cruise '_InLine_PAR_prod.csv']);
-fprintf('Done\n');
+% ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
+% ila.cfg.instruments2run = {'PAR'}; % {'FTH', 'TSG', 'BB3','PAR', 'WSCD1082P'}
+% ila.cfg.days2run = datenum(2020,12,24):datenum(2021,02,05);
+% 
+% % populate ila.instrument
+% ila.Read('prod');
+% 
+% % interpolate SST / SSS / LatLon
+% par_temp = ila.instrument.(cell2mat(ila.cfg.instruments2run)).prod.a;
+% par_temp.dt = datetime(par_temp.dt,'ConvertFrom','datenum');
+% latlon_interp = interp1(latlon.dt, [latlon.lat, latlon.lon], par_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+% tsg_interp = interp1(tsg.dt, [tsg.sst, tsg.sss_adj], par_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+% 
+% % par Products in uE/cm^2/s for SeaBASS
+% par = table(par_temp.dt, latlon_interp(:,1), latlon_interp(:,2), tsg_interp(:,1), tsg_interp(:,2), par_temp.par./10000, par_temp.par_sd./10000, par_temp.par_n,...
+%              'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'par','par_sd','bincount'});
+% par.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'uE/cm^2/s', 'uE/cm^2/s', 'none'};
+% par.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f', '%.2f'};
+% 
+% [~,b] = sort(par.dt); % sort by date
+% par = par(b,:);
+% 
+% figure()
+% scatter(par.dt, par.par, 5, 'filled'); ylabel('PAR (\muE.cm^{-2}.s^{-1})')
+% saveGraph([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
+%   'Graphs' filesep cruise '_PAR_timeseries'], 'jpg')
+% close figure 1
+% 
+% % export product to SeaBASS format
+% ila.meta.documents = [cruise '_PAR_ProcessingReport_V2.pdf'];
+% ila.meta.calibration_files = 'PAR-50168_CalSheet.pdf';
+% exportSeaBASS([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod cruise '_InLine_' cell2mat(ila.cfg.instruments2run) '_Product.sb'],...
+%     ila.meta,...
+%     par,...
+%     {'', '', ''});
+% sprintf('%s_InLine_%s_Product.sb saved', cruise, cell2mat(ila.cfg.instruments2run))
+% 
+% par.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss', 'par', 'par_sd', 'par_n'};
+% 
+% % convert to uE/m^2/s for mat file
+% par.par = par.par.*10000;
+% par.par_sd = par.par_sd.*10000;
+% par.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'uE/m^2/s', 'uE/m^2/s', 'none'};
+% 
+% % save PAR prod
+% fprintf('Export to mat and csv... ');
+% save([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
+%     cruise '_InLine_PAR_prod'], 'par');
+% writetable(par, [ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
+%     cruise '_InLine_PAR_prod.csv']);
+% fprintf('Done\n');
 
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BB3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -382,7 +455,7 @@ saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_bb3_bbp_map'],
 close figure 1
 
 % export product to SeaBASS format
-ila.meta.documents = [cruise '_BB3_ProcessingReport_V2.pdf'];
+ila.meta.documents = [cruise '_BB3_ProcessingReport.pdf'];
 ila.meta.calibration_files = 'BB3-1502_(470-532-650nm)_CharSheet.pdf';
 exportSeaBASS([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod cruise '_InLine_' cell2mat(ila.cfg.instruments2run) '_Particulate.sb'],...
     ila.meta,...

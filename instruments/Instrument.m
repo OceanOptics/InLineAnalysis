@@ -257,26 +257,42 @@ classdef (Abstract) Instrument < handle
       % For each product type (particulate, dissoved...)
       % This will simply add data at the end of the current table
       %   (if data was already in memory it could duplicate timestamps)
+      if contains(obj.model, 'AC')
+        obj.ReadDeviceFile()
+      end
       if nargin < 4; level = 'prod'; end
-      l = dir([obj.path.wk filename_prefix '_' level '*.mat']);
+      if strcmp(level, 'data')
+        l = dir([obj.path.wk filename_prefix '.mat']);
+      else
+        l = dir([obj.path.wk filename_prefix '_' level '*.mat']);
+      end
       if isempty(l)
         fprintf('%s: %s_%s No data.\n', datestr(days2read), filename_prefix, level);
       else
         for f = {l.name}; f = f{1};
           fprintf('\t\t%s', f); tic;
           load([obj.path.wk f], 'data'); % data variable is created
-          sel = min(days2read) <= data.dt & data.dt < max(days2read) + 1;
-          fn = strsplit(f, '_'); fn = fn{end}(1:end-4);
-          if strcmp(fn, level)
-            obj.(level)(end+1:end+sum(sel),:) = data(sel,:);
+          if isempty(data)
+            warning('%s is empty, the file was deleted', f)
+            delete([obj.path.wk f])
           else
-            if isfield(obj.(level), fn)
-              obj.(level).(fn)(end+1:end+sum(sel),:) = data(sel,:);
+            sel = min(days2read) <= data.dt & data.dt < max(days2read) + 1;
+            fn = strsplit(f, {'_','.'}); fn = fn{end-1};%(1:end-4);
+            if strcmp(fn, level)
+              obj.(level)(end+1:end+sum(sel),:) = data(sel,:);
             else
-              obj.(level).(fn) = data(sel,:);
+              if isfield(obj.(level), fn)
+                obj.(level).(fn)(end+1:end+sum(sel),:) = data(sel,:);
+              else
+                if strcmp(level, 'prod')
+                  obj.(level).(fn) = data(sel,:);
+                else
+                  obj.(level)(end+1:end+sum(sel),:) = data(sel,:);
+                end
+              end
             end
+            t = toc; fprintf('  %1.3f s\n', t);
           end
-          t = toc; fprintf('  %1.3f s\n', t);
         end
       end
     end

@@ -7,6 +7,8 @@ classdef AC9 < Instrument
     lambda_ref = [];
     lambda_c = [];
     lambda_a = [];
+    modelG50 = [];
+    modelmphi = [];
   end
   
   methods
@@ -44,10 +46,20 @@ classdef AC9 < Instrument
     function ReadDeviceFile(obj)
         % Read Device file to set wavelength
       obj.lambda_ref = [412 440 488 510 532 555 650 676 715];
-%       obj.lambda_a = [412 440 488 510 532 555 650 676 715];
+      obj.lambda_a = [412 440 488 510 532 555 650 676 715];
+      obj.lambda_c = [412 440 488 510 532 555 650 676 715];
 %       if isempty(obj.lambda_ref); obj.lambda_ref = obj.lambda_c; end
     end
-
+    
+    function obj = load_HTJSetal2021_model(obj)
+      % Load model from Haëntjens et al. 2021v22 to estimate cross-sectional
+      % area (G50) and slope of phytoplankton size distribution (in abundance) (mphi):
+      load('HTJS20_LinearRegression_5features.mat', 'model_G50');
+      load('HTJS20_LinearRegression_5P-mphi.mat', 'model_mphi');
+      obj.modelG50 = model_G50;
+      obj.modelmphi = model_mphi;
+    end
+    
     function ReadRaw(obj, days2run, force_import, write)
       % Get wavelengths from device file
       obj.ReadDeviceFile()
@@ -88,18 +100,25 @@ classdef AC9 < Instrument
     function Calibrate(obj, compute_dissolved, interpolation_method, CDOM, SWT)
       lambda = struct('ref', obj.lambda_ref, 'a', obj.lambda_ref, 'c', obj.lambda_ref);
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
+      % Load model from Haëntjens et al. 2021v22 to estimate cross-sectional
+      % area (G50) and slope of phytoplankton size distribution (in abundance) (mphi):
+      obj.load_HTJSetal2021_model();
       switch interpolation_method
         case 'linear'
           if compute_dissolved
-            [obj.prod.p, obj.prod.g] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, obj.bin.diw);
+            [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, [], [], ...
+              obj.bin.diw, [], SWT.qc.tsw, SWT_constants, interpolation_method);
           else
-            [obj.prod.p] = processACS(lambda, obj.qc.tsw, obj.qc.fsw);
+            [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, obj.modelG50, ...
+              obj.modelmphi, [], [], SWT.qc.tsw, SWT_constants, interpolation_method);
           end
         case 'CDOM'
           if compute_dissolved
-            [obj.prod.p, obj.prod.g] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, obj.bin.diw, CDOM.qc.tsw, SWT.qc.tsw, SWT_constants);
+            [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, ...
+              [], [], obj.bin.diw, CDOM.qc.tsw, SWT.qc.tsw, SWT_constants, interpolation_method);
           else
-            [obj.prod.p] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, [], CDOM.qc.tsw, SWT.qc.tsw, SWT_constants);
+            [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, obj.modelG50, obj.modelmphi, ...
+              [], CDOM.qc.tsw, SWT.qc.tsw, SWT_constants, interpolation_method);
           end
         otherwise
           error('Method not supported.');
