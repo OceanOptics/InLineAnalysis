@@ -187,19 +187,18 @@ end
 
 % QC using ap spectrum
 wla_430 = lambda.a(find(lambda.a <= 430, 1,'last')); % find lower and closest to 430nm wavelength
-wla_715 = lambda.a(find(lambda.a >= 715, 1,'first')); % find higher and closest to 715nm wavelength
+wla_710 = lambda.a(find(lambda.a >= 710, 1,'first')); % find higher and closest to 715nm wavelength
 
 % delete absorption values < -0.0015
 p.ap_sd(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
-p.ap_sd(p.ap < -0.0015 & lambda.a >= wla_715) = NaN;
+p.ap_sd(p.ap < -0.0015 & lambda.a >= wla_710) = NaN;
 p.ap(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
-p.ap(p.ap < -0.0015 & lambda.a >= wla_715) = NaN;
-todelete = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_715 | ...
-  p.cp < -0.0015 | ...
-  p.cp > 4, 2);
-fprintf('%.2f%% (%i) spectrum failed auto-QC step 1: ap 430-715 | cp < -0.0015 | p.cp > 4\n', ...
+p.ap(p.ap < -0.0015 & lambda.a >= wla_710) = NaN;
+todelete = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_710 | ...
+  p.cp < -0.0015 | p.cp > 4, 2);
+fprintf('%.2f%% (%i) spectrum failed auto-QC step 1: ap 430-710 | cp < -0.0015 | p.cp > 4\n', ...
   sum(todelete) / size(p, 1) * 100, sum(todelete))
-bad = [p(todelete, :) table(repmat({'ap 430-715  | cp < -0.0015 | p.cp > 4'}, ...
+bad = [p(todelete, :) table(repmat({'ap 430-710  | cp < -0.0015 | p.cp > 4'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 p(todelete, :) = [];
 
@@ -212,8 +211,8 @@ if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
   minred_wla = sum(lambda.a <= 700) + foo;
   p.cp(lambda.c > lambda.c(minred_wlc)' & lambda.c > 710) = NaN;
   p.cp_sd(lambda.c > lambda.c(minred_wlc)' & lambda.c > 710) = NaN;
-  p.ap(lambda.a > lambda.a(minred_wla)' & lambda.a > wla_715) = NaN;
-  p.ap_sd(lambda.a > lambda.a(minred_wla)' & lambda.a > wla_715) = NaN;
+  p.ap(lambda.a > lambda.a(minred_wla)' & lambda.a > wla_710) = NaN;
+  p.ap_sd(lambda.a > lambda.a(minred_wla)' & lambda.a > wla_710) = NaN;
   
   % replace unrealistic ap in blue wavelength by NaN
   blue_wl = p.ap;
@@ -313,8 +312,8 @@ end
 ap_450 = p.ap(:, find(lambda.a >= 450, 1,'first'));
 d460_640 = diff(p.ap(:, lambda.a > 460 & lambda.a <= 640),[],2);
 % delete bad spectrum
-todelete = any(d460_640 > 0.2 * ap_450,2) | any(abs(diff(d460_640,[],2)) > 0.006, 2);
-fprintf('%.2f%% (%i) spectrum failed auto-QC step 3: d(ap)/d(lambda460-640) > 0.2 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.006)\n', ...
+todelete = any(d460_640 > 0.4 * ap_450,2) | any(abs(diff(d460_640,[],2)) > 0.05, 2);
+fprintf('%.2f%% (%i) spectrum failed auto-QC step 3: d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)\n', ...
   sum(todelete) / size(p, 1) * 100, sum(todelete))
 % % plot spectrum that fail auto-QC
 % visProd3D(lambda.a, p.dt(any(d460_640 > 0.2 * ap_450,2), :), ...
@@ -322,8 +321,8 @@ fprintf('%.2f%% (%i) spectrum failed auto-QC step 3: d(ap)/d(lambda460-640) > 0.
 % zlabel('ap (m^{-1})')
 % ylabel('time')
 % xlabel('lambda')
-% title('auto-QC step 3 bad spectrum: d(ap)/d(lambda460-640) > 0.2 * ap_{450nm}')
-bad = [bad; p(todelete, :) table(repmat({'d(ap)/d(lambda460-640) > 0.2 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.006)'}, ...
+% title('auto-QC step 3 bad spectrum: d(ap)/d(lambda460-640) > 0.4 * ap_{450nm}')
+bad = [bad; p(todelete, :) table(repmat({'d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 p(todelete, :) = [];
 
