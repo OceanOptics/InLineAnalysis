@@ -15,8 +15,12 @@ function fh = visProd3D(x, dt, data, smooth, color, autorotate, figid)
 sel = any(~isnan(data),2);
 % Smooth
 if nargin < 4;  smooth = false; end
-if smooth; Z = filtfilt(ones(10, 1), 10, data(sel,:)); 
-else Z = data(sel,:); end
+if smooth
+  Z = filtfilt(ones(10, 1), 10, data(sel,:)); 
+else
+  Z = data(sel,:);
+end
+
 % Color
 if nargin < 5; color='Wavelength'; end
 switch color

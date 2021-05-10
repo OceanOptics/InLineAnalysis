@@ -150,79 +150,111 @@ classdef InLineAnalysis < handle
     end
     
     function SplitDetect (obj, MinFiltPeriod)
-        fprintf('Detecting %s filter events...\n', obj.cfg.qcref.view);
-        obj.instrument.FLOW.data = SplitDetect(obj.cfg.qcref.view,...
-            obj.instrument.(obj.cfg.qcref.view).data, obj.instrument.FLOW.data, MinFiltPeriod);
-        fprintf('Done\n');
+      fprintf('Detecting %s filter events...\n', obj.cfg.qcref.view);
+      obj.instrument.FLOW.data = SplitDetect(obj.cfg.qcref.view,...
+        obj.instrument.(obj.cfg.qcref.view).data, obj.instrument.FLOW.data, MinFiltPeriod);
+      fprintf('Done\n');
     end
     
-    function StepQC (obj, fudge_factor, bb_threshold)
-      if any(nargin < 2 | nargin < 3)
-          fudge_factor.filtered.a = 3;
-          fudge_factor.filtered.c = 3;
-          fudge_factor.total.a = 3;
-          fudge_factor.total.c = 3;
+    function RawAutoQC (obj, fudge_factor, bb_threshold, level)
+      if nargin < 2
+        fudge_factor.filtered.a = 3;
+        fudge_factor.filtered.c = 3;
+        fudge_factor.total.a = 3;
+        fudge_factor.total.c = 3;
+      elseif nargin < 3
+        bb_threshold = 4000;
+      elseif nargin < 4
+        level = 'raw';
       end
       instru = fieldnames(obj.instrument);
       for i=obj.cfg.instruments2run; i = i{1};
-        if  any(contains(i,{'ACS','BB','PAR'}))
-            if ~isempty(obj.instrument.(i).raw.fsw)
-                fprintf('Deleting bad values from %s filtered data...', i);
-                if  any(contains(i,'ACS'))
-                    lambda.a = obj.instrument.(i).lambda_a;
-                    lambda.c = obj.instrument.(i).lambda_c;
-                elseif  any(contains(i,'BB'))
-                    lambda.bb = obj.instrument.(i).lambda;
-                end
-                if any(contains(i,{'ACS','BB'}))
-                [obj.instrument.(i).raw.fsw, Nbad]= StepQC(obj.instrument.(i).raw.fsw,...
-                    lambda, fudge_factor.filtered, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
-                    bb_threshold);
-                end
-                if  any(contains(i,'ACS'))
-                    fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s filtered data\n',...
-                        Nbad.a, Nbad.c, i);
-                elseif  any(contains(i,'BB'))
-                    for ii = 1:size(Nbad.bb,2)
-                        fprintf('Done\n%4.2f%% of beta%i deleted from %s filtered data\n',...
-                            Nbad.bb(ii), lambda.bb(ii), i);
-                    end
-                end
-                if isempty(obj.instrument.(i).raw.tsw); fprintf('StepQC [Done]\n');end
+        if any(contains(i,{'ACS','BB','PAR'}))
+          if ~isempty(obj.instrument.(i).(level).fsw)
+            fprintf('Deleting bad values from %s filtered data ...', i);
+            if any(contains(i,'ACS'))
+              lambda.a = obj.instrument.(i).lambda_a;
+              lambda.c = obj.instrument.(i).lambda_c;
+            elseif  any(contains(i,'BB'))
+              lambda.bb = obj.instrument.(i).lambda;
             end
-            if ~isempty(obj.instrument.(i).raw.tsw)
-                fprintf('Deleting bad values from %s total data... ', i);
-                if  any(contains(i,'ACS'))
-                    lambda.a = obj.instrument.(i).lambda_a;
-                    lambda.c = obj.instrument.(i).lambda_c;
-                elseif  any(contains(i,'BB'))
-                    lambda.bb = obj.instrument.(i).lambda;
-                elseif any(contains(i,'PAR'))
-                    foo = obj.instrument.(i).raw.tsw.par./obj.instrument.PAR.scale > 4500 ...
-                        | obj.instrument.(i).raw.tsw.par./obj.instrument.PAR.scale < 0;
-                    obj.instrument.(i).raw.tsw(foo,:) = [];
-                    foo = obj.instrument.(i).data.par./obj.instrument.PAR.scale > 4500 ...
-                        | obj.instrument.(i).data.par./obj.instrument.PAR.scale < 0;
-                    obj.instrument.(i).data(foo,:) = [];
-                end
-                if any(contains(i,{'ACS','BB'}))
-                [obj.instrument.(i).raw.tsw, Nbad]= StepQC(obj.instrument.(i).raw.tsw,...
-                    lambda, fudge_factor.total, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
-                    bb_threshold);
-                end
-                if  any(contains(i,'ACS'))
-                    fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s total data\n',...
-                        Nbad.a, Nbad.c, i);
-                elseif any(contains(i,'BB'))
-                    for ii = 1:size(Nbad.bb,2)
-                        fprintf('Done\n%4.2f%% of beta%i deleted from %s total data\n',...
-                            Nbad.bb(ii), lambda.bb(ii), i);
-                    end
-                elseif any(contains(i,'PAR'))
-                    fprintf('Done\n%i raw %s values deleted\n', sum(foo), i);
-                end
-            fprintf('StepQC [Done]\n');
+            if any(contains(i,{'ACS','BB'}))
+              [obj.instrument.(i).(level).fsw, Nbad]= RawAutoQC(obj.instrument.(i).(level).fsw,...
+                lambda, fudge_factor.filtered, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
+                bb_threshold);
             end
+            if any(contains(i,'ACS'))
+              fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s filtered data\n',...
+                Nbad.a, Nbad.c, i);
+            elseif any(contains(i,'BB'))
+              for ii = 1:size(Nbad.bb,2)
+                fprintf('Done\n%4.2f%% of beta%i deleted from %s filtered data\n',...
+                  Nbad.bb(ii), lambda.bb(ii), i);
+              end
+            end
+          else
+            fprintf('No filtered data loaded: Skip\n');
+          end
+          if ~isempty(obj.instrument.(i).(level).tsw)
+            fprintf('Deleting bad values from %s total data ... ', i);
+            if  any(contains(i,'ACS'))
+              lambda.a = obj.instrument.(i).lambda_a;
+              lambda.c = obj.instrument.(i).lambda_c;
+            elseif any(contains(i,'BB'))
+              lambda.bb = obj.instrument.(i).lambda;
+            elseif any(contains(i,'PAR'))
+              foo = obj.instrument.(i).(level).tsw.par./obj.instrument.PAR.scale > 4500 ...
+                | obj.instrument.(i).(level).tsw.par./obj.instrument.PAR.scale < 0;
+              obj.instrument.(i).(level).tsw(foo,:) = [];
+              foo = obj.instrument.(i).data.par./obj.instrument.PAR.scale > 4500 ...
+                | obj.instrument.(i).data.par./obj.instrument.PAR.scale < 0;
+              obj.instrument.(i).data(foo,:) = [];
+            end
+            if any(contains(i,{'ACS','BB'}))
+              [obj.instrument.(i).(level).tsw, Nbad]= RawAutoQC(obj.instrument.(i).(level).tsw,...
+                lambda, fudge_factor.total, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
+                bb_threshold);
+            end
+            if any(contains(i,'ACS'))
+              fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s total data\n',...
+                Nbad.a, Nbad.c, i);
+            elseif any(contains(i,'BB'))
+              for ii = 1:size(Nbad.bb,2)
+                fprintf('Done\n%4.2f%% of beta%i deleted from %s total data\n',...
+                  Nbad.bb(ii), lambda.bb(ii), i);
+              end
+            elseif any(contains(i,'PAR'))
+              fprintf('Done\n%i raw %s values deleted\n', sum(foo), i);
+            end
+          else
+            fprintf('No total data loaded: Skip\n');
+          end
+          if ~isempty(obj.instrument.(i).(level).diw)
+            fprintf('Deleting bad values from %s dissolved data...', i);
+            if any(contains(i,'ACS'))
+              lambda.a = obj.instrument.(i).lambda_a;
+              lambda.c = obj.instrument.(i).lambda_c;
+            elseif  any(contains(i,'BB'))
+              lambda.bb = obj.instrument.(i).lambda;
+            end
+            if any(contains(i,{'ACS','BB'}))
+              [obj.instrument.(i).(level).diw, Nbad]= RawAutoQC(obj.instrument.(i).(level).diw,...
+                lambda, fudge_factor.dissolved, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
+                bb_threshold, true);
+            end
+            if any(contains(i,'ACS'))
+              fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s dissolved data\n',...
+                Nbad.a, Nbad.c, i);
+            elseif any(contains(i,'BB'))
+              for ii = 1:size(Nbad.bb,2)
+                fprintf('Done\n%4.2f%% of beta%i deleted from %s dissolved data\n',...
+                  Nbad.bb(ii), lambda.bb(ii), i);
+              end
+            end
+          end
+          fprintf('RawAutoQC [Done]\n')
+        else
+          fprintf('No RawAutoQC for %s [Done]\n', i)
         end
       end
     end
@@ -579,7 +611,9 @@ classdef InLineAnalysis < handle
       % Manual quality check of the data resulting in good and bad data
       % Check if qc level is empty for each instrument
       for i=obj.cfg.instruments2run; i = i{1};
-        obj.instrument.(i).qc.diw = obj.instrument.(i).raw.diw;
+        if isempty(obj.instrument.(i).qc.diw)
+          obj.instrument.(i).qc.diw = obj.instrument.(i).raw.diw;
+        end
       end
       
       switch obj.cfg.di.qc.mode
@@ -589,16 +623,25 @@ classdef InLineAnalysis < handle
             if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
             % Display interactive figure
             foo = obj.instrument.(i);
-            if isempty(foo.raw.diw); error('Empty raw diw\n'); end
+            if isempty(foo.raw.diw) && isempty(foo.qc.diw)
+              error('Empty raw diw and qc diw \n');
+            elseif isempty(foo.qc.diw)
+              toqc = 'raw';
+            else
+              toqc = 'qc';
+            end
             ColorSet = lines(2);
             fh = fig(52); hold('on');
-            if iscell(foo.view.varname)
-              plot(foo.raw.diw.dt, foo.raw.diw.(foo.view.varname{1})(:,foo.view.varcol), '.', 'Color', ColorSet(1,:));
-              plot(foo.raw.diw.dt, foo.raw.diw.(foo.view.varname{2})(:,foo.view.varcol), '.', 'Color', ColorSet(2,:));
+            if contains(i, 'AC')
+              toplot = {'a', 'c'};
+              plot(foo.(toqc).diw.dt, foo.(toqc).diw.(toplot{1})(:,foo.view.varcol), '.', 'Color', ColorSet(1,:));
+              plot(foo.(toqc).diw.dt, foo.(toqc).diw.(toplot{2})(:,foo.view.varcol), '.', 'Color', ColorSet(2,:));
+              ylabel('a and c'); title([i ' QC DI']);
+              legend(toplot, 'AutoUpdate','off')
             else
-              plot(foo.raw.diw.dt, foo.raw.diw.(foo.view.varname)(:,foo.view.varcol), '.', 'Color', ColorSet(1,:));
+              plot(foo.(toqc).diw.dt, foo.(toqc).diw.(foo.view.varname)(:,foo.view.varcol), '.', 'Color', ColorSet(1,:));
+              ylabel(foo.view.varname); title([i ' QC DI']);
             end
-            ylabel(foo.view.varname); title([i ' QC DI']);
             datetick2_doy();
             set(datacursormode(fh),'UpdateFcn',@data_cursor_display_date);
             % Get user selection
@@ -644,12 +687,12 @@ classdef InLineAnalysis < handle
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.cfg.calibrate.(i).interpolation_method,...
                                            obj.instrument.(obj.cfg.calibrate.(i).CDOM_source),...
-                                           obj.instrument.(obj.cfg.calibrate.(i).FTH_source));
+                                           obj.instrument.(obj.cfg.calibrate.(i).FLOW_source));
             case 'ACS'
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.cfg.calibrate.(i).interpolation_method,...
                                            obj.instrument.(obj.cfg.calibrate.(i).CDOM_source),...
-                                           obj.instrument.(obj.cfg.calibrate.(i).FTH_source));
+                                           obj.instrument.(obj.cfg.calibrate.(i).FLOW_source));
             case {'BB', 'BB3'}
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.instrument.(obj.cfg.calibrate.(i).TSG_source),...
@@ -738,11 +781,11 @@ classdef InLineAnalysis < handle
       fprintf('-----------+----------+----------+----------+----------+----------+----------+---------------+\n');
       for i=obj.cfg.instruments2run; i = i{1};
         sdata = size(obj.instrument.(i).data);
-        sraw = size(obj.instrument.(i).raw.tsw);
-        sbin = size(obj.instrument.(i).bin.tsw);
-        sqc = size(obj.instrument.(i).qc.tsw);
-        ssuspect = size(obj.instrument.(i).suspect.tsw);
-        sbad = size(obj.instrument.(i).bad.tsw);
+        sraw = size(obj.instrument.(i).raw.tsw) + size(obj.instrument.(i).raw.diw);
+        sbin = size(obj.instrument.(i).bin.tsw) + size(obj.instrument.(i).bin.diw);
+        sqc = size(obj.instrument.(i).qc.tsw) + size(obj.instrument.(i).qc.diw);
+        ssuspect = size(obj.instrument.(i).suspect.tsw) + size(obj.instrument.(i).suspect.diw);
+        sbad = size(obj.instrument.(i).bad.tsw) + size(obj.instrument.(i).bad.diw);
         sprod = []; nprod = {};
         if ~isempty(fieldnames(obj.instrument.(i).prod))
           for t=fieldnames(obj.instrument.(i).prod); t = t{1};

@@ -14,80 +14,97 @@ function DiagnosticPlot(data, instrument, level)
 %%
 if contains(instrument,'BB')
   wl = data.lambda;
+  instrument = 'BB';
 elseif contains(instrument,'AC')
   wla = data.lambda_a;
   wlc = data.lambda_c;
+  instrument = 'AC';
 else
   error('Intrument not supported')
 end
 
 for j = 1:length(level)
+  fieldna = fieldnames(data.(level{j}));
+  if strcmp(fieldna, 'bad')
+    data.(level{j}).bad = [];
+  end
+  tabletoplot = fieldna(~structfun(@isempty, data.(level{j})));
+  sztoplot = table(0.4, 8, 'VariableNames', {'AC', 'BB'});
   switch level{j}
     case 'raw'
-      if contains(instrument,'AC')
-%         day_to_plot = [min(data.data.dt) min(data.data.dt)+0.4];
-        day_to_plot = [max([min(data.raw.tsw.dt) min(data.raw.fsw.dt)]) ...
-          max([min(data.raw.tsw.dt) min(data.raw.fsw.dt)]) + 0.4];
-        tabletoplot = {'tsw', 'fsw'};
-        toplot = {'a','c'};
-      else
-%         day_to_plot = [min(data.data.dt) min(data.data.dt)+8];
-        day_to_plot = [max([min(data.raw.tsw.dt) min(data.raw.fsw.dt)]) ...
-          max([min(data.raw.tsw.dt) min(data.raw.fsw.dt)]) + 8];
-        tabletoplot = {'tsw', 'fsw'};
-        toplot = {'beta'};
+      szdt = NaN(size(tabletoplot, 1), 2);
+      for i = 1:size(tabletoplot, 1)
+        szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
+        szdt(i, 2) = min(data.(level{j}).(tabletoplot{i}).dt);
       end
-    case 'bin'
-      day_to_plot = [min([data.bin.tsw.dt; data.bin.fsw.dt]) max([data.bin.tsw.dt; data.bin.fsw.dt])];
-      tabletoplot = {'tsw', 'fsw'};
+      day_to_plot = [max(szdt(:,1)) max(szdt(:,2)) + sztoplot.(instrument)];
       if contains(instrument,'AC')
         toplot = {'a','c'};
       else
         toplot = {'beta'};
       end
-    case 'qc'
-      day_to_plot = [min([data.qc.tsw.dt; data.qc.fsw.dt]) max([data.qc.tsw.dt; data.qc.fsw.dt])];
-      tabletoplot = {'tsw', 'fsw'};
+    case {'bin', 'qc'}
+      szdt = NaN(size(tabletoplot, 1), 2);
+      for i = 1:size(tabletoplot, 1)
+        szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
+        szdt(i, 2) = max(data.(level{j}).(tabletoplot{i}).dt);
+      end
+      day_to_plot = [min(szdt(:,1)) max(szdt(:,2))];
       if contains(instrument,'AC')
         toplot = {'a','c'};
       else
         toplot = {'beta'};
       end
     case 'prod'
-      fieldna = fieldnames(data.prod);
-      if isempty(fieldna)
-        error('No product loaded')
+      szdt = NaN(size(tabletoplot, 1), 2);
+      for i = 1:size(tabletoplot, 1)
+        szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
+        szdt(i, 2) = max(data.(level{j}).(tabletoplot{i}).dt);
       end
-      day_to_plot = [min(data.prod.(fieldna{1}).dt) max(data.prod.(fieldna{1}).dt)];      
-      tabletoplot = fieldna(~structfun(@isempty, data.prod))'; % contains(fieldna, {'p','g'}) & 
+      day_to_plot = [min(szdt(:,1)) max(szdt(:,2))];
       if contains(instrument,'AC')
-        toplot = {['a' tabletoplot{~contains(tabletoplot, 'QCfailed')}] ...
-          ['c' tabletoplot{~contains(tabletoplot, 'QCfailed')}]};
+        toplot = [cellfun(@(x) ['a' x], tabletoplot, 'un', 0) ...
+          cellfun(@(x) ['c' x], tabletoplot, 'un', 0)];
+        toplot(contains(toplot, 'QCfailed')) = {'ap', 'cp'};
+%         toplot = {['a' tabletoplot{~contains(tabletoplot, 'QCfailed')}] ...
+%           ['c' tabletoplot{~contains(tabletoplot, 'QCfailed')}]};
       else
         toplot = {['beta' tabletoplot{1}], ['bb' tabletoplot{1}]};
       end
-    otherwise
-    error('Level not supported')
   end
   
-  for i = 1:size(tabletoplot,2)
+  for i = 1:size(tabletoplot,1)
     if ~isempty(data.(level{j}).(tabletoplot{i}))
       for k = 1:size(toplot,2)
-        sel = data.(level{j}).(tabletoplot{i}).dt >= day_to_plot(1) & ...
-          data.(level{j}).(tabletoplot{i}).dt <= day_to_plot(2);
+        if strcmp(tabletoplot{i}, 'diw') % if DI plot entire dataset
+          sel = true(size(data.(level{j}).(tabletoplot{i}).dt));
+        else
+          sel = data.(level{j}).(tabletoplot{i}).dt >= day_to_plot(1) & ...
+            data.(level{j}).(tabletoplot{i}).dt <= day_to_plot(2);
+        end
         if contains(instrument,'AC') && contains(toplot{k}, 'a')
           wl = wla;
         elseif contains(instrument,'AC') && contains(toplot{k}, 'c')
           wl = wlc;
         end
-        visProd3D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
-            data.(level{j}).(tabletoplot{i}).(toplot{k})(sel,:), ...
+        if size(data.(level{j}).(tabletoplot{i}).dt(sel),1) > 1
+          visProd3D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
+            data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, 'Wavelength', false, j*i+k*10);
-        zlabel([(level{j}) ' ' toplot{k} ' ' tabletoplot{i} ' (m^{-1})']);
-        xlabel('lambda (nm)');
-        ylabel('time');
+          zlabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
+          xlabel('lambda (nm)');
+          ylabel('time');
+        else
+          visProd2D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
+            data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
+            false, j*i+k*10);
+          ylabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
+          xlabel('lambda (nm)');
+          title(datestr(data.(level{j}).(tabletoplot{i}).dt(sel)));
+        end
         % plot plan at 676 nm to check shift in chl a peak wavelength
-        if contains(instrument,'AC') && contains(toplot{k}, 'a')
+        if contains(instrument,'AC') && contains(toplot{k}, 'a') && ...
+            ~strcmp(tabletoplot{i}, 'diw')
           hold on
           zsc = zlim;
           ysc = ylim;

@@ -56,6 +56,8 @@ classdef ACS < Instrument
     function ReadRaw(obj, days2run, force_import, write)
       % Get wavelengths from device file
       obj.ReadDeviceFile()
+      % create wk directory if doesn't exist
+      if ~isfolder(obj.path.wk); mkdir(obj.path.wk); end
       % Read raw data
       switch obj.logger
         case 'InlininoACScsv'
@@ -80,26 +82,34 @@ classdef ACS < Instrument
     end
     
     function ReadRawDI(obj, days2run, force_import, write)
+      % Get wavelengths from device file
+      obj.ReadDeviceFile()
       % Set default parameters
       if isempty(obj.path.di)
         fprintf('WARNING: DI Path is same as raw.\n');
         obj.path.di = obj.path.raw;
       end
-      if isempty(obj.di_cfg.logger) 
+      if isempty(obj.di_cfg.logger)
         fprintf('WARNING: DI Logger set to Compass_2.1rc.\n');
         obj.di_cfg.logger = 'Compass_2.1rc';
       end
-      if isempty(obj.di_cfg.postfix) 
-        fprintf('WARNING: DI Postfix set to "_DI" \n');
-        obj.di_cfg.postfix = '_DI';
+      if isempty(obj.di_cfg.postfix)
+        fprintf('WARNING: DI Postfix isempty \n');
+%         fprintf('WARNING: DI Postfix set to "_DI" \n'); DEPRECATED with Inlinino
+%         obj.di_cfg.postfix = '_DI'; DEPRECATED with Inlinino
       end
+      if isempty(obj.di_cfg.prefix); obj.di_cfg.prefix = ['acs' obj.sn '_']; end
       switch obj.di_cfg.logger
+        case 'InlininoACScsv'
+          obj.raw.diw = iRead(@importInlininoACScsv, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
+                         days2run, 'InlininoACScsv', force_import, ~write, true, false, obj.di_cfg.postfix);
         case 'Compass_2.1rc_scheduled'
-          if isempty(obj.di_cfg.prefix); obj.di_cfg.prefix = ['acs' obj.sn '_']; end
           obj.raw.diw = iRead(@importACS, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
                          days2run, 'Compass_2.1rc_scheduled', force_import, ~write, true, false, obj.di_cfg.postfix);
+        case 'Compass_2.1rc_scheduled_bin'
+          obj.raw.diw = iRead(@importACSBin, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
+                         days2run, 'Compass_2.1rc_scheduled_bin', force_import, ~write, true, false, obj.di_cfg.postfix);
         case 'Compass_2.1rc'
-          if isempty(obj.di_cfg.prefix); obj.di_cfg.prefix = ['acs_' obj.sn '_']; end
           obj.raw.diw = iRead(@importACS, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
                          days2run, 'Compass_2.1rc', force_import, ~write, true, false, obj.di_cfg.postfix);
         otherwise
@@ -116,8 +126,8 @@ classdef ACS < Instrument
       switch interpolation_method
         case 'linear'
           if compute_dissolved
-            [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, [], [], ...
-              obj.bin.diw, [], SWT.qc.tsw, SWT_constants, interpolation_method);
+            [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, ...
+              obj.modelG50, obj.modelmphi, obj.bin.diw, [], SWT.qc.tsw, SWT_constants, interpolation_method);
           else
             [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, obj.modelG50, ...
               obj.modelmphi, [], [], SWT.qc.tsw, SWT_constants, interpolation_method);
@@ -125,7 +135,7 @@ classdef ACS < Instrument
         case 'CDOM'
           if compute_dissolved
             [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, ...
-              [], [], obj.bin.diw, CDOM.qc.tsw, SWT.qc.tsw, SWT_constants, interpolation_method);
+              obj.modelG50, obj.modelmphi, obj.bin.diw, CDOM.qc.tsw, SWT.qc.tsw, SWT_constants, interpolation_method);
           else
             [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, obj.qc.tsw, obj.qc.fsw, obj.modelG50, obj.modelmphi, ...
               [], CDOM.qc.tsw, SWT.qc.tsw, SWT_constants, interpolation_method);

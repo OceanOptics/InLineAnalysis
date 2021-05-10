@@ -57,7 +57,7 @@ switch instrument
       set(gca, 'XScale', 'log', 'YScale', 'log')
       xlabel('a_{p676}[chl] (mg.m^{-3})')
       ylabel('Houskeeper [chl] (mg.m^{-3})')
-    else
+    elseif contains({'gamma'}, data.Properties.VariableNames)
       figure(77)
       clf
       subplot(2,1,1)
@@ -122,6 +122,8 @@ switch instrument
     ylabel('FDOM ppb');
     xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
       max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
+  case 'LISST'
+    
   otherwise
     warning('%s not supported for product visualisation', instrument)
 end

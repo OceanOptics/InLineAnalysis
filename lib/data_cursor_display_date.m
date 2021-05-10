@@ -7,5 +7,5 @@ function txt = data_cursor_display_date(empt,event_obj)
 %--------------------------------------------------------------------
 
 pos = get(event_obj,'Position');
-txt = {datestr(pos(1)),['y: ',num2str(pos(2))]};
+txt = {datestr(pos(1),'dd-mmm-yyyy HH:MM:SS.FFF'),['y: ',num2str(pos(2))]};
 end

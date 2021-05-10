@@ -441,6 +441,7 @@ if ~isempty(di)
   % Propagate error
   %   Note: Error is not propagated through Scattering & Residual temperature
   %         correction as required by SeaBASS
+%   filt.a_avg_sd + di_interp.a_avg_sd < 0 
   g.ag_sd = sqrt(filt.a_avg_sd + di_interp.a_avg_sd);
   g.cg_sd = sqrt(filt.c_avg_sd + di_interp.c_avg_sd);
   g.ag_n = filt.a_avg_n;

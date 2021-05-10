@@ -69,7 +69,8 @@ classdef (Abstract) Instrument < handle
         if isfield(cfg, 'di')
           if isfield(cfg.di, 'prefix'); obj.di_cfg.prefix = cfg.di.prefix; end
           if isfield(cfg.di, 'postfix'); obj.di_cfg.postfix = cfg.di.postfix; end
-          if isfield(cfg.di, 'logger'); obj.di_cfg.logger = cfg.di.logger; end
+%           if isfield(cfg.di, 'logger'); obj.di_cfg.logger = cfg.di.logger; end
+          obj.di_cfg.logger = cfg.logger;
         end
       end
     end

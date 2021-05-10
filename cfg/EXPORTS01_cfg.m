@@ -50,14 +50,13 @@ cfg.instruments.FLOW.view = struct('varname', 'swt');
 %%% ACS 301 %%% (Aug 20 to ...)
 SN = '301';
 cfg.instruments.(['ACS' SN]) = struct();
+cfg.instruments.(['ACS' SN]).di = struct();
+cfg.instruments.(['ACS' SN]).di.prefix = ['acs_' SN '_'];
+cfg.instruments.(['ACS' SN]).di.postfix = '_DI';
 cfg.instruments.(['ACS' SN]).model = 'ACS';
 cfg.instruments.(['ACS' SN]).sn = SN;
 cfg.instruments.(['ACS' SN]).logger = 'Compass_2.1rc_scheduled_bin'; % InlininoACScsv
 cfg.instruments.(['ACS' SN]).device_file = [PATH_ROOT 'DeviceFiles' filesep 'acs301.dev'];
-% cfg.instruments.(['ACS' SN]).logger = 'Compass_2.1rc_scheduled';
-% cfg.instruments.(['ACS' SN]).lambda_reference = [400.9, 404.6, 408.4, 411.7, 415.5, 419.2, 423.7, 428.1, 432.2, 435.9, 440, 444, 449, 453.4, 457.6, 462, 466.2, 470.8, 475.7, 480.3, 485.2, 489.4, 493.7, 497.7, 502.1, 506.6, 511.4, 515.9, 520.6, 524.9, 529.2, 533.4, 537.5, 541.5, 545.7, 550, 554.3, 558.6, 562.8, 566.9, 570.7, 574.1, 578, 582.2, 586.1, 590.3, 594.5, 599.1, 603.8, 608.1, 612.7, 617.4, 621.7, 626, 630.5, 634.7, 639, 643.3, 647.8, 652.4, 656.8, 661.4, 665.9, 670.3, 674.4, 678.8, 682.8, 687.1, 691, 694.7, 698.4, 702.5, 706.2, 710, 713.7, 717.6, 721.4, 725.1, 728.8, 732.6, 736.2, 739.6];
-% cfg.instruments.(['ACS' SN]).lambda_a = [400.9, 404.6, 408.4, 411.7, 415.5, 419.2, 423.7, 428.1, 432.2, 435.9, 440, 444, 449, 453.4, 457.6, 462, 466.2, 470.8, 475.7, 480.3, 485.2, 489.4, 493.7, 497.7, 502.1, 506.6, 511.4, 515.9, 520.6, 524.9, 529.2, 533.4, 537.5, 541.5, 545.7, 550, 554.3, 558.6, 562.8, 566.9, 570.7, 574.1, 578, 582.2, 586.1, 590.3, 594.5, 599.1, 603.8, 608.1, 612.7, 617.4, 621.7, 626, 630.5, 634.7, 639, 643.3, 647.8, 652.4, 656.8, 661.4, 665.9, 670.3, 674.4, 678.8, 682.8, 687.1, 691, 694.7, 698.4, 702.5, 706.2, 710, 713.7, 717.6, 721.4, 725.1, 728.8, 732.6, 736.2, 739.6];
-% cfg.instruments.(['ACS' SN]).lambda_c = [400.9, 404.6, 408.4, 411.7, 415.5, 419.2, 423.7, 428.1, 432.2, 435.9, 440, 444, 449, 453.4, 457.6, 462, 466.2, 470.8, 475.7, 480.3, 485.2, 489.4, 493.7, 497.7, 502.1, 506.6, 511.4, 515.9, 520.6, 524.9, 529.2, 533.4, 537.5, 541.5, 545.7, 550, 554.3, 558.6, 562.8, 566.9, 570.7, 574.1, 578, 582.2, 586.1, 590.3, 594.5, 599.1, 603.8, 608.1, 612.7, 617.4, 621.7, 626, 630.5, 634.7, 639, 643.3, 647.8, 652.4, 656.8, 661.4, 665.9, 670.3, 674.4, 678.8, 682.8, 687.1, 691, 694.7, 698.4, 702.5, 706.2, 710, 713.7, 717.6, 721.4, 725.1, 728.8, 732.6, 736.2, 739.6];
 cfg.instruments.(['ACS' SN]).path = struct('raw',  [PATH_ROOT 'raw' filesep ['ACS' SN] filesep],...
                                     'di',  [PATH_ROOT 'raw' filesep ['ACS' SN] filesep 'DI' filesep],...
                                     'wk',   [PATH_ROOT 'wk' filesep ['ACS' SN] filesep],...
@@ -68,15 +67,13 @@ cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 %%% ACS 298 %%% (Aug 11 to Aug 20)
 SN = '298';
 cfg.instruments.(['ACS' SN]) = struct();
+cfg.instruments.(['ACS' SN]).di = struct();
+cfg.instruments.(['ACS' SN]).di.prefix = ['acs_' SN '_'];
+cfg.instruments.(['ACS' SN]).di.postfix = '_DI';
 cfg.instruments.(['ACS' SN]).model = 'ACS';
 cfg.instruments.(['ACS' SN]).sn = SN;
 cfg.instruments.(['ACS' SN]).logger = 'Compass_2.1rc_scheduled_bin'; % InlininoACScsv
-cfg.instruments.(['ACS' SN]).device_file = [PATH_ROOT 'DeviceFiles' filesep 'acs298.dev'];
-% cfg.instruments.(['ACS' SN]).logger = 'Compass_2.1rc_scheduled';
-% cfg.instruments.(['ACS' SN]).lambda_reference = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-% cfg.instruments.(['ACS' SN]).lambda_a = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-% cfg.instruments.(['ACS' SN]).lambda_c = [401 ,405 ,408.2 ,411.6 ,415.1 ,419.2 ,423.3 ,427.8 ,431.5 ,435.4 ,439.3 ,443.7 ,448.1 ,452.7 ,456.6 ,460.8 ,464.8 ,469.4 ,474 ,478.5 ,483.2 ,487.6 ,491.8 ,496.1 ,500.1 ,504.7 ,509.2 ,514 ,518.4 ,522.9 ,527.2 ,531.3 ,535.3 ,539.4 ,543.7 ,547.8 ,552.1 ,556.3 ,560.6 ,564.7 ,568.6 ,572.5 ,576.1 ,579.7 ,583.2 ,587.5 ,591.5 ,595.7 ,599.9 ,604.3 ,608.7 ,613 ,617.5 ,621.7 ,626 ,630.4 ,634.4 ,638.7 ,643 ,647.3 ,651.7 ,656.2 ,660.6 ,664.9 ,669.1 ,673.6 ,677.6 ,681.9 ,685.9 ,690 ,693.7 ,697.9 ,701.8 ,705.5 ,709.2 ,713.2 ,717.1 ,721.1 ,724.8 ,728.6 ,732.1 ,735.8 ,739.6 ,742.9];
-cfg.instruments.(['ACS' SN]).path = struct('raw',  [PATH_ROOT 'raw' filesep ['ACS' SN] filesep],...
+cfg.instruments.(['ACS' SN]).device_file = [PATH_ROOT 'DeviceFiles' filesep 'acs298.dev'];cfg.instruments.(['ACS' SN]).path = struct('raw',  [PATH_ROOT 'raw' filesep ['ACS' SN] filesep],...
                                     'di',  [PATH_ROOT 'raw' filesep ['ACS' SN] filesep 'DI' filesep],...
                                     'wk',   [PATH_ROOT 'wk' filesep ['ACS' SN] filesep],...
                                     'prod', [PATH_ROOT 'prod' filesep],...
@@ -86,6 +83,9 @@ cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 %%% BB3 %%%
 SN = '349';
 cfg.instruments.(['BB3' SN]) = struct();
+cfg.instruments.(['BB3' SN]).di = struct();
+cfg.instruments.(['BB3' SN]).di.prefix = ['BB3' SN '_'];
+cfg.instruments.(['BB3' SN]).di.postfix = 'DI';
 cfg.instruments.(['BB3' SN]).model = 'BB';
 cfg.instruments.(['BB3' SN]).sn = SN;
 cfg.instruments.(['BB3' SN]).ila_prefix = 'Inlinino'; % ['BB3' SN]
@@ -251,13 +251,17 @@ cfg.process.flag.default.filt = struct('smooth_threshold', 2);
   
 %%% Auto QC %%%
 cfg.process.qc = struct();
-cfg.process.qc.StepQCLim.filtered.a = 3;
-cfg.process.qc.StepQCLim.filtered.c = 3;
-cfg.process.qc.StepQCLim.total.a = 3;
-cfg.process.qc.StepQCLim.total.c = 3;
-cfg.process.qc.StepQCLim.filtered.bb = 3;
-cfg.process.qc.StepQCLim.total.bb = 3;
+cfg.process.qc.RawAutoQCLim.filtered.a = 3;
+cfg.process.qc.RawAutoQCLim.filtered.c = 3;
+cfg.process.qc.RawAutoQCLim.total.a = 3;
+cfg.process.qc.RawAutoQCLim.total.c = 3;
+cfg.process.qc.RawAutoQCLim.dissolved.a = 3;
+cfg.process.qc.RawAutoQCLim.dissolved.c = 3;
+cfg.process.qc.RawAutoQCLim.filtered.bb = 3;
+cfg.process.qc.RawAutoQCLim.total.bb = 3;
 cfg.process.qc.Saturation_Threshold_bb = 4000; % (counts)
+
+%%% Manually QC %%%
 cfg.process.qc.mode = 'ui';
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
@@ -272,11 +276,11 @@ cfg.process.calibrate = struct();
 cfg.process.calibrate.ACS298 = struct('compute_dissolved', true,...
                                   'interpolation_method', 'linear', ...
                                   'CDOM_source', 'WSCD859',... % Pay attention to serial number (could merge WSCD products first)
-                                  'FTH_source', 'FLOW');
+                                  'FLOW_source', 'FLOW');
 cfg.process.calibrate.ACS301 = struct('compute_dissolved', true,...
                                   'interpolation_method', 'linear', ...
                                   'CDOM_source', 'WSCD1299',... % Pay attention to serial number (could merge WSCD products first)
-                                  'FTH_source', 'FLOW');
+                                  'FLOW_source', 'FLOW');
 cfg.process.calibrate.BB3349 = struct('compute_dissolved', true,...
                                    'TSG_source', 'TSG',...
                                    'di_method', 'constant');

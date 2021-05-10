@@ -18,13 +18,12 @@ end
 % Get header
 hd = strip(strsplit(fgetl(fid), ','));
 hd(strcmp(hd, 'time')) = {'dt'};
-% Skip empty lines (bug in Inlinino)
-foo = fgetl(fid);
-while ~isempty(foo)
-    foo = fgetl(fid);
-end
-% get units and lambda
+% get units skipping empty lines (bug in Inlinino)
 unit = fgetl(fid);
+while isempty(unit)
+    unit = fgetl(fid);
+end
+% get lambda
 lambda = strsplit(unit, {', 1/m\tlambda=', ','});
 lambda_a = strsplit(lambda{3}, ' ');
 lambda_c = strsplit(lambda{4}, ' ');
