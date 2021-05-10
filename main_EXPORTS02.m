@@ -3,6 +3,7 @@
 % created: Jan 05, 2021
 clear
 close all
+
 cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master')
 
 % Load InLineAnalysis and the configuration
@@ -97,7 +98,8 @@ visSync(ila.instrument.FLOW.data, ila.instrument.ACS91.data.dt, ila.instrument.A
 % FLOW = ila.instrument.FLOW.data;
 
 % ila.cfg.qcref.MinFiltPeriod = 65; % filter even period in minute % ACS: 55 % BB3: 60
-% ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod);
+% ila.cfg.qcref.szFilt = 12; % filter even length in minute % default = 10
+% ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
 
 %% 3.Normal QC Reference
 % run with mode ui during first run (it saves your work for the next run)

@@ -149,10 +149,16 @@ classdef InLineAnalysis < handle
       end
     end
     
-    function SplitDetect (obj, MinFiltPeriod)
+    function SplitDetect (obj, MinFiltPeriod, szFilt)
+      if nargin < 2
+        MinFiltPeriod = 65;
+        szFilt = 10;
+      elseif nargin < 3
+        szFilt = 10;
+      end
       fprintf('Detecting %s filter events...\n', obj.cfg.qcref.view);
       obj.instrument.FLOW.data = SplitDetect(obj.cfg.qcref.view,...
-        obj.instrument.(obj.cfg.qcref.view).data, obj.instrument.FLOW.data, MinFiltPeriod);
+        obj.instrument.(obj.cfg.qcref.view).data, obj.instrument.FLOW.data, MinFiltPeriod, szFilt);
       fprintf('Done\n');
     end
     

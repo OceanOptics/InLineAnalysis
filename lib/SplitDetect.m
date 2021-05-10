@@ -1,4 +1,4 @@
-function [FTH] = SplitDetect (instrument, data, FTH, MinFiltPeriod)
+function [FTH] = SplitDetect (instrument, data, FTH, MinFiltPeriod, szFilt)
 % author: Guillaume Bourdin
 % created: Oct 10, 2019
 
@@ -26,7 +26,14 @@ function [FTH] = SplitDetect (instrument, data, FTH, MinFiltPeriod)
 %         - spd <Nx1 double> flow rate (in lpm)
 
 if nargin < 2
-    error('missing argument: input instrument name, its data and FTH log');
+  error('missing argument: instrument, data and FTH');
+elseif nargin < 4
+  warning('Optional arguments missing, set to default: MinFiltPeriod = 65 | szFilt = 10')
+  MinFiltPeriod = 65;
+  szFilt = 10;
+elseif nargin < 5
+  warning('Optional arguments missing, set to default: szFilt = 10')
+  szFilt = 10;
 end
 
 % if contains(instrument, 'ACS')
@@ -62,10 +69,10 @@ end
 dt_ini = datetime(table2array(data(:,1)),'ConvertFrom','datenum');
 if any(contains(instrument, 'ACS') | contains(instrument, 'AC9'))
     data = table2array(data(:,3)); data(isinf(data)) = NaN;
-    m_data_ini = nanmean(data,2);
+    m_data_ini = mean(data, 2, 'omitnan');
 elseif contains(instrument, 'BB3')
     data = table2array(data(:,2)); data(isinf(data)) = NaN;
-    m_data_ini = nanmean(data,2);
+    m_data_ini = mean(data, 2, 'omitnan');
 else
     error('Instrument not recognized, check "QC Reference" in cfg file');
 end
@@ -140,35 +147,39 @@ for i = progress(1:size(seg,1)-1)
 %     scatter(dt,m_dbbp,3,'k','filled')
 %     scatter(dt,dbbp,2,'b','filled')
 
+% ACS conversion from szFilt to nb of points (initial method)
+% szFilt*60*4/1.25 % 1920
+% szFilt*60*4/1.92 % 1250
+
     filt_st = NaT(size(x,1),1);
     filt_end = NaT(size(x,1),1);
     if contains(instrument, 'ACS') % for ACS
         parfor k = 1:size(x,1)
-            if all(x(k)<=1920 & x(k)>=size(m_data,1)-1920)% when seg is very small
+            if all(x(k)<=szFilt*60*4/1.25 & x(k)>=size(m_data,1)-szFilt*60*4/1.25)% when seg is very small
                 outlim = [1 size(m_M,1)];
-            elseif x(k)<=1920 % when filter event in the beginning of the time series
-                outlim = [1 x(k)+1920];
-            elseif x(k)>=size(m_data,1)-1920 % when filter event at the end of the time series
-                outlim = [x(k)-1920 size(m_M,1)];
+            elseif x(k)<=szFilt*60*4/1.25 % when filter event in the beginning of the time series
+                outlim = [1 x(k)+szFilt*60*4/1.25];
+            elseif x(k)>=size(m_data,1)-szFilt*60*4/1.25 % when filter event at the end of the time series
+                outlim = [x(k)-szFilt*60*4/1.25 size(m_M,1)];
             else % when filter event in the middle of the time series
-                outlim = [x(k)-1920 x(k)+1920];
+                outlim = [x(k)-szFilt*60*4/1.25 x(k)+szFilt*60*4/1.25];
             end
             sel = m_M(outlim(1):outlim(2));
             seldt = dt(outlim(1):outlim(2));
-            cent = median(seldt(sel<nanmean(sel)));
+            cent = median(seldt(sel<mean(sel, 'omitnan')));
             idx = find(abs(dt-cent)<seconds(1));
             if isempty(idx)
                 idx = floor(median(find(abs(dt-cent)<seconds(3))));
             end
 
-            if all(idx(1)<=1250 & idx(1)>=size(m_data,1)-1250)% when seg is very small
+            if all(idx(1)<=szFilt*60*4/1.92 & idx(1)>=size(m_data,1)-szFilt*60*4/1.92)% when seg is very small
                 inlim = [1 size(m_M,1)];
-            elseif idx(1)<=1250 % when filter event in the beginning of the time series
-                inlim = [1 idx(1)+1250];
-            elseif idx(1)>=size(m_data,1)-1250 % when filter event at the end of the time series
-                inlim = [idx(1)-1250 size(m_M,1)];
+            elseif idx(1)<=szFilt*60*4/1.92 % when filter event in the beginning of the time series
+                inlim = [1 idx(1)+szFilt*60*4/1.92];
+            elseif idx(1)>=size(m_data,1)-szFilt*60*4/1.92 % when filter event at the end of the time series
+                inlim = [idx(1)-szFilt*60*4/1.92 size(m_M,1)];
             else % when filter event in the middle of the time series
-                inlim = [idx(1)-1250 idx(1)+1250];
+                inlim = [idx(1)-szFilt*60*4/1.92 idx(1)+szFilt*60*4/1.92];
             end    
             BEtemp = m_dbbp(inlim(1):inlim(2),:);
             AFtemp = m_dbbp(inlim(1):inlim(2),:);
@@ -178,7 +189,7 @@ for i = progress(1:size(seg,1)-1)
             highpk = dtBEtmp(BEtemp > 0.7 * max(BEtemp)); % local high peak > 70% of max local peak of derivative
             highpk = highpk(highpk < cent); % keep only local high peak before filter event center
             popohpk = highpk(abs(dt(x(k))-highpk) == min(abs(dt(x(k))-highpk)));
-            if all(isempty(popohpk) & x(k)<=1920)
+            if all(isempty(popohpk) & x(k)<=szFilt*60*4/1.25)
                 filt_st (k) = dtBEtmp(1);
             elseif isempty(popohpk)
                 filt_st (k) = NaT;
@@ -189,7 +200,7 @@ for i = progress(1:size(seg,1)-1)
             lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp)); % local low peak < 70% of min local peak of derivative
             lowpk = lowpk(lowpk > cent); % keep only local low peak after filter event center
             popolpk = lowpk(abs(dt(x(k))-lowpk) == min(abs(dt(x(k))-lowpk)));
-            if all(isempty(popolpk) & x(k)>=size(m_data,1)-1920)
+            if all(isempty(popolpk) & x(k)>=size(m_data,1)-szFilt*60*4/1.25)
                 filt_st (k) = dtAFtmp(end);
             elseif isempty(popolpk)
                 filt_end (k) = NaT;
@@ -198,33 +209,37 @@ for i = progress(1:size(seg,1)-1)
             end
         end
 
+% AC9 conversion from szFilt to nb of points (initial method)
+% szFilt*60*4*1.2 % 2880
+% szFilt*60*4/1.28 % 1875
+
     elseif contains(instrument, 'AC9') % for ACS
         parfor k = 1:size(x,1)
-            if all(x(k)<=2880 & x(k)>=size(m_data,1)-2880)% when seg is very small
+            if all(x(k)<=szFilt*60*4*1.2 & x(k)>=size(m_data,1)-szFilt*60*4*1.2)% when seg is very small
                 outlim = [1 size(m_M,1)];
-            elseif x(k)<=2880 % when filter event in the beginning of the time series
-                outlim = [1 x(k)+2880];
-            elseif x(k)>=size(m_data,1)-2880 % when filter event at the end of the time series
-                outlim = [x(k)-2880 size(m_M,1)];
+            elseif x(k)<=szFilt*60*4*1.2 % when filter event in the beginning of the time series
+                outlim = [1 x(k)+szFilt*60*4*1.2];
+            elseif x(k)>=size(m_data,1)-szFilt*60*4*1.2 % when filter event at the end of the time series
+                outlim = [x(k)-szFilt*60*4*1.2 size(m_M,1)];
             else % when filter event in the middle of the time series
-                outlim = [x(k)-2880 x(k)+2880];
+                outlim = [x(k)-szFilt*60*4*1.2 x(k)+szFilt*60*4*1.2];
             end
             sel = m_M(outlim(1):outlim(2));
             seldt = dt(outlim(1):outlim(2));
-            cent = median(seldt(sel<nanmean(sel)));
+            cent = median(seldt(sel<mean(sel, 'omitnan')));
             idx = find(abs(dt-cent)<seconds(1));
             if isempty(idx)
                 idx = floor(median(find(abs(dt-cent)<seconds(3))));
             end
 
-            if all(idx(1)<=1875 & idx(1)>=size(m_data,1)-1875)% when seg is very small
+            if all(idx(1)<=szFilt*60*4/1.28 & idx(1)>=size(m_data,1)-szFilt*60*4/1.28)% when seg is very small
                 inlim = [1 size(m_M,1)];
-            elseif idx(1)<=1875 % when filter event in the beginning of the time series
-                inlim = [1 idx(1)+1875];
-            elseif idx(1)>=size(m_data,1)-1875 % when filter event at the end of the time series
-                inlim = [idx(1)-1875 size(m_M,1)];
+            elseif idx(1)<=szFilt*60*4/1.28 % when filter event in the beginning of the time series
+                inlim = [1 idx(1)+szFilt*60*4/1.28];
+            elseif idx(1)>=size(m_data,1)-szFilt*60*4/1.28 % when filter event at the end of the time series
+                inlim = [idx(1)-szFilt*60*4/1.28 size(m_M,1)];
             else % when filter event in the middle of the time series
-                inlim = [idx(1)-1875 idx(1)+1875];
+                inlim = [idx(1)-szFilt*60*4/1.28 idx(1)+szFilt*60*4/1.28];
             end    
             BEtemp = m_dbbp(inlim(1):inlim(2),:);
             AFtemp = m_dbbp(inlim(1):inlim(2),:);
@@ -234,7 +249,7 @@ for i = progress(1:size(seg,1)-1)
             highpk = dtBEtmp(BEtemp > 0.7 * max(BEtemp)); % local high peak > 70% of max local peak of derivative
             highpk = highpk(highpk < cent); % keep only local high peak before filter event center
             popohpk = highpk(abs(dt(x(k))-highpk) == min(abs(dt(x(k))-highpk)));
-            if all(isempty(popohpk) & x(k)<=2880)
+            if all(isempty(popohpk) & x(k)<=szFilt*60*4*1.2)
                 filt_st (k) = dtBEtmp(1);
             elseif isempty(popohpk)
                 filt_st (k) = NaT;
@@ -245,7 +260,7 @@ for i = progress(1:size(seg,1)-1)
             lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp)); % local low peak < 70% of min local peak of derivative
             lowpk = lowpk(lowpk > cent); % keep only local low peak after filter event cent
             popolpk = lowpk(abs(dt(x(k))-lowpk) == min(abs(dt(x(k))-lowpk)));
-            if all(isempty(popolpk) & x(k)>=size(m_data,1)-2880)
+            if all(isempty(popolpk) & x(k)>=size(m_data,1)-szFilt*60*4*1.2)
                 filt_st (k) = dtAFtmp(end);
             elseif isempty(popolpk) 
                 filt_end (k) = NaT;
@@ -254,35 +269,40 @@ for i = progress(1:size(seg,1)-1)
             end
         end
 
+% BB conversion from szFilt to nb of points (initial method)
+% szFilt*60/1.5 % 400
+% szFilt*60*0.9167 % szFilt*60*0.9167
+% szFilt*60*0.55 % 330
+
     elseif contains(instrument, 'BB3') % for BB3
         parfor k = 1:size(x,1)
 %         for k = 1:size(x,1)
 
-            if all(x(k)<=550 & x(k)>=size(m_data,1)-400)% when seg is very small
+            if all(x(k)<=szFilt*60*0.9167 & x(k)>=size(m_data,1)-szFilt*60/1.5)% when seg is very small
                 outlim = [1 size(m_M,1)];
-            elseif x(k)<=550 % when filter event in the beginning of the time series
-                outlim = [1 x(k)+400];
-            elseif x(k)>=size(m_data,1)-400 % when filter event at the end of the time series
-                outlim = [x(k)-550 size(m_M,1)];
+            elseif x(k)<=szFilt*60*0.9167 % when filter event in the beginning of the time series
+                outlim = [1 x(k)+szFilt*60/1.5];
+            elseif x(k)>=size(m_data,1)-szFilt*60/1.5 % when filter event at the end of the time series
+                outlim = [x(k)-szFilt*60*0.9167 size(m_M,1)];
             else % when filter event in the middle of the time series
-                outlim = [x(k)-550 x(k)+400];
+                outlim = [x(k)-szFilt*60*0.9167 x(k)+szFilt*60/1.5];
             end
             sel = m_M(outlim(1,1):outlim(1,2));
             seldt = dt(outlim(1,1):outlim(1,2));
-            cent = median(seldt(sel<nanmean(sel)));
+            cent = median(seldt(sel<mean(sel, 'omitnan')));
             idx = find(abs(dt-cent)<seconds(1));
             if isempty(idx)
                 idx = floor(median(find(abs(dt-cent)<seconds(3))));
             end
 
-            if all(idx(1)<=330 & idx(1)>=size(m_data,1)-330)% when seg is very small
+            if all(idx(1)<=szFilt*60*0.55 & idx(1)>=size(m_data,1)-szFilt*60*0.55)% when seg is very small
                 inlim = [1 size(m_M,1)];
-            elseif idx(1)<=330 % when filter event in the beginning of the time series
-                inlim = [1 idx(1)+330];
-            elseif idx(1)>=size(m_data,1)-330 % when filter event at the end of the time series
-                inlim = [idx(1)-330 size(m_M,1)];
+            elseif idx(1)<=szFilt*60*0.55 % when filter event in the beginning of the time series
+                inlim = [1 idx(1)+szFilt*60*0.55];
+            elseif idx(1)>=size(m_data,1)-szFilt*60*0.55 % when filter event at the end of the time series
+                inlim = [idx(1)-szFilt*60*0.55 size(m_M,1)];
             else % when filter event in the middle of the time series
-                inlim = [idx(1)-330 idx(1)+330];
+                inlim = [idx(1)-szFilt*60*0.55 idx(1)+szFilt*60*0.55];
             end    
             BEtemp = m_dbbp(inlim(1,1):inlim(1,2),:);
             AFtemp = m_dbbp(inlim(1,1):inlim(1,2),:);
@@ -294,7 +314,7 @@ for i = progress(1:size(seg,1)-1)
                 & max(BEtemp) > 0.03); % nanstd(BEtemp) > 12*nanstd(BEtemp(dtBEtmp > cent - minutes(0.5) & dtBEtmp < cent)));
             highpk = highpk(highpk < cent); % keep only local high peak before filter event center
             popohpk = highpk(abs(cent-highpk) == min(abs(cent-highpk)));
-            if all(isempty(popohpk) & idx<=330)
+            if all(isempty(popohpk) & idx<=szFilt*60*0.55)
                 filt_st (k) = dtBEtmp(1);
             elseif isempty(popohpk) % find filter event longer than 10 in case flowcontrol is stuck
                 foo = 600;
@@ -325,7 +345,7 @@ for i = progress(1:size(seg,1)-1)
                 & min(AFtemp) < - 0.03);% nanstd(AFtemp) > 12*nanstd(AFtemp(dtAFtmp > cent & dtAFtmp < cent + minutes(0.5))));
             lowpk = lowpk(lowpk > cent); % keep only local low peak after filter event center
             popolpk = lowpk(abs(cent-lowpk) == min(abs(cent-lowpk)));
-            if all(isempty(popolpk) & idx>=size(m_data,1)-330)
+            if all(isempty(popolpk) & idx>=size(m_data,1)-szFilt*60*0.55)
                 filt_st (k) = dtAFtmp(end);
             elseif isempty(popolpk) % find filter event longer than 10 in case flowcontrol is stuck
                 foo = 600;
