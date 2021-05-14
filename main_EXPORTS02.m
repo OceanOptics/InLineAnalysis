@@ -3,7 +3,6 @@
 % created: Jan 05, 2021
 clear
 close all
-
 cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master')
 
 % Load InLineAnalysis and the configuration
@@ -11,8 +10,8 @@ ila = InLineAnalysis('cfg/EXPORTS02_cfg.m');
 
 % Quick cfg update
 %% TSG
- ila.instrument.TSG.logger = 'JCook_TSG';
- ila.cfg.days2run = datenum(2021,5,2,0,0,0):datenum(2021,5,5,0,0,0);
+ ila.instrument.TSG.logger = 'SBE45TSG';
+ ila.cfg.days2run = datenum(2021,5,2,0,0,0):datenum(2021,5,10,0,0,0);
 % ila.instrument.TSG.logger = 'TeraTerm';
 % ila.cfg.days2run = datenum(2021,1,10,0,0,0):datenum(2021,1,15,0,0,0);
 
@@ -27,11 +26,14 @@ ila.cfg.days2run = datenum(2021,5,2,0,0,0):datenum(2021,5,5,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
 
 %% SeapointCD
- ila.cfg.days2run = datenum(2021,5,2,0,0,0):datenum(2021,5,5,0,0,0);
+ ila.cfg.days2run = datenum(2021,1,2,0,0,0):datenum(2021,5,5,0,0,0);
+ 
+%% HBB
+ ila.cfg.days2run = datenum(2021,5,5,0,0,0):datenum(2021,5,10,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','ACS91'}; % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
-ila.cfg.qcref.view = 'ACS91';
+ila.cfg.instruments2run = {'FLOW','HBB'}; % 'FLOW', 'TSG', 'BB31052', 'HBB', 'WSCD859','SPCD'
+ila.cfg.qcref.view = 'HBB';
 ila.cfg.parallel = Inf;
 
 %% 1.Normal Import | Load raw data
@@ -54,11 +56,11 @@ ila.ReadRawDI();
 % % No noticeable difference was observed between the TSG of EXPORTS and the BB3
 % % ila.instrument.FLOW.Sync(30);
 % ila.instrument.ACS57.Sync(10);
-ila.instrument.ACS91.Sync(65);
+ila.instrument.ACS91.Sync(0);
 % % ila.instrument.ACS111.Sync(60);
 % % ila.instrument.ACS279.Sync(55);
-% % ila.instrument.BB3.Sync(0);
-% ila.instrument.BB31502.Sync(0);
+ila.instrument.HBB.Sync(0);
+% ila.instrument.BB3.Sync(0);
 % % % ila.instrument.LISST.Sync(1);
 % % ila.instrument.WSCD1082P.Sync(40);
 % ila.instrument.WSCD859.Sync(40);
@@ -77,8 +79,9 @@ visSync(ila.instrument.FLOW.data, ila.instrument.ACS91.data.dt, ila.instrument.A
 % % visSync(ila.instrument.FLOW.data, ila.instrument.ACS111.data.dt, ila.instrument.ACS111.data.c(:,40), 'c (m^{-1})');
 % % visSync(ila.instrument.FLOW.data, ila.instrument.ACS279.data.dt, ila.instrument.ACS279.data.a(:,20), 'a (m^{-1})');
 % % visSync(ila.instrument.FLOW.data, ila.instrument.ACS279.data.dt, ila.instrument.ACS279.data.c(:,40), 'c (m^{-1})');
-% % visSync(ila.instrument.('FLOW').data, ila.instrument.('BB3').data.dt, ila.instrument.('BB3').data.beta(:,1), '\beta (counts)');
-% % visSync(ila.instrument.('FLOW').data, ila.instrument.('LISST').data.dt, ila.instrument.('LISST').data.beta(:,10), '\beta (counts)');
+% % visSync(ila.instrument.FLOW.data, ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,1), '\beta (counts)');
+visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB.data.beta(:,14), '\beta (counts)');
+% % visSync(ila.instrument.FLOW.data, ila.instrument.LISST.data.dt, ila.instrument.LISST.data.beta(:,10), '\beta (counts)');
 % % visSync(ila.instrument.('FLOW').data, ila.instrument.('WSCD').data.dt, ila.instrument.('WSCD').data.fdom, 'FDOM (counts)');
 % % visSync(ila.instrument.('FLOW').data, ila.instrument.('WSCD1082P').data.dt, ila.instrument.('WSCD1082P').data.fdom, 'FDOM (counts)');
 % % visSync(ila.instrument.('BB3').data, ila.instrument.('TSG').data.dt, ila.instrument.('TSG').data.t, 'Temp (C)');
@@ -93,9 +96,9 @@ visSync(ila.instrument.FLOW.data, ila.instrument.ACS91.data.dt, ila.instrument.A
 % % % ila.instrument.BB31502.Sync(-10);
 
 %% 2.Normal Auto-synchronise: automatic detection of filter events for AC and BB sensors
-% data = ila.instrument.(ila.cfg.qcref.view).data;
-% instrument = ila.cfg.qcref.view;
-% FLOW = ila.instrument.FLOW.data;
+% % % data = ila.instrument.(ila.cfg.qcref.view).data;
+% % % instrument = ila.cfg.qcref.view;
+% % % FLOW = ila.instrument.FLOW.data;
 
 % ila.cfg.qcref.MinFiltPeriod = 65; % filter even period in minute % ACS: 55 % BB3: 60
 % ila.cfg.qcref.szFilt = 12; % filter even length in minute % default = 10
@@ -117,20 +120,20 @@ ila.CheckDataStatus();
 
 %% Normal and DI Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
+ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
 
 %% 5.Normal and DI automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR values
 % fudge factor for auto QC ACS.
 % Varies between ACS: 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
-ila.cfg.qc.RawAutoQCLim.filtered.a = 3; % 6
-ila.cfg.qc.RawAutoQCLim.filtered.c = 10; % 15
+ila.cfg.qc.RawAutoQCLim.filtered.a = 2; % 6
+ila.cfg.qc.RawAutoQCLim.filtered.c = 2; % 15
 ila.cfg.qc.RawAutoQCLim.total.a = 2; % 4
-ila.cfg.qc.RawAutoQCLim.total.c = 12; % 12
+ila.cfg.qc.RawAutoQCLim.total.c = 2; % 12
 ila.cfg.qc.RawAutoQCLim.dissolved.a = 3; % 4
 ila.cfg.qc.RawAutoQCLim.dissolved.c = 3; % 12
 % fudge factor for auto QC BB.
 % 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
-ila.cfg.qc.RawAutoQCLim.filtered.bb = 3;
+ila.cfg.qc.RawAutoQCLim.filtered.bb = 5;
 ila.cfg.qc.RawAutoQCLim.total.bb = 3;
 % remove saturated periods in BB
 ila.cfg.qc.Saturation_Threshold_bb = 4000; % saturate above 4000 counts
@@ -139,7 +142,7 @@ ila.CheckDataStatus();
 
 %% Normal and DI Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
+ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
 
 %% 6.Normal Bin
 % % Set settings directly in configuration file (no tunning at this step)
@@ -151,17 +154,17 @@ ila.CheckDataStatus();
 
 %% Normal and DI Diagnostic Plot
 % check binned spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'bin'}); % AC or BB
+ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
 
 %% 6.1.Normal Write bin
 ila.Write('bin')
 ila.CheckDataStatus();
 
 %% Load processed data from mat files: 'data' = Raw | 'bin' = Bin | 'qc' = QCed | 'prod' = product
-ila.Read('data');
+% ila.Read('data');
 ila.Read('bin');
 ila.Read('qc');
-ila.Read('prod');
+% ila.Read('prod');
 
 %% 7.Normal Flag
 ila.Flag() % Now deprecated will just copy data to next level
@@ -189,7 +192,7 @@ ila.CheckDataStatus();
 %% Normal and DI Diagnostic Plot
 % check QCed spectrums AC or BB sensors
 % {'raw','bin','qc','prod'}
-ila.DiagnosticPlot('AC',{'qc'}); % AC or BB
+ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
 
 %% 8.1.Normal Write qc
 ila.Write('qc')
@@ -199,10 +202,13 @@ ila.CheckDataStatus();
 % ila.cfg.days2run = ila.cfg.days2run(1)+1:ila.cfg.days2run(end)-1;
 ila.BinDI();
 
+%% Normal and DI Diagnostic Plot
+% check binned spectrums AC or BB sensors
+ila.DiagnosticPlot('AC',{'bin'}); % AC or BB
+
 %% 9.1. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Write bin DI
 ila.Write('bin')
 ila.CheckDataStatus();
-
 
 %% 10.Normal and DI Calibrate
 % ila.cfg.calibrate.ACS.compute_dissolved = false;
@@ -242,7 +248,7 @@ ila.CheckDataStatus();
 % save_figures = true;
 
 %%% ACS 3D %%%
-ila.DiagnosticPlot('AC',{'prod'}); % AC or BB
+ila.DiagnosticPlot('BB',{'prod'}); % AC or BB
 
 %%% BB 3D %%%
 % ila.DiagnosticPlot('BB',{'prod'}); % AC or BB
@@ -250,6 +256,10 @@ ila.DiagnosticPlot('AC',{'prod'}); % AC or BB
 %%% ACS BB3 TSG PAR WSCD final product visualisation %%%
 ila.visProd_timeseries()
 
+%%
+% saveGraph('HBB_1minutes_binned_1-4spectre_per_bin', 'fig')
+% saveGraph('HBB_1minutes_binned_1-4spectre_per_bin', 'fig')
+% saveGraph('HBB_1minutes_binned_1-4spectre_per_bin', 'fig')
 %% 11. Normal and DI Save products
 ila.Write('prod')
 

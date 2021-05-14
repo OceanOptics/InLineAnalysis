@@ -211,7 +211,10 @@ classdef (Abstract) Instrument < handle
       end
     end
     
-    function DeleteUserSelection(obj, user_selection)
+    function DeleteUserSelection(obj, user_selection, channel)
+      if nargin < 2
+        channel = 'all';
+      end
       for i=1:size(user_selection, 1)
 %         obj.bad.tsw = obj.qc.tsw(user_selection(i,1) <= obj.qc.tsw.dt & obj.qc.tsw.dt <= user_selection(i,2),:);
 %         obj.bad.fsw(user_selection(i,1) <= obj.qc.fsw.dt & obj.qc.fsw.dt <= user_selection(i,2),:);
@@ -222,7 +225,11 @@ classdef (Abstract) Instrument < handle
           obj.qc.fsw(user_selection(i,1) <= obj.qc.fsw.dt & obj.qc.fsw.dt <= user_selection(i,2),:) = []; 
         end
         if ~isempty(obj.qc.diw)
-          obj.qc.diw(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = []; 
+          if strcmp(channel, 'all')
+            obj.qc.diw(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = [];
+          else
+            obj.qc.diw.(channel)(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = NaN;
+          end
         end
       end
     end
@@ -260,6 +267,8 @@ classdef (Abstract) Instrument < handle
       %   (if data was already in memory it could duplicate timestamps)
       if contains(obj.model, 'AC')
         obj.ReadDeviceFile()
+      elseif contains(obj.model, 'HBB')
+        obj.ReadHBBCalFiles()
       end
       if nargin < 4; level = 'prod'; end
       if strcmp(level, 'data')

@@ -37,10 +37,32 @@ classdef TSG < Instrument
             case {'TeraTerm', 'teraterm', 'TERATERM'}
               obj.data = iRead(@importTSGTeraTerm, obj.path.raw, obj.path.wk, 'TeraTerm_tsg_',...
                              days2run, 'TeraTerm', force_import, ~write, true);
+%             case {'Inlinino'}
+%               obj.data = iRead(@importInlinino_miniTSG, obj.path.raw, obj.path.wk, 'C01_',...
+%                              days2run, 'Inlinino', force_import, ~write, true);
+%             case {'Inlinino'}
+%               obj.data = iRead(@importInlinino_miniTSG, obj.path.raw, obj.path.wk, 'T01_',...
+%                              days2run, 'Inlinino', force_import, ~write, true);
+            otherwise
+              error('TSG: Unknown logger for %s.', obj.boat);
           end
         case 'RRevelle'
           obj.data = iRead(@importRRevelleUnderway, obj.path.raw, obj.path.wk, '',...
                          days2run, 'RRevelleUnderway', force_import, ~write, true);
+        case 'JCook'
+          switch obj.logger
+            case {'SBE45TSG'}
+              obj.data = iRead(@importSBEformatTSG, obj.path.raw, obj.path.wk, '',...
+                             days2run, 'SBE45TSG', force_import, ~write, true);
+%             case {'Inlinino'}
+%               obj.data = iRead(@importInlinino_miniTSG, obj.path.raw, obj.path.wk, 'C01_',...
+%                              days2run, 'Inlinino', force_import, ~write, true);
+%             case {'Inlinino'}
+%               obj.data = iRead(@importInlinino_miniTSG, obj.path.raw, obj.path.wk, 'T01_',...
+%                              days2run, 'Inlinino', force_import, ~write, true);
+            otherwise
+              error('TSG: Unknown logger for %s.', obj.boat);
+          end                           
         otherwise
           error('TSG: Unknown boat.');
       end

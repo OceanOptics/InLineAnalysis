@@ -40,6 +40,9 @@ classdef ECO < Instrument
         case 'InlininoWSCD'
           obj.data = iRead(@importInlininoWSCD, obj.path.raw, obj.path.wk, 'Inlinino_',...
                          days2run, 'Inlinino', force_import, ~write, true);
+        case 'InlininoSPCDSN'
+          obj.data = iRead(@importInlininoSPCD, obj.path.raw, obj.path.wk, ['SUVF' obj.sn '_'],...
+                         days2run, 'Inlinino', force_import, ~write, true);
         case 'InlininoWSCDSN'
           obj.data = iRead(@importInlininoWSCD, obj.path.raw, obj.path.wk, ['WSCD' obj.sn '_'],...
                          days2run, 'Inlinino', force_import, ~write, true);

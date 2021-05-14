@@ -90,8 +90,8 @@ classdef ACS < Instrument
         obj.path.di = obj.path.raw;
       end
       if isempty(obj.di_cfg.logger)
-        fprintf('WARNING: DI Logger set to Compass_2.1rc.\n');
-        obj.di_cfg.logger = 'Compass_2.1rc';
+        fprintf('WARNING: DI Logger set to InlininoACScsv.\n');
+        obj.di_cfg.logger = 'InlininoACScsv';
       end
       if isempty(obj.di_cfg.postfix)
         fprintf('WARNING: DI Postfix isempty \n');

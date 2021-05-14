@@ -87,6 +87,8 @@ classdef InLineAnalysis < handle
               obj.instrument.(i) = ACS(cfg.instruments.(i));
             case 'AC9'
               obj.instrument.(i) = AC9(cfg.instruments.(i));
+            case 'HBB'
+              obj.instrument.(i) = HBB(cfg.instruments.(i));
 %             case 'BB3'
 %               obj.instrument.(i) = BB3(cfg.instruments.(i));
 %             case 'WSCD'
@@ -175,26 +177,26 @@ classdef InLineAnalysis < handle
       end
       instru = fieldnames(obj.instrument);
       for i=obj.cfg.instruments2run; i = i{1};
-        if any(contains(i,{'ACS','BB','PAR'}))
+        if any(contains(i,{'AC','BB','PAR'}))
           if ~isempty(obj.instrument.(i).(level).fsw)
-            fprintf('Deleting bad values from %s filtered data ...', i);
-            if any(contains(i,'ACS'))
+            fprintf('Deleting bad values from %s filtered data ...\n', i);
+            if any(contains(i,'AC'))
               lambda.a = obj.instrument.(i).lambda_a;
               lambda.c = obj.instrument.(i).lambda_c;
             elseif  any(contains(i,'BB'))
               lambda.bb = obj.instrument.(i).lambda;
             end
-            if any(contains(i,{'ACS','BB'}))
-              [obj.instrument.(i).(level).fsw, Nbad]= RawAutoQC(obj.instrument.(i).(level).fsw,...
+            if any(contains(i,{'AC','BB'}))
+              [obj.instrument.(i).(level).fsw, Nbad]= RawAutoQC(i, obj.instrument.(i).(level).fsw,...
                 lambda, fudge_factor.filtered, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
                 bb_threshold);
             end
-            if any(contains(i,'ACS'))
-              fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s filtered data\n',...
+            if any(contains(i,'AC'))
+              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s filtered data\n',...
                 Nbad.a, Nbad.c, i);
             elseif any(contains(i,'BB'))
               for ii = 1:size(Nbad.bb,2)
-                fprintf('Done\n%4.2f%% of beta%i deleted from %s filtered data\n',...
+                fprintf('%4.2f%% of beta%i deleted from %s filtered data\n',...
                   Nbad.bb(ii), lambda.bb(ii), i);
               end
             end
@@ -202,8 +204,8 @@ classdef InLineAnalysis < handle
             fprintf('No filtered data loaded: Skip\n');
           end
           if ~isempty(obj.instrument.(i).(level).tsw)
-            fprintf('Deleting bad values from %s total data ... ', i);
-            if  any(contains(i,'ACS'))
+            fprintf('Deleting bad values from %s total data ...\n', i);
+            if  any(contains(i,'AC'))
               lambda.a = obj.instrument.(i).lambda_a;
               lambda.c = obj.instrument.(i).lambda_c;
             elseif any(contains(i,'BB'))
@@ -216,44 +218,44 @@ classdef InLineAnalysis < handle
                 | obj.instrument.(i).data.par./obj.instrument.PAR.scale < 0;
               obj.instrument.(i).data(foo,:) = [];
             end
-            if any(contains(i,{'ACS','BB'}))
-              [obj.instrument.(i).(level).tsw, Nbad]= RawAutoQC(obj.instrument.(i).(level).tsw,...
+            if any(contains(i,{'AC','BB'}))
+              [obj.instrument.(i).(level).tsw, Nbad]= RawAutoQC(i, obj.instrument.(i).(level).tsw,...
                 lambda, fudge_factor.total, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
                 bb_threshold);
             end
-            if any(contains(i,'ACS'))
-              fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s total data\n',...
+            if any(contains(i,'AC'))
+              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s total data\n',...
                 Nbad.a, Nbad.c, i);
             elseif any(contains(i,'BB'))
               for ii = 1:size(Nbad.bb,2)
-                fprintf('Done\n%4.2f%% of beta%i deleted from %s total data\n',...
+                fprintf('%4.2f%% of beta%i deleted from %s total data\n',...
                   Nbad.bb(ii), lambda.bb(ii), i);
               end
             elseif any(contains(i,'PAR'))
-              fprintf('Done\n%i raw %s values deleted\n', sum(foo), i);
+              fprintf('%i raw %s values deleted\n', sum(foo), i);
             end
           else
             fprintf('No total data loaded: Skip\n');
           end
           if ~isempty(obj.instrument.(i).(level).diw)
-            fprintf('Deleting bad values from %s dissolved data...', i);
-            if any(contains(i,'ACS'))
+            fprintf('Deleting bad values from %s dissolved data...\n', i);
+            if any(contains(i,'AC'))
               lambda.a = obj.instrument.(i).lambda_a;
               lambda.c = obj.instrument.(i).lambda_c;
             elseif  any(contains(i,'BB'))
               lambda.bb = obj.instrument.(i).lambda;
             end
-            if any(contains(i,{'ACS','BB'}))
-              [obj.instrument.(i).(level).diw, Nbad]= RawAutoQC(obj.instrument.(i).(level).diw,...
+            if any(contains(i,{'AC','BB'}))
+              [obj.instrument.(i).(level).diw, Nbad]= RawAutoQC(i, obj.instrument.(i).(level).diw,...
                 lambda, fudge_factor.dissolved, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
                 bb_threshold, true);
             end
-            if any(contains(i,'ACS'))
-              fprintf('Done\n%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s dissolved data\n',...
+            if any(contains(i,'AC'))
+              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s dissolved data\n',...
                 Nbad.a, Nbad.c, i);
             elseif any(contains(i,'BB'))
               for ii = 1:size(Nbad.bb,2)
-                fprintf('Done\n%4.2f%% of beta%i deleted from %s dissolved data\n',...
+                fprintf('%4.2f%% of beta%i deleted from %s dissolved data\n',...
                   Nbad.bb(ii), lambda.bb(ii), i);
               end
             end
@@ -281,7 +283,12 @@ classdef InLineAnalysis < handle
           ifieldn = fieldnames(obj.instrument.(i).prod);
           for j=1:size(ifieldn,1)
             if ~strcmp(ifieldn{j}, 'QCfailed') && ~isempty(obj.instrument.(i).prod.(ifieldn{j}))
-              visProd_timeseries(obj.instrument.(i).prod.(ifieldn{j}), i);
+              if contains(i, {'AC', 'BB'})
+                visProd_timeseries(obj.instrument.(i).prod.(ifieldn{j}), i, ...
+                  obj.instrument.(i).lambda);
+              else
+                visProd_timeseries(obj.instrument.(i).prod.(ifieldn{j}), i);
+              end
             end
           end
         end
@@ -636,41 +643,70 @@ classdef InLineAnalysis < handle
             else
               toqc = 'qc';
             end
+            % create folder for user input
+            if ~isdir(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
             ColorSet = lines(2);
             fh = fig(52); hold('on');
             if contains(i, 'AC')
               toplot = {'a', 'c'};
-              plot(foo.(toqc).diw.dt, foo.(toqc).diw.(toplot{1})(:,foo.view.varcol), '.', 'Color', ColorSet(1,:));
-              plot(foo.(toqc).diw.dt, foo.(toqc).diw.(toplot{2})(:,foo.view.varcol), '.', 'Color', ColorSet(2,:));
-              ylabel('a and c'); title([i ' QC DI']);
-              legend(toplot, 'AutoUpdate','off')
+              for j = 1:size(toplot,2)
+                plot(foo.(toqc).diw.dt, foo.(toqc).diw.(toplot{j})(:,foo.view.varcol), '.', 'Color', ColorSet(j,:));
+                ylabel(toplot{j}); title([i ' channel ' toplot{j} ' QC DI']);
+                datetick2_doy();
+                set(datacursormode(fh), 'UpdateFcn', @data_cursor_display_date);
+                % Get user selection
+                user_selection = guiSelectOnTimeSeries(fh);
+                % Apply user selection
+                obj.instrument.(i).DeleteUserSelection(user_selection, toplot{j});
+                % Save user selection
+                filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.json'];
+                obj.updatejson_userselection_bad(filename, user_selection, toplot{j});
+                clf(52)
+              end
+              close(52)
             else
               plot(foo.(toqc).diw.dt, foo.(toqc).diw.(foo.view.varname)(:,foo.view.varcol), '.', 'Color', ColorSet(1,:));
               ylabel(foo.view.varname); title([i ' QC DI']);
+              datetick2_doy();
+              set(datacursormode(fh), 'UpdateFcn', @data_cursor_display_date);
+              % Get user selection
+              user_selection = guiSelectOnTimeSeries(fh);
+              % Apply user selection
+              obj.instrument.(i).DeleteUserSelection(user_selection);
+              % Save user selection
+              filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.json'];
+              obj.updatejson_userselection_bad(filename, user_selection);
             end
-            datetick2_doy();
-            set(datacursormode(fh),'UpdateFcn',@data_cursor_display_date);
-            % Get user selection
-            user_selection = guiSelectOnTimeSeries(fh);
-            % Apply user selection
-            obj.instrument.(i).DeleteUserSelection(user_selection);
-            % Save user selection
-            filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.json'];
-            if ~isdir(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
-            obj.updatejson_userselection_bad(filename, user_selection);
           end
         case 'load'
-          % Load previous QC files and apply them
+          % Load previous QC DI files and apply them
           for i=obj.cfg.instruments2run; i = i{1};
             if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
             fprintf('QC DI LOAD: %s\n', i);
-            file_selection = loadjson([obj.instrument.(i).path.ui i '_QCDI_UserSelection.json']);
-            % Convert datestr to datenum for newer format
-            if ~isempty(file_selection.bad)
-                file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)),...
-                    datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))];
+            if exist([obj.instrument.(i).path.ui i '_QCDI_UserSelection.json'], 'file')
+              file_selection = loadjson([obj.instrument.(i).path.ui i '_QCDI_UserSelection.json']);
+              sel_toload = fieldnames(file_selection);
+              % Convert datestr to datenum for newer format
+              for j = 1:size(sel_toload, 1)
+                if ~isempty(file_selection.(sel_toload{j}))
+                  if iscell(file_selection.(sel_toload{j}){1}) && iscell(file_selection.(sel_toload{j}){1})
+                    file_selection.(sel_toload{j}) = [datenum(cellfun(@(x) char(x), file_selection.(sel_toload{j}){1}, 'UniformOutput', false)),...
+                      datenum(cellfun(@(x) char(x), file_selection.(sel_toload{j}){2}, 'UniformOutput', false))];
+                  else
+                    file_selection.(sel_toload{j}) = [datenum(file_selection.(sel_toload{j})(:, 1)),...
+                      datenum(file_selection.(sel_toload{j})(:, 2))];
+                  end
+                end
+                if contains(i, 'AC')
+                  channel = strsplit(sel_toload{j}, '_');
+                  obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}), channel{end});
+                else
+                  obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}));
+                end
+              end
+            else
+              warning('No user input saved')
             end
-            obj.instrument.(i).DeleteUserSelection(file_selection.bad);
           end
         case 'skip'
           fprintf('WARNING: Quality Check is NOT performed.\n');
@@ -699,7 +735,7 @@ classdef InLineAnalysis < handle
                                            obj.cfg.calibrate.(i).interpolation_method,...
                                            obj.instrument.(obj.cfg.calibrate.(i).CDOM_source),...
                                            obj.instrument.(obj.cfg.calibrate.(i).FLOW_source));
-            case {'BB', 'BB3'}
+            case {'BB', 'BB3', 'HBB'}
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.instrument.(obj.cfg.calibrate.(i).TSG_source),...
                                            obj.cfg.calibrate.(i).di_method)
@@ -885,34 +921,48 @@ classdef InLineAnalysis < handle
   end
   
   methods (Access=private)
-    function updatejson_userselection_bad(obj, filename, user_selection)
+    function updatejson_userselection_bad(~, filename, user_selection, channel) % obj, 
+      if nargin < 4
+        channel = '';
+      else
+        channel = ['_' channel];
+      end
       if exist(filename, 'file')
         % Load file
         file_selection = loadjson(filename);
-        % Convert datestr to datenum for newer format
-        try
-            if ~isempty(file_selection.bad)
-                file_selection.bad = [datenum(file_selection.bad(1)), datenum(file_selection.bad(2))]; end
-        catch
-            if ~isempty(file_selection.bad)
-                file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)),...
-                    datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))];
+        fiedna = fieldnames(file_selection);
+        for i = 1:size(fiedna,1)
+          if ~isempty(file_selection.(fiedna{i}))
+            % Convert datestr to datenum for newer format
+            if iscell(file_selection.(fiedna{i}){1})
+              file_selection.(fiedna{i}) = [datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){1}', 'UniformOutput', false)),...
+                  datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){2}', 'UniformOutput', false))];
+            else
+              file_selection.(fiedna{i}) = [datenum(file_selection.(fiedna{i})(1)), ...
+                datenum(file_selection.(fiedna{i})(2))];
             end
+          end
         end
-        if isfield(file_selection, 'bad') && ~isempty(file_selection.bad)
-          % Remove old (days2run) selections
-          sel = min(obj.cfg.days2run) <= file_selection.bad(:,1) & file_selection.bad(:,1) < max(obj.cfg.days2run) + 1;
-          file_selection.bad(sel,:) = [];
+        if isfield(file_selection, ['bad' channel]) && ~isempty(file_selection.(['bad' channel]))
+%           % Remove old (days2run) selections REMOVED TO KEEP ALL HISTORY OF USER SELECTION
+%           sel = min(obj.cfg.days2run) <= file_selection.(['bad' channel])(:,1) & ...
+%             file_selection.(['bad' channel])(:,1) < max(obj.cfg.days2run) + 1;
+%           file_selection.(['bad' channel])(sel,:) = [];
           % Add new user selection
-          file_selection.bad = [file_selection.bad; user_selection];
+          file_selection.(['bad' channel]) = [file_selection.(['bad' channel]); user_selection];
         else
-          file_selection = struct('bad', user_selection);
+          file_selection.(['bad' channel]) = user_selection;
+          fiedna = fieldnames(file_selection);
         end
       else
-        file_selection = struct('bad', user_selection);
+        file_selection = struct(['bad' channel], user_selection);
+        fiedna = fieldnames(file_selection);
       end
       % Convert datenum to datestr for newer format
-      if ~isempty(file_selection.bad); file_selection.bad = {datestr(file_selection.bad(:,1)), datestr(file_selection.bad(:,2))}; end
+      for i = 1:size(fiedna,1)
+        if ~isempty(file_selection.(fiedna{i})); file_selection.(fiedna{i}) = ...
+            {datestr(file_selection.(fiedna{i})(:,1)), datestr(file_selection.(fiedna{i})(:,2))};end
+      end
       % Save user selection
       savejson('',file_selection,filename); 
     end

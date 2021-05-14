@@ -1,5 +1,5 @@
 function [ data ] = iRead( fun, dirname_in, dirname_out, prefix, dt, software, ...
-    force, nowrite, verbose, read_margin, postfix, parallel_flag, otherargs )
+    force, nowrite, verbose, read_margin, postfix, parallel_flag, otherarg1, otherarg2 )
 %IMPORTALLUNDERWAY import underway data from all files matching regex settings
 %   in specified directory. Loaded files are saved as mat files for faster run.
 %
@@ -24,7 +24,8 @@ if nargin < 9; verbose = false; end
 if nargin < 10; read_margin = true; end
 if nargin < 11; postfix = ''; end
 if nargin < 12; parallel_flag = Inf; end
-if nargin < 13; otherargs = {}; end
+if nargin < 13; otherarg1 = {}; end
+if nargin < 14; otherarg2 = {}; end
 
 dir_in = dirname_in;
 dir_out = dirname_out;
@@ -62,10 +63,12 @@ for i=1:length(dt)
       ddata = [];
       for j=1:size(l,1)
 %       parfor (j=1:size(l,1), parallel_flag)
-        if isempty(otherargs)
+        if isempty(otherarg1) && isempty(otherarg2)
           foo = fun([dir_in l{j}], verbose);
+        elseif isempty(otherarg2)
+          foo = fun([dir_in l{j}], otherarg1, verbose);
         else
-          foo = fun([dir_in l{j}], otherargs, verbose);
+          foo = fun([dir_in l{j}], otherarg1, otherarg2, verbose);
         end
         ddata = [ddata; foo];
       end
@@ -91,12 +94,12 @@ if read_margin
   margin = 1/24; % day
   if verbose; fprintf('Reading margin ... \n'); end
   pre_data = iRead( fun, dirname_in, dirname_out, prefix, dt(1)-margin, ...
-      software, force, nowrite, verbose, false, postfix, parallel_flag, otherargs);
+      software, force, nowrite, verbose, false, postfix, parallel_flag, otherarg1);
   if ~isempty(pre_data)
     pre_data = pre_data(dt(1)-margin <= pre_data.dt,:);
   end
   post_data = iRead( fun, dirname_in, dirname_out, prefix, dt(end)+1+margin, ...
-      software, force, nowrite, verbose, false, postfix, parallel_flag, otherargs );
+      software, force, nowrite, verbose, false, postfix, parallel_flag, otherarg1 );
   if ~isempty(post_data)
     post_data = post_data(post_data.dt <= dt(end)+1+margin,:);
   end
@@ -146,6 +149,10 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
     case {'Inlinino', 'InlininoACScsv'}
       % List all files in directory
       l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.csv']);
+      filenames = {l.name}';
+    case 'SBE45TSG'
+      % List all files in directory
+      l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.sbe45']);
       filenames = {l.name}';
     case 'FlowControl'
       % List all files in directory

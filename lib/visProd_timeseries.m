@@ -1,8 +1,8 @@
-function visProd_timeseries(data, instrument)
+function visProd_timeseries(data, instrument, lambda)
 % Plot InLineAnalysis product time series to assess quality of processing
 % and include in processing report
 %
-%% Author: Guillaume BOurdin
+%% Author: Guillaume Bourdin
 % Date: 03 Mar. 2021
 %
 % INPUT:
@@ -13,9 +13,9 @@ function visProd_timeseries(data, instrument)
 %%
 instrument = instrument(isstrprop(instrument,'alpha'));
 
-list_instru = {'ACS', 'AC', 'BB', 'TSG', 'PAR', 'WSCD'};
-idx = false(size(list_instru));
-for i = 1:max(size(list_instru)); idx(i) = contains(instrument, list_instru{i}); end
+% list_instru = {'ACS', 'AC', 'BB', 'TSG', 'PAR', 'WSCD', 'HBB'};
+% idx = false(size(list_instru));
+% for i = 1:max(size(list_instru)); idx(i) = contains(instrument, list_instru{i}); end
 
 switch instrument
   case {'ACS', 'AC'}
@@ -76,31 +76,33 @@ switch instrument
       xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
         max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
     end
-  case 'BB'
-    wl = [470 532 650];
-    C = spectrumRGB(wl);
-    figure(81);
-    clf
-%     yyaxis('left')
-    hold on
-    for i = 1:size(data.poc, 2)
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.poc(:,i), 6, C(:,:,i), 'filled');
+  case {'BB', 'HBB'}
+    if size(lambda, 1) > size(lambda, 2); lambda = lambda'; end
+    if contains(instrument, 'HBB')
+      data.poc(:, lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
+      lambda(lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
     end
+    C = reshape(spectrumRGB(lambda), max(size(lambda)),  3);
+    figure(79);
+    clf
+    yyaxis('left')
+    hold on
+    scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.poc, 10, C, 'filled');
     ylabel('[POC] (mg.m^{-3})');
-    leg = cellfun(@(c) ['POC_{' c 'nm}'], cellstr(num2str(wl')), 'un', 0);
+    leg = cellfun(@(c) ['POC_{' c 'nm}'], cellstr(num2str(lambda')), 'un', 0);
+    if contains(instrument, 'HBB')
+      yyaxis('right')
+      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.gamma_bb, 50, ...
+        'k', 'filled', 'Marker', 'v');
+      ylabel('Gamma bbp (unitless)');
+      leg = [leg; {'gamma bbp'}];
+    end
     hold off
-%     yyaxis('right')
-%     hold on
-%     for i = 1:size(data.cphyto, 2)
-%       sc(2) = scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.cphyto(:,i), 6, C(:,:,i), 'filled');
-%     end
-%     ylabel('[Cphyto] (mg.m^{-3})');
-%     leg = [leg; cellfun(@(c) ['Cphyto_{' c 'nm}'], cellstr(num2str(wl')), 'un', 0)];
     legend(leg)
     xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
       max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
   case 'TSG'
-    figure(80);
+    figure(81);
     clf
     yyaxis('left')
     scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.t, 6, 'filled'); ylabel('TSG T (°C)');
@@ -109,20 +111,20 @@ switch instrument
     xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
       max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
   case 'PAR'
-    figure(81);
+    figure(82);
     clf
     scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.par, 6, 'filled');
     ylabel('PAR (\muE.m^{-2}.s^{-1})');
     xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
       max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
   case 'WSCD'
-    figure(82);
+    figure(83);
     clf
     scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.fdom, 6, 'filled');
     ylabel('FDOM ppb');
     xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
       max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
-  case 'LISST'
+%   case 'LISST'
     
   otherwise
     warning('%s not supported for product visualisation', instrument)

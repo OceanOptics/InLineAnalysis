@@ -1,4 +1,4 @@
-function [data, Nbad] = RawAutoQC (data, lambda, fudge_factor, bb_dark, bb_threshold, DI)
+function [data, Nbad] = RawAutoQC (instrument, data, lambda, fudge_factor, bb_dark, bb_threshold, DI)
 % author: Guillaume Bourdin
 % created: Nov 13, 2019
 %
@@ -41,23 +41,22 @@ function [data, Nbad] = RawAutoQC (data, lambda, fudge_factor, bb_dark, bb_thres
 %       - c: <double> percentage of attenuation spectrum deleted
 %       - bb: <1xM double> percentage of beta vales deleted
 
-if nargin < 2
+if nargin < 3
   error('input wavelenghts missing');
 end
-if nargin < 1
+if nargin < 2
   error('input data in missing');
 end
-if nargin < 3
+if nargin < 4
   fudge_factor.a = 3;
   fudge_factor.c = 3;
   warning('fudge_factor missing, set to default (3)');
 end
-if nargin < 6
+if nargin < 7
   DI = false;
 end
 
-if any(strcmp(data.Properties.VariableNames, 'a') | ...
-    strcmp(data.Properties.VariableNames, 'c'))
+if contains(instrument, 'AC')
   if any(fudge_factor.a < 3 | fudge_factor.c < 3)
     warning('QC threshold might be too low, data might be lost');
   end
@@ -120,13 +119,13 @@ if any(strcmp(data.Properties.VariableNames, 'a') | ...
   data.c(bad_c,:) = NaN;
   data(bad_a & bad_c,:)=[];
     
-elseif any(strcmp(data.Properties.VariableNames, 'beta'))
-  if nargin < 5
+elseif contains(instrument, 'BB3')
+  if nargin < 6
     bb_threshold = 4100;
     warning('beta threshold missing, set to default (4100 counts)');
   end
 
-  if nargin < 4
+  if nargin < 5
     error('beta dark missing (4th argument)');
   end
   Nbad.bb = NaN(1, size(lambda.bb,2));
@@ -136,18 +135,45 @@ elseif any(strcmp(data.Properties.VariableNames, 'beta'))
   end
 
   if any(fudge_factor.bb < 3)
-    error('QC threshold BB3 too low (minimum 3)');
+    warning('QC threshold might be too low, data might be lost');
   end
   bad_bb = NaN(size(data,1), size(lambda.bb, 2));
   for ii = 1:size(lambda.bb, 2)
     other = 1:size(lambda.bb, 2); other(ii)=[];
-    bad_bb (:,ii) = data.beta(:,ii) - bb_dark(ii) > fudge_factor.bb * (nanmean(data.beta(:,other),2) - nanmean(bb_dark(other),2));
+    bad_bb (:,ii) = data.beta(:,ii) - bb_dark(ii) > fudge_factor.bb * ...
+      (mean(data.beta(:,other),2, 'omitnan') - mean(bb_dark(other),2, 'omitnan'));
     Nbad.bb(ii) = Nbad.bb(ii) + sum(bad_bb(:,ii));
   end
   data.beta(logical(bad_bb)) = NaN;
   Nbad.bb = Nbad.bb / size(data.beta(:,ii),1) * 100;
+  
+elseif contains(instrument, 'HBB')
+
+  % normalize data to homogenize auto QC
+  datanorm = data;
+  datanorm.beta = fillmissing(datanorm.beta, 'linear', 2);
+  datanorm.beta = datanorm.beta - min(datanorm.beta(:)) + 2;
+  
+  diff_bb = [NaN(size(datanorm,1),1) diff(datanorm.beta,[],2)];
+  diff_bb(:,1) = median(diff_bb,2, 'omitnan');
+  diff_neg = diff_bb;
+  diff_neg(diff_neg > 0) = NaN;
+  bad_bb_up = diff_bb > abs(median(diff_neg, 2, 'omitnan'));
+%   bad_bb = diff_bb > fudge_factor.bb * median(abs(diff_bb),2, 'omitnan');
+  bad_bb_down = diff_bb < fudge_factor.bb * median(diff_neg,2, 'omitnan');
+
+  if any(fudge_factor.bb < 3)
+    warning('QC threshold might be too low, data might be lost');
+  end
+  bad_bb = bad_bb_up + bad_bb_down;
+  bad_bb = bad_bb > 0;
+  data.beta(bad_bb) = NaN;
+  data(sum(isnan(data.beta), 2) > size(data.beta, 2) /3, :) = [];
+  Nbad.bb = sum(bad_bb) / size(data.beta,1) * 100;
 end
 
+% visProd3D(lambda.bb, datanorm.dt, datanorm.beta, ...
+%   false, 'Wavelength', false, 72); zlabel('beta (m^{-1})'); %, 'Wavelength', true
 
 
 % visProd3D(lambda_ref, dataini.dt(100000:101000,:), dataini.a(100000:101000,:), false, 'Wavelength', false, 72); zlabel('a_p (m^{-1})'); %, 'Wavelength', true

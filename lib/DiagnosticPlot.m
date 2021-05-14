@@ -25,7 +25,7 @@ end
 
 for j = 1:length(level)
   fieldna = fieldnames(data.(level{j}));
-  if strcmp(fieldna, 'bad')
+  if any(strcmp(fieldna, 'bad'))
     data.(level{j}).bad = [];
   end
   tabletoplot = fieldna(~structfun(@isempty, data.(level{j})));
@@ -39,9 +39,9 @@ for j = 1:length(level)
       end
       day_to_plot = [max(szdt(:,1)) max(szdt(:,2)) + sztoplot.(instrument)];
       if contains(instrument,'AC')
-        toplot = {'a','c'};
+        toplot = repmat({'a','c'}, size(tabletoplot));
       else
-        toplot = {'beta'};
+        toplot = repmat({'beta'}, size(tabletoplot));
       end
     case {'bin', 'qc'}
       szdt = NaN(size(tabletoplot, 1), 2);
@@ -51,9 +51,9 @@ for j = 1:length(level)
       end
       day_to_plot = [min(szdt(:,1)) max(szdt(:,2))];
       if contains(instrument,'AC')
-        toplot = {'a','c'};
+        toplot = repmat({'a','c'}, size(tabletoplot));
       else
-        toplot = {'beta'};
+        toplot = repmat({'beta'}, size(tabletoplot));
       end
     case 'prod'
       szdt = NaN(size(tabletoplot, 1), 2);
@@ -69,7 +69,12 @@ for j = 1:length(level)
 %         toplot = {['a' tabletoplot{~contains(tabletoplot, 'QCfailed')}] ...
 %           ['c' tabletoplot{~contains(tabletoplot, 'QCfailed')}]};
       else
-        toplot = {['beta' tabletoplot{1}], ['bb' tabletoplot{1}]};
+        toplot = [cellfun(@(x) ['beta' x], tabletoplot, 'un', 0) ...
+          cellfun(@(x) ['bb' x], tabletoplot, 'un', 0)];
+        if any(contains(toplot, 'QCfailed'))
+          toplot(contains(toplot, 'QCfailed')) = {'betap', 'bbp'};
+        end
+%         toplot = {['beta' tabletoplot{1}], ['bb' tabletoplot{1}]};
       end
   end
   
@@ -79,12 +84,27 @@ for j = 1:length(level)
         if strcmp(tabletoplot{i}, 'diw') % if DI plot entire dataset
           sel = true(size(data.(level{j}).(tabletoplot{i}).dt));
         else
-          sel = data.(level{j}).(tabletoplot{i}).dt >= day_to_plot(1) & ...
-            data.(level{j}).(tabletoplot{i}).dt <= day_to_plot(2);
-        end
-        if contains(instrument,'AC') && contains(toplot{k}, 'a')
+          sel = false(size(data.(level{j}).(tabletoplot{i}).dt));
+          if size(sel,1) < 20000
+            sel(1:end) = true;
+          else
+            warning('Large dataset, only the first 20000 %s %s %s spectrum were plotted to save computer memory', ...
+              level{j}, tabletoplot{i}, toplot{i, k})
+            sel(1:20000) = true;
+          end
+%           sel = data.(level{j}).(tabletoplot{i}).dt >= day_to_plot(1) & ...
+%             data.(level{j}).(tabletoplot{i}).dt <= day_to_plot(2);
+        end        
+        
+%         if strcmp(tabletoplot{i}, 'diw') % if DI plot entire dataset
+%           sel = true(size(data.(level{j}).(tabletoplot{i}).dt));
+%         else
+%           sel = data.(level{j}).(tabletoplot{i}).dt >= day_to_plot(1) & ...
+%             data.(level{j}).(tabletoplot{i}).dt <= day_to_plot(2);
+%         end
+        if contains(instrument,'AC') && contains(toplot{i, k}, 'a')
           wl = wla;
-        elseif contains(instrument,'AC') && contains(toplot{k}, 'c')
+        elseif contains(instrument,'AC') && contains(toplot{i, k}, 'c')
           wl = wlc;
         end
         if size(data.(level{j}).(tabletoplot{i}).dt(sel),1) > 1
@@ -94,7 +114,7 @@ for j = 1:length(level)
           zlabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
           xlabel('lambda (nm)');
           ylabel('time');
-        else
+        elseif ~isempty(data.(level{j}).(tabletoplot{i}).dt(sel))
           visProd2D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, j*i+k*10);
@@ -103,8 +123,8 @@ for j = 1:length(level)
           title(datestr(data.(level{j}).(tabletoplot{i}).dt(sel)));
         end
         % plot plan at 676 nm to check shift in chl a peak wavelength
-        if contains(instrument,'AC') && contains(toplot{k}, 'a') && ...
-            ~strcmp(tabletoplot{i}, 'diw')
+        if contains(instrument,'AC') && contains(toplot{i, k}, 'a') && ...
+            ~strcmp(tabletoplot{i}, 'diw') && ~isempty(data.(level{j}).(tabletoplot{i}).dt(sel))
           hold on
           zsc = zlim;
           ysc = ylim;
