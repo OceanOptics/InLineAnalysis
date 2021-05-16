@@ -3,15 +3,16 @@
 % created: Jan 05, 2021
 clear
 close all
-cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master')
+% cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master/')
+cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master/')
 
 % Load InLineAnalysis and the configuration
 ila = InLineAnalysis('cfg/EXPORTS02_cfg.m');
 
 % Quick cfg update
 %% TSG
- ila.instrument.TSG.logger = 'SBE45TSG';
- ila.cfg.days2run = datenum(2021,5,2,0,0,0):datenum(2021,5,10,0,0,0);
+ ila.instrument.TSG.logger = 'matlab_Emmanuel'; % SBE45TSG matlab_Emmanuel
+ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,10,0,0,0);
 % ila.instrument.TSG.logger = 'TeraTerm';
 % ila.cfg.days2run = datenum(2021,1,10,0,0,0):datenum(2021,1,15,0,0,0);
 
@@ -32,7 +33,7 @@ ila.cfg.days2run = datenum(2021,5,2,0,0,0):datenum(2021,5,5,0,0,0);
  ila.cfg.days2run = datenum(2021,5,5,0,0,0):datenum(2021,5,10,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','HBB'}; % 'FLOW', 'TSG', 'BB31052', 'HBB', 'WSCD859','SPCD'
+ila.cfg.instruments2run = {'FLOW','TSG','HBB'}; % 'FLOW', 'TSG', 'BB31052', 'HBB', 'WSCD859','SPCD'
 ila.cfg.qcref.view = 'HBB';
 ila.cfg.parallel = Inf;
 
@@ -100,9 +101,9 @@ visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB
 % % % instrument = ila.cfg.qcref.view;
 % % % FLOW = ila.instrument.FLOW.data;
 
-% ila.cfg.qcref.MinFiltPeriod = 65; % filter even period in minute % ACS: 55 % BB3: 60
-% ila.cfg.qcref.szFilt = 12; % filter even length in minute % default = 10
-% ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
+ila.cfg.qcref.MinFiltPeriod = 65; % filter even period in minute % ACS: 55 % BB3: 60
+ila.cfg.qcref.szFilt = 12; % filter even length in minute % default = 10
+ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
 
 %% 3.Normal QC Reference
 % run with mode ui during first run (it saves your work for the next run)
@@ -133,12 +134,12 @@ ila.cfg.qc.RawAutoQCLim.dissolved.a = 3; % 4
 ila.cfg.qc.RawAutoQCLim.dissolved.c = 3; % 12
 % fudge factor for auto QC BB.
 % 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
-ila.cfg.qc.RawAutoQCLim.filtered.bb = 5;
-ila.cfg.qc.RawAutoQCLim.total.bb = 3;
+ila.cfg.qc.RawAutoQCLim.filtered.bb = 4;
+ila.cfg.qc.RawAutoQCLim.total.bb = 4;
 % remove saturated periods in BB
 ila.cfg.qc.Saturation_Threshold_bb = 4000; % saturate above 4000 counts
-ila.RawAutoQC(ila.cfg.qc.RawAutoQCLim, ila.cfg.qc.Saturation_Threshold_bb);
-ila.CheckDataStatus();
+ila.RawAutoQC(ila.cfg.qc.RawAutoQCLim, ila.cfg.qc.Saturation_Threshold_bb, 'raw');
+% ila.CheckDataStatus();
 
 %% Normal and DI Diagnostic Plot
 % check raw spectrums AC or BB sensors

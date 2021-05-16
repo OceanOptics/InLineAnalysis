@@ -125,6 +125,7 @@ else
 end
 
 [data, lambda] = reformatHBB(dat, cal_temp.wl);
+data(all(isnan(data.beta), 2), :) = [];
 
 % save calibration information in table properties
 data = addprop(data, {'PlaqueCal', 'TemperatureCal'}, ...
@@ -218,7 +219,7 @@ function [data, lambda] = reformatHBB(dat, lambda)
 uscan = unique(dat.ScanIdx);
 
 foo = dat.wl;
-for i = 1:size(lambda, 2)
+for i = 1:max(size(lambda))
   foo(foo == lambda(i)) = i;
 end
 
@@ -236,7 +237,7 @@ data = table();
 % ScatTempCor2 = NaN(size(uscan, 1), 28);
 % ScatTempCor3 = NaN(size(uscan, 1), 28);
 % ScatTempCorX = NaN(size(uscan, 1), 28);
-beta = NaN(size(uscan, 1), 28);
+beta = NaN(size(uscan, 1), max(size(lambda)));
 % % TempCorrCoeff = NaN(size(uscan, 1), 28);
 % % ScatX = NaN(size(uscan, 1), 28);
 % % GainX = NaN(size(uscan, 1), 28);

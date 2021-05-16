@@ -25,8 +25,8 @@ t = textscan(fid, parser, 'delimiter', ',');
 fclose(fid);
 
 % Build table
-data = table(t{2} + t{3}, t{6}, t{7}, t{8}, t{10}, 'VariableNames', ...
-  {'dt', 'tcal', 'c', 's', 't'});
+data = table(t{2} + t{3}, t{6}, t{7}, t{8}, t{10}, t{9}, 'VariableNames', ...
+  {'dt', 'tcal', 'c', 's', 't', 'sound_speed'});
 data.dt = datenum(data.dt);
 data(isnan(data.dt), :) = [];
 

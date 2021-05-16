@@ -42,9 +42,9 @@ p.betap_n = tot.beta_avg_n;
 % Correct bu on March 5, 2018, FitSpectra_HM2 does not accept NaNs in cp
 p(all(isnan(p.bbp),2),:)=[];
 sel = ~any(isnan(p.bbp));
-sel(param.lambda > 660) = false;
-fprintf('Computing Gamma_BB ... ')
-[~, p.gamma_bb] = FitSpectra_HM2(param.lambda(sel), p.bbp(:, sel));
+sel(param.lambda < 510 & param.lambda > 650) = false;
+fprintf('Computing Gamma_bbp ... ')
+[~, p.gamma_bbp] = FitSpectra_HM2(param.lambda(sel), p.bbp(:, sel));
 fprintf('Done\n')
 
 % Estimate POC and Cphyto from bbp
@@ -76,28 +76,65 @@ if nargout > 1 && nargin > 4
       % Average values
       di_pp.beta = mean(di_beta_sel(avg_sel,:));
       di_pp.beta_avg_sd = mean(di_beta_avg_sd_sel(avg_sel,:));
+    case 'SW_scattering'
+%       tsg = table(filt.dt, 'VariableNames', {'dt'});
+%       a = 12;
+%       b = 16;
+%       tsg.t = (b-a).*rand(size(tsg,1),1) + a;
+%       a = 32;
+%       b = 35;
+%       tsg.s = (b-a).*rand(size(tsg,1),1) + a;
     otherwise
       error('Method not supported.');
   end
   % Get beta salt from Zhang et al. 2009
   t = interp1(tsg.dt, tsg.t, filt.dt);
   s = interp1(tsg.dt, tsg.s, filt.dt);
+%   beta_s = NaN(size(filt.beta));
+%   for i = 1:max(size(param.lambda))
+%     for j = 1:size(t,1)
+%       beta_s(j,i) = betasw_ZHH2009(param.lambda(i), t(j), param.theta, s(j)) - betasw_ZHH2009(param.lambda(i), t(j), param.theta, 0);
+%     end
+%   end
+  
+%   visProd3D(param.lambda, filt.dt, filt.beta, ...
+%   false, 'Wavelength', false, 70); zlabel('beta filt (m^{-1})'); %, 'Wavelength', true
+
   beta_s = NaN(size(filt.beta));
-  for i = 1:size(param.lambda,2)
-    for j = 1:size(t,1)
-      beta_s(j,i) = betasw_ZHH2009(param.lambda(i), t(j), param.theta, s(j)) - betasw_ZHH2009(param.lambda(i), t(j), param.theta, 0);
-    end
+  for j = 1:size(t,1)
+    beta_s(j, :) = betasw_ZHH2009(param.lambda, t(j), param.theta, s(j));
   end
 
+%   visProd3D(param.lambda, filt.dt, beta_s, ...
+%   false, 'Wavelength', false, 71); zlabel('beta SW (m^{-1})'); %, 'Wavelength', true
+  
   % Compute beta dissolved
   g = table(filt.dt, 'VariableNames', {'dt'});
-  g.betag = param.slope .* (filt.beta - di_pp.beta) - beta_s ;
+%   g.betag = param.slope .* filt.beta - beta_s ;
+  g.betag = filt.beta - beta_s ;
+  g.bbg = 2 * pi * X_p .* g.betag;
+  fprintf('Computing filtered beta slope... ')
+%   sel = ~any(isnan(filt.beta));
+%   sel(param.lambda < 510 & param.lambda > 650) = false;
+  sel = param.lambda > 510 & param.lambda < 650;
+  g.beta_filt_slope = NaN(size(g.betag, 1), 1);
+  for j = 1:size(filt.beta,1)
+    coef = polyfit(param.lambda(sel), filt.beta(j,sel),1);
+    g.beta_filt_slope(j) = coef(1);
+  end
+%   [~, g.gamma_bbg] = FitSpectra_HM2(param.lambda(sel), g.bbg(:, sel));
+  fprintf('Done\n')
+  
+%   visProd3D(param.lambda, filt.dt, g.betag, ...
+%   false, 'Wavelength', false, 72); zlabel('betag (betaFilt - betaSW (m^{-1})'); %, 'Wavelength', true
   
   % Propagate error
   %   Note: Error is not propagated through Scattering & Residual temperature
   %         correction as required by SeaBASS
-  g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
+%   g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
+  g.betag_sd = filt.beta_avg_sd;
   g.betag_n = filt.beta_avg_n;
+  
 end
 end
 

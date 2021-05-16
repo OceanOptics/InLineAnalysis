@@ -54,12 +54,10 @@ classdef TSG < Instrument
             case {'SBE45TSG'}
               obj.data = iRead(@importSBEformatTSG, obj.path.raw, obj.path.wk, '',...
                              days2run, 'SBE45TSG', force_import, ~write, true);
-%             case {'Inlinino'}
-%               obj.data = iRead(@importInlinino_miniTSG, obj.path.raw, obj.path.wk, 'C01_',...
-%                              days2run, 'Inlinino', force_import, ~write, true);
-%             case {'Inlinino'}
-%               obj.data = iRead(@importInlinino_miniTSG, obj.path.raw, obj.path.wk, 'T01_',...
-%                              days2run, 'Inlinino', force_import, ~write, true);
+            case {'matlab_Emmanuel'}
+              obj.data = iRead(@importJCookTSG, obj.path.raw, obj.path.wk, '',...
+                             days2run, 'matlab_Emmanuel', force_import, ~write, true,...
+                             [], 'GPS_TSG');
             otherwise
               error('TSG: Unknown logger for %s.', obj.boat);
           end                           

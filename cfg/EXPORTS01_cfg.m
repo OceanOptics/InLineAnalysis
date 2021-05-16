@@ -202,6 +202,7 @@ cfg.process.qcref.reference = 'FLOW';
 cfg.process.qcref.view = 'BB3349';
 cfg.process.qcref.mode = 'load'; % load or ui
 cfg.process.qcref.MinFiltPeriod = 50; % filter even period in minute
+cfg.process.qcref.szFilt = 10; % filter even length in minute
 
 %%% Split total/filtered %%%
 cfg.process.split = struct();

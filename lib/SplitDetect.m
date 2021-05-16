@@ -49,14 +49,17 @@ end
 if ~isempty(FTH)
   % FTH.swt = zeros(size(FTH.swt,1),1);
   oldFTH = FTH;
-  FTHdt = (oldFTH.dt(1):1/1/3600/24:oldFTH.dt(end))';
+  FTHstart = min([oldFTH.dt; data.dt]);
+  FTHend = max([oldFTH.dt; data.dt]);
+  FTHdt = (FTHstart:1/1/3600/24:FTHend)';
+%   FTHdt = (oldFTH.dt(1):1/1/3600/24:oldFTH.dt(end))';
 
   % delete data with duplicats timestamp
   [~, I] = unique(oldFTH.dt, 'first');
   x = 1:length(oldFTH.dt);
   x(I) = [];
   oldFTH(x,:) = [];
-  int_spd = interp1(oldFTH.dt, oldFTH.spd, FTHdt, 'linear', 'extrap');
+  int_spd = interp1(oldFTH.dt, oldFTH.spd, FTHdt, 'linear');
   ism = ~ismember(FTHdt,oldFTH.dt);
   int_spd (ism) = NaN;
   FTH = table(FTHdt, zeros(size(FTHdt,1),1), int_spd, 'VariableNames', {'dt', 'swt', 'spd'});

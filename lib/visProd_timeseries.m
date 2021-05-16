@@ -79,23 +79,40 @@ switch instrument
   case {'BB', 'HBB'}
     if size(lambda, 1) > size(lambda, 2); lambda = lambda'; end
     if contains(instrument, 'HBB')
-      data.poc(:, lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
+      if any(contains(data.Properties.VariableNames, 'betap'))
+        toplot = 'poc';
+        unit = '(mg.m^{-3})';
+        fignum = 79;
+      elseif any(contains(data.Properties.VariableNames, 'betag'))
+        toplot = 'betag';
+        unit = 'm^{-1}';
+        fignum = 80;
+      end
+      data.(toplot)(:, lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
       lambda(lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
     end
     C = reshape(spectrumRGB(lambda), max(size(lambda)),  3);
-    figure(79);
+    figure(fignum);
     clf
     yyaxis('left')
     hold on
-    scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.poc, 10, C, 'filled');
-    ylabel('[POC] (mg.m^{-3})');
-    leg = cellfun(@(c) ['POC_{' c 'nm}'], cellstr(num2str(lambda')), 'un', 0);
-    if contains(instrument, 'HBB')
+    scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.(toplot), 10, C, 'filled');
+    ylabel([toplot ' ' unit]);
+    leg = cellfun(@(c) [toplot '_{' c 'nm}'], cellstr(num2str(lambda')), 'un', 0);
+    if contains(instrument, 'HBB') && any(contains(data.Properties.VariableNames, 'betap'))
       yyaxis('right')
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.gamma_bb, 50, ...
+      hold on
+      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.gamma_bbp, 50, ...
         'k', 'filled', 'Marker', 'v');
-      ylabel('Gamma bbp (unitless)');
+      ylabel('Gamma bb (unitless)');
       leg = [leg; {'gamma bbp'}];
+    end
+    if contains(instrument, 'HBB') && any(contains(data.Properties.VariableNames, 'beta_filt_slope'))
+      yyaxis('right')
+      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.beta_filt_slope, 50, ...
+        'k', 'filled', 'Marker', 'v');
+      ylabel('beta filtered slope');
+      leg = [leg; {'beta filtered slope'}];
     end
     hold off
     legend(leg)

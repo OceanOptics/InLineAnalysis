@@ -28,16 +28,16 @@ parfor k = 1:nspect
     gamma(k) = x(2);
 
     %disp(['  Fitting power-law model: k=' ...
-        %num2str(k) ' cp0=' num2str(x(1)) ' gamma=' num2str(x(2)) ' err=' num2str(fiterr(k))]);
+        %num2str(k) ' meas0=' num2str(x(1)) ' gamma=' num2str(x(2)) ' err=' num2str(fiterr(k))]);
   end
 end
 return 
 
-% function err = power_law(x, cpmeas, lambda, lambda0);
+% function err = power_law(x, meas, lambda, lambda0);
 % 
-% 	cphat = x(1)*(lambda./lambda0).^(-x(2));
+% 	yhat = x(1)*(lambda./lambda0).^(-x(2));
 % 
-%     err = sum(abs(cpmeas-cphat));
+%     err = sum(abs(meas-yhat));
 % 
 % return
 

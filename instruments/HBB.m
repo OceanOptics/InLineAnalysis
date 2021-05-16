@@ -7,6 +7,7 @@ classdef HBB < Instrument
     calfile_temp = '';
     lambda = [];
     theta = [];
+%     muFactors = [];
   end
   
   methods
@@ -27,6 +28,8 @@ classdef HBB < Instrument
       else; error('Missing field calfile_temp.'); end
       if isfield(cfg, 'theta'); obj.theta = cfg.theta;
       else; error('Missing field theta.'); end
+%       if isfield(cfg, 'muFactors'); obj.muFactors = cfg.muFactors;
+%       else; error('Missing field muFactors.'); end
 
       if isempty(obj.logger)
         fprintf('WARNING: Logger set to InlininoHBB.\n');
@@ -86,6 +89,7 @@ classdef HBB < Instrument
     
     function Calibrate(obj, compute_dissolved, TSG, di_method)
       param = struct('lambda', obj.lambda, 'theta', obj.theta);
+%       param = struct('lambda', obj.lambda, 'theta', obj.theta, 'muFactors', obj.muFactors);
       % linear interpolation only, CDOM interpolation is not yet available
       if compute_dissolved
         [obj.prod.p, obj.prod.g] = processHBB(param, obj.qc.tsw, obj.qc.fsw, obj.bin.diw, TSG.qc.tsw, di_method);
