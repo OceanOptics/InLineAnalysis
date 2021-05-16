@@ -64,28 +64,59 @@ if nargout > 1 && nargin > 4
       % Average values
       di_pp.beta = mean(di_beta_sel(avg_sel,:));
       di_pp.beta_avg_sd = mean(di_beta_avg_sd_sel(avg_sel,:));
+    case 'SW_scattering'
     otherwise
       error('Method not supported.');
   end
   % Get beta salt from Zhang et al. 2009
   t = interp1(tsg.dt, tsg.t, filt.dt);
   s = interp1(tsg.dt, tsg.s, filt.dt);
+%   beta_s = NaN(size(filt.beta));
+%   for i = 1:max(size(param.lambda))
+%     for j = 1:size(t,1)
+%       beta_s(j,i) = betasw_ZHH2009(param.lambda(i), t(j), param.theta, s(j)) - betasw_ZHH2009(param.lambda(i), t(j), param.theta, 0);
+%     end
+%   end
+  
   beta_s = NaN(size(filt.beta));
-  for i = 1:size(param.lambda,2)
-    for j = 1:size(t,1)
-      beta_s(j,i) = betasw_ZHH2009(param.lambda(i), t(j), param.theta, s(j)) - betasw_ZHH2009(param.lambda(i), t(j), param.theta, 0);
-    end
+  for j = 1:size(t,1)
+    beta_s(j, :) = betasw_ZHH2009(param.lambda, t(j), param.theta, s(j));
   end
 
-  % Compute beta dissolved
-  g = table(filt.dt, 'VariableNames', {'dt'});
-  g.betag = param.slope .* (filt.beta - di_pp.beta) - beta_s ;
-  
-  % Propagate error
-  %   Note: Error is not propagated through Scattering & Residual temperature
-  %         correction as required by SeaBASS
-  g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
+  switch di_method
+    case {'interpolate', 'constant'}
+      % Compute beta dissolved
+      g = table(filt.dt, 'VariableNames', {'dt'});
+      g.betag = param.slope .* (filt.beta - di_pp.beta) - beta_s ;
+      % Propagate error
+      %   Note: Error is not propagated through Scattering & Residual temperature
+      %         correction as required by SeaBASS
+      g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
+    case 'SW_scattering'
+      % Compute beta dissolved
+      g = table(filt.dt, 'VariableNames', {'dt'});
+      % g.betag = param.slope .* filt.beta - beta_s ;
+      g.betag = filt.beta - beta_s ;
+      % Propagate error
+      %   Note: Error is not propagated through Scattering & Residual temperature
+      %         correction as required by SeaBASS
+      % g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
+      g.betag_sd = filt.beta_avg_sd;
+    otherwise
+      error('Method not supported.');
+  end
   g.betag_n = filt.beta_avg_n;
+  
+  % Compute bbg and beta filtered slope
+  g.bbg = 2 * pi * X_p .* g.betag;
+  fprintf('Computing beta filtered slope... ')
+  sel = param.lambda > 510 & param.lambda < 650;
+  g.beta_filt_slope = NaN(size(g.betag, 1), 1);
+  for j = 1:size(filt.beta,1)
+    coef = polyfit(param.lambda(sel), filt.beta(j,sel),1);
+    g.beta_filt_slope(j) = coef(1);
+  end
+  fprintf('Done\n')
 end
 end
 

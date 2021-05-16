@@ -38,8 +38,7 @@ p.betap_n = tot.beta_avg_n;
 % 3.3 Derive Gamma (does not support NaN values) (Boss et al. 2001)
 % REFERENCES:
 % Boss, E., W.S. Pegau, W.D. Gardner, J.R.V. Zaneveld, A.H. Barnard., M.S. Twardowski, G.C. Chang, and T.D. Dickey, 2001. Spectral particulate attenuation and particle size distribution in the bottom boundary layer of a continental shelf. Journal of Geophysical Research, 106, 9509-9516.
-% [~,p.gamma] = FitSpectra_HM2(lambda.ref(:,1:end-2),p.cp(:,1:end-2));
-% Correct bu on March 5, 2018, FitSpectra_HM2 does not accept NaNs in cp
+% Correct bu on March 5, 2018, FitSpectra_HM2 does not accept NaNs in spectra
 p(all(isnan(p.bbp),2),:)=[];
 sel = ~any(isnan(p.bbp));
 sel(param.lambda < 510 & param.lambda > 650) = false;
@@ -77,13 +76,6 @@ if nargout > 1 && nargin > 4
       di_pp.beta = mean(di_beta_sel(avg_sel,:));
       di_pp.beta_avg_sd = mean(di_beta_avg_sd_sel(avg_sel,:));
     case 'SW_scattering'
-%       tsg = table(filt.dt, 'VariableNames', {'dt'});
-%       a = 12;
-%       b = 16;
-%       tsg.t = (b-a).*rand(size(tsg,1),1) + a;
-%       a = 32;
-%       b = 35;
-%       tsg.s = (b-a).*rand(size(tsg,1),1) + a;
     otherwise
       error('Method not supported.');
   end
@@ -97,43 +89,46 @@ if nargout > 1 && nargin > 4
 %     end
 %   end
   
-%   visProd3D(param.lambda, filt.dt, filt.beta, ...
-%   false, 'Wavelength', false, 70); zlabel('beta filt (m^{-1})'); %, 'Wavelength', true
-
   beta_s = NaN(size(filt.beta));
   for j = 1:size(t,1)
     beta_s(j, :) = betasw_ZHH2009(param.lambda, t(j), param.theta, s(j));
   end
 
-%   visProd3D(param.lambda, filt.dt, beta_s, ...
-%   false, 'Wavelength', false, 71); zlabel('beta SW (m^{-1})'); %, 'Wavelength', true
+  switch di_method
+    case {'interpolate', 'constant'}
+      % Compute beta dissolved
+      g = table(filt.dt, 'VariableNames', {'dt'});
+      g.betag = param.slope .* (filt.beta - di_pp.beta) - beta_s ;
+      % Propagate error
+      %   Note: Error is not propagated through Scattering & Residual temperature
+      %         correction as required by SeaBASS
+      % g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
+      g.betag_sd = sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
+    case 'SW_scattering'
+      % Compute beta dissolved
+      g = table(filt.dt, 'VariableNames', {'dt'});
+      % g.betag = param.slope .* filt.beta - beta_s ;
+      g.betag = filt.beta - beta_s ;
+      % Propagate error
+      %   Note: Error is not propagated through Scattering & Residual temperature
+      %         correction as required by SeaBASS
+      % g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
+      g.betag_sd = filt.beta_avg_sd;
+    otherwise
+      error('Method not supported.');
+  end
+  g.betag_n = filt.beta_avg_n;
   
-  % Compute beta dissolved
-  g = table(filt.dt, 'VariableNames', {'dt'});
-%   g.betag = param.slope .* filt.beta - beta_s ;
-  g.betag = filt.beta - beta_s ;
+  % Compute bbg and beta filtered slope
   g.bbg = 2 * pi * X_p .* g.betag;
-  fprintf('Computing filtered beta slope... ')
-%   sel = ~any(isnan(filt.beta));
-%   sel(param.lambda < 510 & param.lambda > 650) = false;
+  fprintf('Computing beta filtered slope... ')
   sel = param.lambda > 510 & param.lambda < 650;
   g.beta_filt_slope = NaN(size(g.betag, 1), 1);
   for j = 1:size(filt.beta,1)
     coef = polyfit(param.lambda(sel), filt.beta(j,sel),1);
     g.beta_filt_slope(j) = coef(1);
   end
-%   [~, g.gamma_bbg] = FitSpectra_HM2(param.lambda(sel), g.bbg(:, sel));
   fprintf('Done\n')
-  
-%   visProd3D(param.lambda, filt.dt, g.betag, ...
-%   false, 'Wavelength', false, 72); zlabel('betag (betaFilt - betaSW (m^{-1})'); %, 'Wavelength', true
-  
-  % Propagate error
-  %   Note: Error is not propagated through Scattering & Residual temperature
-  %         correction as required by SeaBASS
-%   g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
-  g.betag_sd = filt.beta_avg_sd;
-  g.betag_n = filt.beta_avg_n;
   
 end
 end
