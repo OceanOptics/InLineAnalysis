@@ -24,12 +24,7 @@ cfg.meta.measurement_depth = 5;
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-if ispc
-  PATH_ROOT = 'D:\Data\EXPORTS02\';
-elseif ismac
-  PATH_ROOT = '/Volumes/Samsung_T5/Data/EXPORTS02/';
-end
-% PATH_ROOT = '/Users/emmanuel.boss/Desktop/InLine analysis/Data/EXPORTS02/';
+PATH_ROOT = '/Users/emmanuel.boss/Desktop/InLine analysis/Data/EXPORTS02/';
 
 %%% TSG + GPS %%%
 cfg.instruments.TSG = struct();

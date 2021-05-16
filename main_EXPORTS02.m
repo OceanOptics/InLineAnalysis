@@ -3,8 +3,7 @@
 % created: Jan 05, 2021
 clear
 close all
-% cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master/')
-cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master/')
+cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master/')
 
 % Load InLineAnalysis and the configuration
 ila = InLineAnalysis('cfg/EXPORTS02_cfg.m');
