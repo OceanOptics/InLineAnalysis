@@ -80,8 +80,8 @@ classdef HBB < Instrument
       switch obj.di_cfg.logger
         case 'InlininoHBB'
           obj.raw.diw = iRead(@importInlininoHBB, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
-                         days2run, 'Inlinino', force_import, ~write, true, true, '', Inf, ...
-                         obj.calfile_plaque, obj.calfile_temp);
+                         days2run, 'Inlinino', force_import, ~write, true, true, ...
+                         obj.di_cfg.postfix, Inf, obj.calfile_plaque, obj.calfile_temp);
         otherwise
           error('HBB: Unknown logger.');
       end

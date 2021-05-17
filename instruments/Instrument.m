@@ -211,9 +211,9 @@ classdef (Abstract) Instrument < handle
       end
     end
     
-    function DeleteUserSelection(obj, user_selection, channel)
-      if nargin < 2
-        channel = 'all';
+    function DeleteUserSelection(obj, user_selection, chan)
+      if nargin < 3
+        chan = 'all';
       end
       for i=1:size(user_selection, 1)
 %         obj.bad.tsw = obj.qc.tsw(user_selection(i,1) <= obj.qc.tsw.dt & obj.qc.tsw.dt <= user_selection(i,2),:);
@@ -225,10 +225,10 @@ classdef (Abstract) Instrument < handle
           obj.qc.fsw(user_selection(i,1) <= obj.qc.fsw.dt & obj.qc.fsw.dt <= user_selection(i,2),:) = []; 
         end
         if ~isempty(obj.qc.diw)
-          if strcmp(channel, 'all')
+          if strcmp(chan, 'all')
             obj.qc.diw(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = [];
           else
-            obj.qc.diw.(channel)(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = NaN;
+            obj.qc.diw.(chan)(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = NaN;
           end
         end
       end

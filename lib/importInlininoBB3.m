@@ -22,13 +22,13 @@ end
 
 % Get header
 hd = strip(strsplit(fgetl(fid), ','));
-% Skip empty lines (bug in Inlinino)
-foo = fgetl(fid);
-while ~isempty(foo)
-    foo = fgetl(fid);
+% get units skipping empty lines (bug in Inlinino)
+unit = fgetl(fid);
+while isempty(unit)
+    unit = fgetl(fid);
 end
 % get units and lambda
-unit = strip(strsplit(fgetl(fid), ','));
+unit = strip(strsplit(unit, ','));
 unit(3:4) = [];
 lambda = str2double(cellfun(@(c) strrep(c, 'beta', ''), hd(2:4), 'un', 0));
 

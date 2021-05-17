@@ -90,7 +90,7 @@ if contains(instrument, 'AC')
       seg.a = seg.a - min(seg.a(:)) + 2;
       seg.c = seg.c - min(seg.c(:)) + 2;
       
-      % remove spectrum if any derivation over time between 500 and 660 nm is
+      % remove spectrum if any derivative over time between 500 and 660 nm is
       % 10x (a) and 5x (c) higher than average derivation over time AND any value between
       % 475 and 700 nm is greater than 99.7 percentile
       deriv = [NaN(1, size(seg.a,2)); diff(seg.a + min(seg.a(:)) + 500)];
@@ -111,10 +111,8 @@ if contains(instrument, 'AC')
     bad_a = bad_a > 0;
     bad_c = bad_c > 0;
   end
-
-  % Nbad_tot = sum(bad_a & bad_c)/size(data,1)*100;
-  Nbad.a = sum(bad_a)/size(data,1)*100;%-Nbad_tot;
-  Nbad.c = sum(bad_c)/size(data,1)*100;%-Nbad_tot;
+  Nbad.a = sum(bad_a)/size(data,1)*100;
+  Nbad.c = sum(bad_c)/size(data,1)*100;
   data.a(bad_a,:) = NaN;
   data.c(bad_c,:) = NaN;
   data(bad_a & bad_c,:)=[];
@@ -137,15 +135,45 @@ elseif contains(instrument, 'BB3')
   if any(fudge_factor.bb < 3)
     warning('QC threshold might be too low, data might be lost');
   end
-  bad_bb = NaN(size(data,1), size(lambda.bb, 2));
+  bad_bb = false(size(data,1), size(lambda.bb, 2));
   for ii = 1:size(lambda.bb, 2)
     other = 1:size(lambda.bb, 2); other(ii)=[];
     bad_bb (:,ii) = data.beta(:,ii) - bb_dark(ii) > fudge_factor.bb * ...
       (mean(data.beta(:,other),2, 'omitnan') - mean(bb_dark(other),2, 'omitnan'));
-    Nbad.bb(ii) = Nbad.bb(ii) + sum(bad_bb(:,ii));
+%     Nbad.bb(ii) = Nbad.bb(ii) + sum(bad_bb(:,ii));
   end
-  data.beta(logical(bad_bb)) = NaN;
-  Nbad.bb = Nbad.bb / size(data.beta(:,ii),1) * 100;
+  
+  if DI 
+    % segment database per DI event
+    foo = find(diff(datetime(data.dt, 'ConvertFrom', 'datenum')) > hours(0.5)) + 1;
+    if isempty(foo)
+      foo = [1 size(data, 1)];
+    else
+      foo = [[1; foo], [foo-1; foo(end) + foo(1)]];
+      foo(end, end) = size(data, 1);
+    end
+    for i = 1:size(foo,1)
+      seg = data(foo(i, 1):foo(i, 2), :);
+      % normalize each segments independently
+      seg.beta = seg.beta - min(seg.beta(:)) + 2;
+      
+      % remove spectrum if any derivative over time is
+      % 5 times higher than average derivative over time AND
+      % any value is greater than 99.7 percentile
+      deriv = [NaN(1, size(seg.beta,2)); diff(seg.beta + min(seg.beta(:)) + 500)];
+      perc = prctile(seg.beta, 95);
+      segbad = false(size(seg.beta));
+      segbad(abs(deriv) > fudge_factor.bb * mean(abs(deriv),1, 'omitnan') & ...
+        seg.beta > perc) = true;
+      
+      bad_bb(foo(i, 1):foo(i, 2), :) = bad_bb(foo(i, 1):foo(i, 2), :) + segbad;
+    end
+    bad_bb = bad_bb > 0;
+  end
+  
+  Nbad.bb = sum(bad_bb) / size(data.beta,1) * 100;
+  data.beta(bad_bb) = NaN;
+  data(all(isnan(data.beta), 2),:) = [];
   
 elseif contains(instrument, 'HBB')
   % delete empty rows

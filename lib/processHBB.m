@@ -35,13 +35,11 @@ p.bbp = 2 * pi * X_p .* p.betap;
 p.betap_sd = sqrt(tot.beta_avg_sd + filt_interp.beta_avg_sd);
 p.betap_n = tot.beta_avg_n;
 
-% 3.3 Derive Gamma (does not support NaN values) (Boss et al. 2001)
-% REFERENCES:
-% Boss, E., W.S. Pegau, W.D. Gardner, J.R.V. Zaneveld, A.H. Barnard., M.S. Twardowski, G.C. Chang, and T.D. Dickey, 2001. Spectral particulate attenuation and particle size distribution in the bottom boundary layer of a continental shelf. Journal of Geophysical Research, 106, 9509-9516.
+% Derive Gamma_bbp (does not support NaN values)
 % Correct bu on March 5, 2018, FitSpectra_HM2 does not accept NaNs in spectra
 p(all(isnan(p.bbp),2),:)=[];
 sel = ~any(isnan(p.bbp));
-sel(param.lambda < 510 & param.lambda > 650) = false;
+sel(param.lambda < 510 | param.lambda > 650) = false;
 fprintf('Computing Gamma_bbp ... ')
 [~, p.gamma_bbp] = FitSpectra_HM2(param.lambda(sel), p.bbp(:, sel));
 fprintf('Done\n')
@@ -53,6 +51,8 @@ fprintf('Done\n')
 p(any(p.bbp < 0,2),:) = [];
 
 if nargout > 1 && nargin > 4
+  t = interp1(tsg.dt, tsg.t, filt.dt);
+  s = interp1(tsg.dt, tsg.s, filt.dt);
   switch di_method
     case 'interpolate'
       % Interpolate DI on Filtered
@@ -80,35 +80,40 @@ if nargout > 1 && nargin > 4
       error('Method not supported.');
   end
   % Get beta salt from Zhang et al. 2009
-  t = interp1(tsg.dt, tsg.t, filt.dt);
-  s = interp1(tsg.dt, tsg.s, filt.dt);
 %   beta_s = NaN(size(filt.beta));
 %   for i = 1:max(size(param.lambda))
 %     for j = 1:size(t,1)
 %       beta_s(j,i) = betasw_ZHH2009(param.lambda(i), t(j), param.theta, s(j)) - betasw_ZHH2009(param.lambda(i), t(j), param.theta, 0);
 %     end
 %   end
-  
-  beta_s = NaN(size(filt.beta));
-  for j = 1:size(t,1)
-    beta_s(j, :) = betasw_ZHH2009(param.lambda, t(j), param.theta, s(j));
-  end
+
 
   switch di_method
     case {'interpolate', 'constant'}
+      % Get beta salt from Zhang et al. 2009
+      beta_s = NaN(size(filt.beta));
+      for j = 1:size(t,1)
+        beta_s(j, :) = betasw_ZHH2009(param.lambda, t(j), param.theta, s(j)) - ...
+          betasw_ZHH2009(param.lambda, t(j), param.theta, 0);
+      end
       % Compute beta dissolved
       g = table(filt.dt, 'VariableNames', {'dt'});
-      g.betag = param.slope .* (filt.beta - di_pp.beta) - beta_s ;
+      g.betag = (filt.beta - di_pp.beta) - beta_s ;
       % Propagate error
       %   Note: Error is not propagated through Scattering & Residual temperature
       %         correction as required by SeaBASS
       % g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
       g.betag_sd = sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
     case 'SW_scattering'
+      % Get beta salt from Zhang et al. 2009
+      beta_sw = NaN(size(filt.beta));
+      for j = 1:size(t,1)
+        beta_sw(j, :) = betasw_ZHH2009(param.lambda, t(j), param.theta, s(j));
+      end
       % Compute beta dissolved
       g = table(filt.dt, 'VariableNames', {'dt'});
       % g.betag = param.slope .* filt.beta - beta_s ;
-      g.betag = filt.beta - beta_s ;
+      g.betag = filt.beta - beta_sw ;
       % Propagate error
       %   Note: Error is not propagated through Scattering & Residual temperature
       %         correction as required by SeaBASS
@@ -119,17 +124,17 @@ if nargout > 1 && nargin > 4
   end
   g.betag_n = filt.beta_avg_n;
   
-  % Compute bbg and beta filtered slope
+  % Compute bbg and gamma_bbg
   g.bbg = 2 * pi * X_p .* g.betag;
-  fprintf('Computing beta filtered slope... ')
-  sel = param.lambda > 510 & param.lambda < 650;
-  g.beta_filt_slope = NaN(size(g.betag, 1), 1);
-  for j = 1:size(filt.beta,1)
-    coef = polyfit(param.lambda(sel), filt.beta(j,sel),1);
-    g.beta_filt_slope(j) = coef(1);
-  end
-  fprintf('Done\n')
   
+  % Derive Gamma_bbp (does not support NaN values)
+  % Correct bu on March 5, 2018, FitSpectra_HM2 does not accept NaNs in spectra
+  fprintf('Computing beta filtered slope... ')
+  g(all(isnan(g.bbg),2),:)=[]; % delete line full of NaNs
+  sel = ~any(isnan(g.bbg)); % select wavelenght with no NaN
+  sel(param.lambda < 430 | param.lambda > 650) = false;
+  [~, g.gamma_bbg] = FitSpectra_HM2(param.lambda(sel), g.bbg(:, sel));  
+  fprintf('Done\n')
 end
 end
 

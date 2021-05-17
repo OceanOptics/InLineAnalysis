@@ -50,7 +50,8 @@ classdef BB3 < Instrument
     end
 
     function Calibrate(obj)
-      param = struct('lambda', obj.lambda, 'theta', obj.theta, 'slope', obj.slope);
+      param = struct('lambda', obj.lambda, 'theta', obj.theta, ...
+        'slope', obj.slope, 'dark', obj.dark);
       [obj.prod.p, obj.prod.g] = processBB3(param, obj.qc.tsw, obj.qc.fsw, obj.qc.diw, obj.qc.tsg);
     end
   end

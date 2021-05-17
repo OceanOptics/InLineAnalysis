@@ -1,4 +1,4 @@
-% Fit power law to beamc data
+% Fit power law to data
 function [meas0, gamma, fiterr] = FitSpectra_HM2(lambda, meas)
 lambda = lambda(:)';
 [nspect, nlambd] = size(meas);
@@ -10,16 +10,16 @@ gamma = NaN(nspect,1);
 fiterr = NaN(nspect,1);
 
 %setting options for fmisearch
-opts = optimset('fminsearch');      
-opts = optimset(opts,'MaxIter',4000); 
+opts = optimset('fminsearch');
+opts = optimset(opts,'MaxIter',4000);
 opts = optimset(opts,'MaxFunEvals',2000);   % usually 100*number of params
 opts = optimset(opts,'TolFun',1e-9);
 %opts = optimset('LevenbergMarquardt','on');
 
 parfor k = 1:nspect
-  if all(isfinite(meas(k,:)))
-    % guess for paramters (beamc at lambda0, beamc slope)
-    x0 = [1.0 0.8];
+  if all(isfinite(meas(k,:))) && ~any(isnan(meas(k,:)), 2)
+    % guess for paramters (data at lambda0, beamc slope)
+    x0 = [1.0 -0.8];
 
     % minimization routine a la Nelder Mead
     [x, fiterr(k)] = fminsearch(@least_square, x0, opts, meas(k,:), lambda); %lambda,lambda0
@@ -42,5 +42,5 @@ return
 % return
 
 function y = least_square(x0, spec, lambda)
-y=sum(((spec - x0(1) .* (532 ./ lambda) .^ x0(2))) .^ 2);
+y = sum(((spec - x0(1) .* (532 ./ lambda) .^ x0(2))) .^ 2);
 return

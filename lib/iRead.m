@@ -94,12 +94,12 @@ if read_margin
   margin = 1/24; % day
   if verbose; fprintf('Reading margin ... \n'); end
   pre_data = iRead( fun, dirname_in, dirname_out, prefix, dt(1)-margin, ...
-      software, force, nowrite, verbose, false, postfix, parallel_flag, otherarg1);
+      software, force, nowrite, verbose, false, postfix, parallel_flag, otherarg1, otherarg2 );
   if ~isempty(pre_data)
     pre_data = pre_data(dt(1)-margin <= pre_data.dt,:);
   end
   post_data = iRead( fun, dirname_in, dirname_out, prefix, dt(end)+1+margin, ...
-      software, force, nowrite, verbose, false, postfix, parallel_flag, otherarg1 );
+      software, force, nowrite, verbose, false, postfix, parallel_flag, otherarg1, otherarg1 );
   if ~isempty(post_data)
     post_data = post_data(post_data.dt <= dt(end)+1+margin,:);
   end

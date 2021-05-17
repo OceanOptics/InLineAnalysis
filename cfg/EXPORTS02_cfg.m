@@ -68,6 +68,9 @@ cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 %%% HBB %%%
 SN = '8005';
 cfg.instruments.HBB = struct();
+cfg.instruments.HBB.di = struct();
+cfg.instruments.HBB.di.prefix = ['DIW_HyperBB' SN '_'];
+cfg.instruments.HBB.di.postfix = '';
 cfg.instruments.HBB.model = 'HBB';
 cfg.instruments.HBB.sn = SN;
 cfg.instruments.HBB.ila_prefix = ['HyperBB' SN];
@@ -85,13 +88,16 @@ cfg.instruments.HBB.view = struct('varname', 'beta', 'varcol', 23);
 %%% BB3 %%%
 SN = '1052';
 cfg.instruments.BB3 = struct();
+cfg.instruments.BB3.di = struct();
+cfg.instruments.BB3.di.prefix = ['DIW_BB3' SN '_'];
+cfg.instruments.BB3.di.postfix = '';
 cfg.instruments.BB3.model = 'BB';
 cfg.instruments.BB3.sn = SN;
 cfg.instruments.BB3.ila_prefix = ['BB3' SN];
-cfg.instruments.BB3.logger = 'InlininoBB3';
+cfg.instruments.BB3.logger = 'InlininoBB3SN';
 cfg.instruments.BB3.lambda = [470,532,660];
 cfg.instruments.BB3.theta = 124;
-cfg.instruments.BB3.slope = [1.34E-05,1.38E-06,5.58E-06]; % [1.25E-05,1.04E-06,5.49E-06]
+cfg.instruments.BB3.slope = [1.34E-05,1.38E-05,5.58E-06]; % [1.25E-05,1.04E-06,5.49E-06]
 cfg.instruments.BB3.dark = [57,48,45];
 cfg.instruments.BB3.path = struct('raw',  [PATH_ROOT 'raw' filesep ['BB3' SN] filesep],...
                                   'di',  [PATH_ROOT 'raw' filesep ['BB3' SN] filesep 'DI' filesep],...
@@ -244,6 +250,7 @@ cfg.process.qc.RawAutoQCLim.dissolved.a = 3;
 cfg.process.qc.RawAutoQCLim.dissolved.c = 3;
 cfg.process.qc.RawAutoQCLim.filtered.bb = 3;
 cfg.process.qc.RawAutoQCLim.total.bb = 3;
+cfg.process.qc.RawAutoQCLim.dissolved.bb = 3;
 cfg.process.qc.Saturation_Threshold_bb = 4000; % (counts)
   
 %%% Manually QC %%%
@@ -269,10 +276,10 @@ cfg.process.calibrate.ACS91 = struct('compute_dissolved', true, ...
                                   'FLOW_source', 'FLOW');
 cfg.process.calibrate.BB3 = struct('compute_dissolved', true, ...
                                    'TSG_source', 'TSG', ...
-                                   'di_method', 'SW_scattering');
+                                   'di_method', 'interpolate'); % interpolate constant
 cfg.process.calibrate.HBB = struct('compute_dissolved', true, ...
                                    'TSG_source', 'TSG', ...
-                                   'di_method', 'SW_scattering');
+                                   'di_method', 'interpolate'); % interpolate constant
 cfg.process.calibrate.skip = {'FLOW', 'TSG', 'SPCD'};
 
 %%% Write %%%

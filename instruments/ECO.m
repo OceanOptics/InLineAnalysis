@@ -40,11 +40,11 @@ classdef ECO < Instrument
         case 'InlininoWSCD'
           obj.data = iRead(@importInlininoWSCD, obj.path.raw, obj.path.wk, 'Inlinino_',...
                          days2run, 'Inlinino', force_import, ~write, true);
-        case 'InlininoSPCDSN'
-          obj.data = iRead(@importInlininoSPCD, obj.path.raw, obj.path.wk, ['SUVF' obj.sn '_'],...
-                         days2run, 'Inlinino', force_import, ~write, true);
         case 'InlininoWSCDSN'
           obj.data = iRead(@importInlininoWSCD, obj.path.raw, obj.path.wk, ['WSCD' obj.sn '_'],...
+                         days2run, 'Inlinino', force_import, ~write, true);
+        case 'InlininoSPCDSN'
+          obj.data = iRead(@importInlininoSPCD, obj.path.raw, obj.path.wk, ['SUVF' obj.sn '_'],...
                          days2run, 'Inlinino', force_import, ~write, true);
         case 'InlininoPourquoiPas'
           obj.data = iRead(@importInlininoPourquoiPas, obj.path.raw, obj.path.wk, 'Inlinino_',...
@@ -78,19 +78,22 @@ classdef ECO < Instrument
       switch obj.logger
         case 'Inlinino'
           obj.raw.diw = iRead(@importInlinino, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
-                         days2run, 'Inlinino', force_import, ~write, true, false);
-        case 'InlininoBB3'
-          obj.raw.diw = iRead(@importInlininoBB3, obj.path.raw, obj.path.wk, obj.di_cfg.prefix,...
-                         days2run, 'Inlinino', force_import, ~write, true, false);
-        case 'InlininoWSCD'
-          obj.raw.diw = iRead(@importInlininoWSCD, obj.path.raw, obj.path.wk, obj.di_cfg.prefix,...
-                         days2run, 'Inlinino', force_import, ~write, true, false);
+                         days2run, 'Inlinino', force_import, ~write, true, true, obj.di_cfg.postfix);
+        case {'InlininoBB3', 'InlininoBB3SN'}
+          obj.raw.diw = iRead(@importInlininoBB3, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
+                         days2run, 'Inlinino', force_import, ~write, true, true, obj.di_cfg.postfix);
+        case {'InlininoWSCD', 'InlininoWSCDSN'}
+          obj.raw.diw = iRead(@importInlininoWSCD, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
+                         days2run, 'Inlinino', force_import, ~write, true, true, obj.di_cfg.postfix);
+        case 'InlininoSPCDSN'
+          obj.raw.diw = iRead(@importInlininoSPCD, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
+                         days2run, 'Inlinino', force_import, ~write, true, true, obj.di_cfg.postfix);
         case 'InlininoPourquoiPas'
           obj.raw.diw = iRead(@importInlininoPourquoiPas, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
-                         days2run, 'Inlinino', force_import, ~write, true, false);
+                         days2run, 'Inlinino', force_import, ~write, true, true, obj.di_cfg.postfix);
         case 'DH4PreProc'
           obj.raw.diw = iRead(@importDH4PreProc, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
-                         days2run, 'DH4PreProc', force_import, ~write, true, false);
+                         days2run, 'DH4PreProc', force_import, ~write, true, true, obj.di_cfg.postfix);
         otherwise
           error(['ECO: Unknown logger: ' obj.logger]);
       end

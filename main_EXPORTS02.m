@@ -3,6 +3,8 @@
 % created: Jan 05, 2021
 clear
 close all
+dbquit all
+
 cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master/')
 
 % Load InLineAnalysis and the configuration
@@ -20,7 +22,7 @@ ila.cfg.days2run = datenum(2021,5,2,0,0,0):datenum(2021,5,5,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
 
-%% BB31502
+%% BB3
  ila.cfg.days2run =datenum(2021,5,2,0,0,0):datenum(2021,5,5,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
@@ -32,8 +34,8 @@ ila.cfg.days2run = datenum(2021,5,2,0,0,0):datenum(2021,5,5,0,0,0);
  ila.cfg.days2run = datenum(2021,5,5,0,0,0):datenum(2021,5,10,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','TSG','HBB'}; % 'FLOW', 'TSG', 'BB31052', 'HBB', 'WSCD859','SPCD'
-ila.cfg.qcref.view = 'HBB';
+ila.cfg.instruments2run = {'FLOW','TSG','BB3'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD'
+ila.cfg.qcref.view = 'BB3';
 ila.cfg.parallel = Inf;
 
 %% 1.Normal Import | Load raw data
@@ -60,7 +62,7 @@ ila.instrument.ACS91.Sync(0);
 % % ila.instrument.ACS111.Sync(60);
 % % ila.instrument.ACS279.Sync(55);
 ila.instrument.HBB.Sync(0);
-% ila.instrument.BB3.Sync(0);
+ila.instrument.BB3.Sync(0);
 % % % ila.instrument.LISST.Sync(1);
 % % ila.instrument.WSCD1082P.Sync(40);
 % ila.instrument.WSCD859.Sync(40);
@@ -79,7 +81,7 @@ visSync(ila.instrument.FLOW.data, ila.instrument.ACS91.data.dt, ila.instrument.A
 % % visSync(ila.instrument.FLOW.data, ila.instrument.ACS111.data.dt, ila.instrument.ACS111.data.c(:,40), 'c (m^{-1})');
 % % visSync(ila.instrument.FLOW.data, ila.instrument.ACS279.data.dt, ila.instrument.ACS279.data.a(:,20), 'a (m^{-1})');
 % % visSync(ila.instrument.FLOW.data, ila.instrument.ACS279.data.dt, ila.instrument.ACS279.data.c(:,40), 'c (m^{-1})');
-% % visSync(ila.instrument.FLOW.data, ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,1), '\beta (counts)');
+visSync(ila.instrument.FLOW.data, ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,1), '\beta (counts)');
 visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB.data.beta(:,14), '\beta (counts)');
 % % visSync(ila.instrument.FLOW.data, ila.instrument.LISST.data.dt, ila.instrument.LISST.data.beta(:,10), '\beta (counts)');
 % % visSync(ila.instrument.('FLOW').data, ila.instrument.('WSCD').data.dt, ila.instrument.('WSCD').data.fdom, 'FDOM (counts)');
@@ -100,9 +102,9 @@ visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB
 % % % instrument = ila.cfg.qcref.view;
 % % % FLOW = ila.instrument.FLOW.data;
 
-ila.cfg.qcref.MinFiltPeriod = 65; % filter even period in minute % ACS: 55 % BB3: 60
-ila.cfg.qcref.szFilt = 12; % filter even length in minute % default = 10
-ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
+% ila.cfg.qcref.MinFiltPeriod = 65; % filter even period in minute % ACS: 55 % BB3: 60
+% ila.cfg.qcref.szFilt = 12; % filter even length in minute % default = 10
+% ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
 
 %% 3.Normal QC Reference
 % run with mode ui during first run (it saves your work for the next run)
@@ -110,7 +112,7 @@ ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
 % Note: when redoing QC of a given period of time (days2run) the previous
 % QC during the same period of time is erased, QC done on other periods of
 % time is kept in the json file
-ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
+ila.cfg.qcref.mode='load'; % 'ui' or 'load'
 ila.QCRef();
 
 %% 4.Normal Split fsw and tsw
@@ -135,6 +137,7 @@ ila.cfg.qc.RawAutoQCLim.dissolved.c = 3; % 12
 % 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
 ila.cfg.qc.RawAutoQCLim.filtered.bb = 4;
 ila.cfg.qc.RawAutoQCLim.total.bb = 4;
+ila.cfg.qc.RawAutoQCLim.dissolved.bb = 3;
 % remove saturated periods in BB
 ila.cfg.qc.Saturation_Threshold_bb = 4000; % saturate above 4000 counts
 ila.RawAutoQC(ila.cfg.qc.RawAutoQCLim, ila.cfg.qc.Saturation_Threshold_bb, 'raw');
@@ -162,8 +165,8 @@ ila.CheckDataStatus();
 
 %% Load processed data from mat files: 'data' = Raw | 'bin' = Bin | 'qc' = QCed | 'prod' = product
 % ila.Read('data');
-ila.Read('bin');
-ila.Read('qc');
+% ila.Read('bin');
+% ila.Read('qc');
 % ila.Read('prod');
 
 %% 7.Normal Flag
@@ -183,7 +186,7 @@ ila.CheckDataStatus();
 
 %% 8.Normal QC
 % Interactive or Loading previous qc selection
-ila.cfg.qc.mode='ui';  % load or ui
+ila.cfg.qc.mode='load';  % load or ui
 ila.cfg.qc.specific.run = ila.cfg.instruments2run(~contains(ila.cfg.instruments2run, 'FLOW')); % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
 % QCmap(ila.cfg.days2run); % SST & latlon QC
 ila.QC();
@@ -204,7 +207,7 @@ ila.BinDI();
 
 %% Normal and DI Diagnostic Plot
 % check binned spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'bin'}); % AC or BB
+ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
 
 %% 9.1. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Write bin DI
 ila.Write('bin')
