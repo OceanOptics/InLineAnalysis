@@ -3,7 +3,7 @@
 % created: Jan 05, 2021
 clear
 close all
-dbquit all
+if feature('IsDebugMode'); dbquit all; end
 
 cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master/')
 
