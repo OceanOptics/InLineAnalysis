@@ -76,16 +76,55 @@ switch instrument
       xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
         max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
     end
+    if contains({'base_fit_ag'}, data.Properties.VariableNames)
+      figure(79)
+      clf
+      hold on
+      yyaxis('left')
+      p = [];
+      p1 = scatter(datetime(data.dt(~data.ag_fitflag), 'ConvertFrom', 'datenum'), ...
+        data.base_fit_ag(~data.ag_fitflag), 20, 'filled');
+      p = [p, p1(1)];
+      leg = {'a_g'};
+      ylabel('a_g fit slope')
+      if any(data.ag_fitflag)
+        y_lim = ylim;
+        p2 = plot([datetime(data.dt(data.ag_fitflag), 'ConvertFrom', 'datenum') ...
+          datetime(data.dt(data.ag_fitflag), 'ConvertFrom', 'datenum')], ...
+          [y_lim(1) y_lim(2)], '--b', 'LineWidth', 0.001);
+        p = [p, p2(1)];
+        leg = [leg, 'ag fit flagged'];
+      end
+      yyaxis('right')
+      p3 = scatter(datetime(data.dt(~data.cg_fitflag), 'ConvertFrom', 'datenum'), ...
+        data.base_fit_cg(~data.cg_fitflag), 20, 'filled');
+      p = [p, p3(1)];
+      leg = [leg, 'c_g'];
+      ylabel('c_g fit slope')
+      if any(data.cg_fitflag)
+        y_lim = ylim;
+        p4 = plot([datetime(data.dt(data.cg_fitflag), 'ConvertFrom', 'datenum') ...
+          datetime(data.dt(data.cg_fitflag), 'ConvertFrom', 'datenum')], ...
+          [y_lim(1) y_lim(2)], '--r', 'LineWidth', 0.001);
+        p = [p, p4(1)];
+        leg = [leg, 'cg fit flagged'];
+      end
+      legend(p, leg)
+      hold off
+      xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
+        max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
+    end
+      
   case {'BB', 'HBB'}
     if size(lambda, 1) > size(lambda, 2); lambda = lambda'; end
     if any(contains(data.Properties.VariableNames, 'betap'))
       toplot = 'poc';
       unit = '(mg.m^{-3})';
-      fignum = 79;
+      fignum = 85;
     elseif any(contains(data.Properties.VariableNames, 'betag'))
       toplot = 'betag';
       unit = 'm^{-1}';
-      fignum = 80;
+      fignum = 86;
     end
     if contains(instrument, 'HBB')
       data.(toplot)(:, lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
@@ -118,7 +157,7 @@ switch instrument
     xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
       max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
   case 'TSG'
-    figure(81);
+    figure(90);
     clf
     yyaxis('left')
     scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.t, 6, 'filled'); ylabel('TSG T (°C)');
@@ -127,14 +166,14 @@ switch instrument
     xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
       max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
   case 'PAR'
-    figure(82);
+    figure(92);
     clf
     scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.par, 6, 'filled');
     ylabel('PAR (\muE.m^{-2}.s^{-1})');
     xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
       max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
   case 'WSCD'
-    figure(83);
+    figure(94);
     clf
     scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.fdom, 6, 'filled');
     ylabel('FDOM ppb');

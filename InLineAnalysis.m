@@ -179,7 +179,7 @@ classdef InLineAnalysis < handle
       for i=obj.cfg.instruments2run; i = i{1};
         if any(contains(i,{'AC','BB','PAR'}))
           if ~isempty(obj.instrument.(i).(level).fsw)
-            fprintf('Deleting bad values from %s filtered data ...\n', i);
+%             fprintf('Deleting bad values from %s filtered data ...\n', i);
             if any(contains(i,'AC'))
               lambda.a = obj.instrument.(i).lambda_a;
               lambda.c = obj.instrument.(i).lambda_c;
@@ -192,19 +192,39 @@ classdef InLineAnalysis < handle
                 bb_threshold);
             end
             if any(contains(i,'AC'))
-              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s filtered data\n',...
-                Nbad.a, Nbad.c, i);
+              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s filtered %s data\n',...
+                Nbad.a, Nbad.c, i, level);
             elseif any(contains(i,'BB'))
+              fprintf('\n')
+              fprintf('\n')
+              fprintf('Data percentage deleted from %s filtered %s data:\n', i, level)
+              lineseg = '-------+';
+              headseg = '  %i  |';
+              dataseg = ' %2.2f%% |';
+              lin = '-----------+';
+              head = '|  lambda  |';
+              dat = ' %% deleted |';
               for ii = 1:size(Nbad.bb,2)
-                fprintf('%4.2f%% of beta%i deleted from %s filtered data\n',...
-                  Nbad.bb(ii), lambda.bb(ii), i);
+                lin = [lin lineseg];
+                head = [head headseg];
+                dat = [dat dataseg];
               end
+              lin = [lin '+\n'];
+              head = [head '\n'];
+              dat = [dat '\n'];
+              fprintf(head, lambda.bb)
+              fprintf(lin);
+              fprintf(dat, Nbad.bb)
+%               for ii = 1:size(Nbad.bb,2)
+%                 fprintf('%4.2f%% of beta%i deleted from %s filtered data\n',...
+%                   Nbad.bb(ii), lambda.bb(ii), i);
+%               end
             end
           else
             fprintf('No filtered data loaded: Skip\n');
           end
           if ~isempty(obj.instrument.(i).(level).tsw)
-            fprintf('Deleting bad values from %s total data ...\n', i);
+% %             fprintf('Deleting bad values from %s total data ...\n', i);
             if  any(contains(i,'AC'))
               lambda.a = obj.instrument.(i).lambda_a;
               lambda.c = obj.instrument.(i).lambda_c;
@@ -224,21 +244,41 @@ classdef InLineAnalysis < handle
                 bb_threshold);
             end
             if any(contains(i,'AC'))
-              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s total data\n',...
-                Nbad.a, Nbad.c, i);
+              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s total %s data\n',...
+                Nbad.a, Nbad.c, i, level);
             elseif any(contains(i,'BB'))
+              fprintf('\n')
+              fprintf('\n')
+              fprintf('Data percentage deleted from %s total %s data:\n', i, level)
+              lineseg = '-------+';
+              headseg = '  %i  |';
+              dataseg = ' %2.2f%% |';
+              lin = '-----------+';
+              head = '|  lambda  |';
+              dat = ' %% deleted |';
               for ii = 1:size(Nbad.bb,2)
-                fprintf('%4.2f%% of beta%i deleted from %s total data\n',...
-                  Nbad.bb(ii), lambda.bb(ii), i);
+                lin = [lin lineseg];
+                head = [head headseg];
+                dat = [dat dataseg];
               end
+              lin = [lin '+\n'];
+              head = [head '\n'];
+              dat = [dat '\n'];
+              fprintf(head, lambda.bb)
+              fprintf(lin);
+              fprintf(dat, Nbad.bb)
+%               for ii = 1:size(Nbad.bb,2)
+%                 fprintf('%4.2f%% of beta%i deleted from %s total data\n',...
+%                   Nbad.bb(ii), lambda.bb(ii), i);
+%               end
             elseif any(contains(i,'PAR'))
-              fprintf('%i raw %s values deleted\n', sum(foo), i);
+              fprintf('%i %s %s values deleted\n', sum(foo), level, i);
             end
           else
             fprintf('No total data loaded: Skip\n');
           end
           if ~isempty(obj.instrument.(i).(level).diw)
-            fprintf('Deleting bad values from %s dissolved data...\n', i);
+%             fprintf('Deleting bad values from %s dissolved data...\n', i);
             if any(contains(i,'AC'))
               lambda.a = obj.instrument.(i).lambda_a;
               lambda.c = obj.instrument.(i).lambda_c;
@@ -251,13 +291,33 @@ classdef InLineAnalysis < handle
                 bb_threshold, true);
             end
             if any(contains(i,'AC'))
-              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s dissolved data\n',...
-                Nbad.a, Nbad.c, i);
+              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s dissolved %s data\n',...
+                Nbad.a, Nbad.c, i, level);
             elseif any(contains(i,'BB'))
+              fprintf('\n')
+              fprintf('\n')
+              fprintf('Data percentage deletred from %s dissolved %s data:\n', i, level)
+              lineseg = '-------+';
+              headseg = '  %i  |';
+              dataseg = ' %2.2f%% |';
+              lin = '-----------+';
+              head = '|  lambda  |';
+              dat = ' %% deleted |';
               for ii = 1:size(Nbad.bb,2)
-                fprintf('%4.2f%% of beta%i deleted from %s dissolved data\n',...
-                  Nbad.bb(ii), lambda.bb(ii), i);
+                lin = [lin lineseg];
+                head = [head headseg];
+                dat = [dat dataseg];
               end
+              lin = [lin '+\n'];
+              head = [head '\n'];
+              dat = [dat '\n'];
+              fprintf(head, lambda.bb)
+              fprintf(lin);
+              fprintf(dat, Nbad.bb)
+%               for ii = 1:size(Nbad.bb,2)
+%                 fprintf('%4.2f%% of beta%i deleted from %s dissolved data\n',...
+%                   Nbad.bb(ii), lambda.bb(ii), i);
+%               end
             end
           end
           fprintf('RawAutoQC [Done]\n')
@@ -283,7 +343,7 @@ classdef InLineAnalysis < handle
           ifieldn = fieldnames(obj.instrument.(i).prod);
           for j=1:size(ifieldn,1)
             if ~strcmp(ifieldn{j}, 'QCfailed') && ~isempty(obj.instrument.(i).prod.(ifieldn{j}))
-              if contains(i, {'AC', 'BB'})
+              if contains(i, {'BB'})
                 visProd_timeseries(obj.instrument.(i).prod.(ifieldn{j}), i, ...
                   obj.instrument.(i).lambda);
               else
@@ -729,12 +789,14 @@ classdef InLineAnalysis < handle
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.cfg.calibrate.(i).interpolation_method,...
                                            obj.instrument.(obj.cfg.calibrate.(i).CDOM_source),...
-                                           obj.instrument.(obj.cfg.calibrate.(i).FLOW_source));
+                                           obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
+                                           obj.cfg.calibrate.(i).di_method);
             case 'ACS'
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.cfg.calibrate.(i).interpolation_method,...
                                            obj.instrument.(obj.cfg.calibrate.(i).CDOM_source),...
-                                           obj.instrument.(obj.cfg.calibrate.(i).FLOW_source));
+                                           obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
+                                           obj.cfg.calibrate.(i).di_method);
             case {'BB', 'BB3', 'HBB'}
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.instrument.(obj.cfg.calibrate.(i).TSG_source),...

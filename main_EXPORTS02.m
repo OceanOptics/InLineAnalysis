@@ -17,7 +17,7 @@ ila = InLineAnalysis('cfg/EXPORTS02_cfg.m');
 % ila.instrument.TSG.logger = 'TeraTerm';
 % ila.cfg.days2run = datenum(2021,1,10,0,0,0):datenum(2021,1,15,0,0,0);
 
-%% ACS091
+%% ACS91
 ila.cfg.days2run = datenum(2021,5,2,0,0,0):datenum(2021,5,5,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
@@ -34,8 +34,8 @@ ila.cfg.days2run = datenum(2021,5,2,0,0,0):datenum(2021,5,5,0,0,0);
  ila.cfg.days2run = datenum(2021,5,5,0,0,0):datenum(2021,5,10,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','TSG','BB3'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD'
-ila.cfg.qcref.view = 'BB3';
+ila.cfg.instruments2run = {'FLOW','ACS91'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91'
+ila.cfg.qcref.view = 'ACS91';
 ila.cfg.parallel = Inf;
 
 %% 1.Normal Import | Load raw data
@@ -102,9 +102,9 @@ visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB
 % % % instrument = ila.cfg.qcref.view;
 % % % FLOW = ila.instrument.FLOW.data;
 
-% ila.cfg.qcref.MinFiltPeriod = 65; % filter even period in minute % ACS: 55 % BB3: 60
-% ila.cfg.qcref.szFilt = 12; % filter even length in minute % default = 10
-% ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
+ila.cfg.qcref.MinFiltPeriod = 65; % filter even period in minute % ACS: 55 % BB3: 60
+ila.cfg.qcref.szFilt = 12; % filter even length in minute % default = 10
+ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
 
 %% 3.Normal QC Reference
 % run with mode ui during first run (it saves your work for the next run)
@@ -122,15 +122,15 @@ ila.CheckDataStatus();
 
 %% Normal and DI Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
+ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 
 %% 5.Normal and DI automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR values
 % fudge factor for auto QC ACS.
 % Varies between ACS: 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
-ila.cfg.qc.RawAutoQCLim.filtered.a = 2; % 6
-ila.cfg.qc.RawAutoQCLim.filtered.c = 2; % 15
+ila.cfg.qc.RawAutoQCLim.filtered.a = 3; % 6
+ila.cfg.qc.RawAutoQCLim.filtered.c = 6; % 15
 ila.cfg.qc.RawAutoQCLim.total.a = 2; % 4
-ila.cfg.qc.RawAutoQCLim.total.c = 2; % 12
+ila.cfg.qc.RawAutoQCLim.total.c = 3; % 12
 ila.cfg.qc.RawAutoQCLim.dissolved.a = 3; % 4
 ila.cfg.qc.RawAutoQCLim.dissolved.c = 3; % 12
 % fudge factor for auto QC BB.
@@ -145,7 +145,7 @@ ila.RawAutoQC(ila.cfg.qc.RawAutoQCLim, ila.cfg.qc.Saturation_Threshold_bb, 'raw'
 
 %% Normal and DI Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
+ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 
 %% 6.Normal Bin
 % % Set settings directly in configuration file (no tunning at this step)
@@ -157,7 +157,7 @@ ila.CheckDataStatus();
 
 %% Normal and DI Diagnostic Plot
 % check binned spectrums AC or BB sensors
-ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
+ila.DiagnosticPlot('AC',{'bin'}); % AC or BB
 
 %% 6.1.Normal Write bin
 ila.Write('bin')
@@ -186,7 +186,7 @@ ila.CheckDataStatus();
 
 %% 8.Normal QC
 % Interactive or Loading previous qc selection
-ila.cfg.qc.mode='load';  % load or ui
+ila.cfg.qc.mode='ui';  % load or ui
 ila.cfg.qc.specific.run = ila.cfg.instruments2run(~contains(ila.cfg.instruments2run, 'FLOW')); % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
 % QCmap(ila.cfg.days2run); % SST & latlon QC
 ila.QC();
@@ -195,7 +195,7 @@ ila.CheckDataStatus();
 %% Normal and DI Diagnostic Plot
 % check QCed spectrums AC or BB sensors
 % {'raw','bin','qc','prod'}
-ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
+ila.DiagnosticPlot('AC',{'qc'}); % AC or BB
 
 %% 8.1.Normal Write qc
 ila.Write('qc')
@@ -207,7 +207,7 @@ ila.BinDI();
 
 %% Normal and DI Diagnostic Plot
 % check binned spectrums AC or BB sensors
-ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
+ila.DiagnosticPlot('AC',{'bin'}); % AC or BB
 
 %% 9.1. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Write bin DI
 ila.Write('bin')

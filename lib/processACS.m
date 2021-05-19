@@ -1,4 +1,5 @@
-function [p, g, bad] = processACS(lambda, tot, filt, modelG50, modelmphi, di, cdom, fth, fth_constants, interpolation_method)
+function [p, g, bad] = processACS(lambda, tot, filt, modelG50, modelmphi, di, ...
+  cdom, fth, fth_constants, interpolation_method, di_method)
 % NOTE: wavelength of c are interpolated to wavelength of a
 %% ap & cp
 % check FTH data
@@ -220,7 +221,7 @@ if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
   blue_wl_var = [zeros(size(blue_wl, 1), 1) abs(diff(blue_wl,[],2))]; % get absolute derivative over wavelengths  
   cutoffblue_wla = NaN(size(blue_wl_var, 1), 1);
   for i = 1:size(cutoffblue_wla,1)
-    foo = lambda.a(find(blue_wl_var(i,:) > 6 * nanmean(blue_wl_var(i, lambda.a > 450), 2), 1, 'last'));
+    foo = lambda.a(find(blue_wl_var(i,:) > 6 * mean(blue_wl_var(i, lambda.a > 450), 2, 'omitnan'), 1, 'last'));
     if ~isempty(foo)
       cutoffblue_wla(i) = foo;
     else
@@ -249,7 +250,7 @@ if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
   fudge_list = (0.1:0.1:10)';
   ndel_spec = NaN(size(fudge_list));
   for i=1:size(fudge_list,1)
-    above_median_d600_ap450 = ratiod600_ap450 > fudge_list(i)*nanmedian(ratiod600_ap450);
+    above_median_d600_ap450 = ratiod600_ap450 > fudge_list(i) * median(ratiod600_ap450, 'omitnan');
     ndel_spec(i) = sum(above_median_d600_ap450);
 %     above_median_var600676 = ratiostd600676 > fudge_list(i)*median(ratiostd600676);
 %     ndel_spec(i) = sum(above_median_var600676);
@@ -419,6 +420,34 @@ fprintf('Done\n')
 
 %% ag & cg
 if ~isempty(di)
+  if strcmp(di_method, 'best_di')
+    % select DIW with lowest a or c values between 550-650nm
+    di_orig = di;
+    di_dt = datetime(di_orig.dt, 'ConvertFrom', 'datenum');
+    best_di_a = NaN(size(di_orig,1), 1);
+    best_di_c = NaN(size(di_orig,1), 1);
+    for i = 1:size(di_orig,1)
+      if i == 1 || i == size(di_orig,1)
+        iddi = abs(di_dt(i) - di_dt) < hours(72);
+      else
+        iddi = abs(di_dt(i) - di_dt) < hours(36);
+      end
+      lowest_di_a = di_orig.a(:, lambda.a >= 550 & lambda.a <= 650) == ...
+        min(di_orig.a(iddi, lambda.a >= 550 & lambda.a <= 650), [], 1);
+      lowest_di_c = di_orig.c(:, lambda.c >= 550 & lambda.c <= 650) == ...
+        min(di_orig.c(iddi, lambda.c >= 550 & lambda.c <= 650), [], 1);
+      foo_a = find(sum(lowest_di_a, 2) == max(sum(lowest_di_a, 2)));
+      foo_c = find(sum(lowest_di_c, 2) == max(sum(lowest_di_c, 2)));
+      di.a(i, :) = di_orig.a(foo_a, :);
+      di.c(i, :) = di_orig.c(foo_c, :);
+      di.a_avg_sd(i, :) = di_orig.a_avg_sd(foo_a, :);
+      di.c_avg_sd(i, :) = di_orig.c_avg_sd(foo_c, :);
+      
+      best_di_a(i) = foo_a(1);
+      best_di_c(i) = foo_c(1);
+    end
+  end
+  
   % Interpolate filtered on Total
   di_interp = table(filt.dt, 'VariableNames', {'dt'});
   di_interp.a = interp1(di.dt, di.a, di_interp.dt, 'linear', 'extrap');
@@ -434,23 +463,46 @@ if ~isempty(di)
   % g.cg = cell2mat(arrayfun(@(i) interp1(c_wl, g.cg(i,:), a_wl, 'linear', 'extrap'), 1:size(g,1), 'UniformOutput', false)');
   g.ag = interp1(lambda.a', g.ag', lambda.ref', 'linear', 'extrap')';
   g.cg = interp1(lambda.c', g.cg', lambda.ref', 'linear', 'extrap')';
+  fprintf('Correcting for temperature & salinity dependence ... ')
   % Temperature & Salinity Correction (No Scattering correction needed)
   [g.ag, g.cg] = TemperatureAndSalinityDependence(g.ag, g.cg, lambda.ref);
 %   [g.ag, g.cg] = ResidualTemperatureAndScatteringCorrection(g.ag, g.cg, lambda.ref);
+  fprintf('Done\n')
 
   % Propagate error
   %   Note: Error is not propagated through Scattering & Residual temperature
   %         correction as required by SeaBASS
-%   filt.a_avg_sd + di_interp.a_avg_sd < 0 
   g.ag_sd = sqrt(filt.a_avg_sd + di_interp.a_avg_sd);
   g.cg_sd = sqrt(filt.c_avg_sd + di_interp.c_avg_sd);
   g.ag_n = filt.a_avg_n;
   g.cg_n = filt.c_avg_n;
   
-  % QC with ag and cg spectrums (limited testing on the QC)
-  g(g.ag(:,1) < 0 & g.cg(:,end-3) < -0.005, :) = [];
-else
-  g = table();
+%   visProd3D(lambda.a, g.dt, g.ag, false, 'Wavelength', false, 70);
+%   title('ag with auto best DI 72h')
+%   saveGraph('ag_with_auto_best_DI_72h', 'fig')
+%   
+%   visProd3D(lambda.c, g.dt, g.cg, false, 'Wavelength', false, 71);
+%   title('cg with auto best DI 72h')
+%   saveGraph('cg_with_auto_best_DI_72h', 'fig')
+
+%   visProd3D(lambda.a, di_interp.dt, di_interp.a, false, 'Wavelength', false, 72);
+%   visProd3D(lambda.c, di_interp.dt, di_interp.c, false, 'Wavelength', false, 73);
+
+  fprintf('Exponential fit to ag and cg ... ')
+  sel_a = lambda.a < 660 & ~any(isnan(g.ag(~all(isnan(g.ag),2), :)));
+  sel_c = lambda.c < 660 & ~any(isnan(g.cg(~all(isnan(g.cg),2), :)));
+  [g.y_intercp_fit_ag, g.base_fit_ag, ~, ~, g.RMSE_fit_ag] = FitExp(lambda.a(sel_a), g.ag(:, sel_a));
+  % add fit flag
+  g.ag_fitflag = false(size(g, 1), 1);
+  g.ag_fitflag(g.RMSE_fit_ag > 0.0025) = true;
+  [g.y_intercp_fit_cg, g.base_fit_cg, ~, ~, g.RMSE_fit_cg] = FitExp(lambda.c(sel_c), g.cg(:, sel_c));
+  % add fit flag
+  g.cg_fitflag = false(size(g, 1), 1);
+  g.cg_fitflag(g.RMSE_fit_cg > 0.0025) = true;
+  fprintf('Done\n')
+  
+%   % QC with ag and cg spectrums (limited testing on the QC)
+%   g(g.ag(:,1) < 0 & g.cg(:,end-3) < -0.005, :) = [];
 end
 end
 
@@ -480,7 +532,7 @@ c_psiS = c_psiS - median(c_psiS(wl <= 590));
 % Parameters of minization routine
 opts = optimset('fminsearch');      
 opts = optimset(opts,'MaxIter',20000000); 
-opts = optimset(opts,'MaxFunEvals',20000);
+opts = optimset(opts,'MaxFunEvals',20000); % 20000
 opts = optimset(opts,'TolX',1e-8);
 opts = optimset(opts,'TolFun',1e-8);
 
@@ -753,7 +805,7 @@ end
 % compspec = interp1(onenm', compspec_temp, lambda, 'spline');
 sumspec = interp1(onenm, sumspec_temp, lambda, 'spline')';
 
-uncertainty = nansum(abs(p.ap(:, lambda > 440 & lambda < 705) - sumspec(:, lambda > 440 & lambda < 705)),2) / ...
+uncertainty = sum(abs(p.ap(:, lambda > 440 & lambda < 705) - sumspec(:, lambda > 440 & lambda < 705)), 2, 'omitnan') / ...
     size(lambda(lambda > 440 & lambda < 705),2);
     
 agaus = array2table([amps uncertainty], 'VariableNames', ...
