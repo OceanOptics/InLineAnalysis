@@ -146,7 +146,7 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
         warning(['No files found for ' software]);
         filenames = [];
       end
-    case {'Inlinino', 'InlininoACScsv'}
+    case 'Inlinino'
       % List all files in directory
       l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.csv']);
       filenames = {l.name}';

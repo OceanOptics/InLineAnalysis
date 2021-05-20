@@ -67,6 +67,9 @@ classdef LISST < Instrument
     
     function ReadRaw(obj, days2run, force_import, write)
       switch obj.logger
+        case 'InlininoLISSTcsv'
+          obj.data = iRead(@importInlininoLISSTcsv, obj.path.raw, obj.path.wk, ['LISST' obj.sn '_'],...
+                         days2run, 'Inlinino', force_import, ~write, true);
         case 'TeraTerm'
           obj.data = iRead(@importLISSTTeraTerm, obj.path.raw, obj.path.wk, ['LISST' obj.sn '_'],...
                          days2run, 'TeraTerm', force_import, ~write, true);
@@ -85,6 +88,9 @@ classdef LISST < Instrument
         obj.di_cfg.postfix = '_DI';
       end
       switch obj.logger
+        case 'InlininoLISSTcsv'
+          obj.raw.diw = iRead(@importInlininoLISSTcsv, obj.path.di, obj.path.wk, ['LISST' obj.sn '_'],...
+                         days2run, 'Inlinino', force_import, ~write, true, false, obj.di_cfg.postfix);
         case 'TeraTerm'
           obj.raw.diw = iRead(@importLISSTTeraTerm, obj.path.di, obj.path.wk, ['LISST' obj.sn '_'],...
                          days2run, 'TeraTerm', force_import, ~write, true, false, obj.di_cfg.postfix);

@@ -1,6 +1,6 @@
-% EXPORTS Configuration file
-% author: Nils
-% created: Aug 16, 2018
+% EXPORTS02 Configuration file
+% author: Guillaume
+% created: April 2021
 
 cfg = struct('meta', struct(), 'instruments', struct(), 'process', struct());
 
@@ -109,6 +109,9 @@ cfg.instruments.BB3.view = struct('varname', 'beta', 'varcol', 2);
 %%% SPCD %%%
 SN = '6244';
 cfg.instruments.SPCD = struct();
+cfg.instruments.SPCD.di = struct();
+cfg.instruments.SPCD.di.prefix = ['DIW_SUVF' SN '_'];
+cfg.instruments.SPCD.di.postfix = '';
 cfg.instruments.SPCD.model = 'CD';
 cfg.instruments.SPCD.sn = '6244';
 cfg.instruments.SPCD.ila_prefix = ['SUVF' SN];
@@ -125,6 +128,9 @@ cfg.instruments.SPCD.view = struct('varname', 'fdom', 'varcol', 2);
 %%% WSCD %%%
 SN = '1052';
 cfg.instruments.WSCD = struct();
+cfg.instruments.WSCD.di = struct();
+cfg.instruments.WSCD.di.prefix = ['DIW_WSCD' SN '_'];
+cfg.instruments.WSCD.di.postfix = '';
 cfg.instruments.WSCD.model = 'CD';
 cfg.instruments.WSCD.sn = SN;
 cfg.instruments.WSCD.ila_prefix = ['WSCD' SN];
@@ -141,10 +147,13 @@ cfg.instruments.WSCD.view = struct('varname', 'fdom', 'varcol', 2);
 %%% LISST %%%
 SN = '1183';
 cfg.instruments.LISST = struct();
+cfg.instruments.LISST.di = struct();
+cfg.instruments.LISST.di.prefix = ['DIW_LISST' SN '_'];
+cfg.instruments.LISST.di.postfix = '';
 cfg.instruments.LISST.model = 'LISST';
 cfg.instruments.LISST.type = 'B'; 
 cfg.instruments.LISST.sn = SN;
-cfg.instruments.LISST.logger = 'InlininoLISST';
+cfg.instruments.LISST.logger = 'InlininoLISSTcsv';
 cfg.instruments.LISST.zsc = [2.203500e+001, 2.568500e+001, 2.503000e+001, 2.986000e+001, 2.842500e+001, 3.283000e+001, 3.077000e+001, 3.659500e+001, 2.978000e+001, 3.552000e+001, 3.198000e+001, 4.216000e+001, 3.916500e+001, 4.662500e+001, 3.974000e+001, 4.454000e+001, 4.403500e+001, 4.604500e+001, 4.430000e+001, 4.510500e+001, 4.719500e+001, 3.850000e+001, 5.373000e+001, 2.664000e+001, 3.180500e+001, 1.655500e+001, 2.205500e+001, 1.554000e+001, 1.422000e+001, 1.123000e+001, 8.780000e+000, 8.555000e+000, 1.515000e+003, 1.167900e+003, 6.410000e+001, 1.055150e+003, 7.700000e+001, 2.116600e+003, 1.807000e+003, 5.476500e+003];
 % Original dcal file (ring area)
 % cfg.instruments.LISST.dcal = [1.0000000e+000, 1.0038000e+000, 9.9360000e-001, 1.0027000e+000, 9.9720000e-001, 9.9570000e-001, 9.9030000e-001, 9.9430000e-001, 9.9290000e-001, 9.9000000e-001, 9.9290000e-001, 9.9300000e-001, 9.9150000e-001, 9.9300000e-001, 9.9230000e-001, 9.9090000e-001, 1.1032000e+000, 1.1123000e+000, 1.2430000e+000, 1.1562000e+000, 1.3273000e+000, 1.1999000e+000, 1.0740000e+000, 1.7489000e+000, 1.5382000e+000, 2.5109000e+000, 2.5468000e+000, 3.5504000e+000, 3.9338000e+000, 5.1747342e+000, 7.5143548e+000, 1.2528083e+001];
