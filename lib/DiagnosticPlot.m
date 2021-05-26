@@ -1,4 +1,4 @@
-function DiagnosticPlot(data, instrument, level)
+function DiagnosticPlot(data, instrument, level, save_figure, prefix)
 % Plot all level of processing 3D spectrums of BB and AC sensors to
 % quality check along processing
 %
@@ -12,6 +12,17 @@ function DiagnosticPlot(data, instrument, level)
 %   instrument: <char> instrument name
 %   level: <1xL cellstr> processing levels to plot
 %%
+if nargin < 3
+  error('Not enough input argument')
+elseif nargin == 3
+  save_figure = false;
+  prefix = 'plot';
+elseif nargin == 4
+  prefix = 'plot';
+elseif nargin > 5
+  error('Too many input argument')
+end
+
 if contains(instrument,'BB')
   wl = data.lambda;
   instrument = 'BB';
@@ -65,7 +76,9 @@ for j = 1:length(level)
       if contains(instrument,'AC')
         toplot = [cellfun(@(x) ['a' x], tabletoplot, 'un', 0) ...
           cellfun(@(x) ['c' x], tabletoplot, 'un', 0)];
-        toplot(contains(toplot, 'QCfailed')) = {'ap', 'cp'};
+        if any(contains(toplot, 'QCfailed'))
+          toplot(contains(toplot, 'QCfailed')) = {'ap', 'cp'};
+        end
 %         toplot = {['a' tabletoplot{~contains(tabletoplot, 'QCfailed')}] ...
 %           ['c' tabletoplot{~contains(tabletoplot, 'QCfailed')}]};
       else
@@ -108,14 +121,14 @@ for j = 1:length(level)
           wl = wlc;
         end
         if size(data.(level{j}).(tabletoplot{i}).dt(sel),1) > 1
-          visProd3D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
+          fh = visProd3D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, 'Wavelength', false, j*i+k*10);
           zlabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
           xlabel('lambda (nm)');
           ylabel('time');
         elseif ~isempty(data.(level{j}).(tabletoplot{i}).dt(sel))
-          visProd2D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
+          fh = visProd2D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, j*i+k*10);
           ylabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
@@ -134,6 +147,18 @@ for j = 1:length(level)
             'FaceAlpha',0.3, 'EdgeAlpha',0.2)
           text(676, max(data.(level{j}).(tabletoplot{i}).dt(sel)), zsc(2)-zsc(2)/5, '676 nm')
           hold off
+        end
+        if save_figure
+          pause(0.01)
+          if ishghandle(fh) && get(fh,'Number') == j*i+k*10
+            if ~isfolder([data.path.prod 'plots'])
+              mkdir([data.path.prod 'plots'])
+            end
+            filename = [data.path.prod 'plots' filesep prefix '_' ...
+              datestr(day_to_plot(1), 'yyyymmdd') '_' datestr(day_to_plot(2), 'yyyymmdd') '_' ...
+              data.model data.sn '_' level{j} '_' toplot{i, k} '_' tabletoplot{i}];
+            savefig(fh, filename, 'compact')
+          end
         end
       end
     end

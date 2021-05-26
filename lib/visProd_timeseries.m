@@ -12,6 +12,9 @@ function visProd_timeseries(data, instrument, lambda)
 %   instrument: <char> instrument name
 %%
 instrument = instrument(isstrprop(instrument,'alpha'));
+if ~isdatetime(data.dt)
+  data.dt = datetime(data.dt, 'ConvertFrom', 'datenum');
+end
 
 % list_instru = {'ACS', 'AC', 'BB', 'TSG', 'PAR', 'WSCD', 'HBB'};
 % idx = false(size(list_instru));
@@ -20,99 +23,115 @@ instrument = instrument(isstrprop(instrument,'alpha'));
 switch instrument
   case {'ACS', 'AC'}
     if all(contains({'Halh_chl', 'HH_G50'}, data.Properties.VariableNames))
-      figure(77)
+      vargam = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
+        'gamma')};
+      varHH_G50 = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
+        'HH_G50')};
+      varchl = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
+        {'ap676lh_chl', 'Chl_lineheight'})};
+      varHchl = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
+        'Halh_chl')};
+      varPOC = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
+        {'poc','POC','POC_cp'})};
+      fig(77);
       clf
       subplot(3,1,1)
       hold on
       yyaxis('left')
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.gamma, 6, 'filled')
+      scatter(data.dt, data.(vargam), 6, 'filled')
       ylabel('gamma (unitless)')
       yyaxis('right')
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.HH_G50, 6, 'filled')
+      scatter(data.dt, data.(varHH_G50), 6, 'filled')
       ylabel('H&H phytoplankton G50: cross-sectional area (\mum)')
       legend('gamma', 'H&H phytoplankton G50')
       hold off
       subplot(3,1,2)
       hold on
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.Halh_chl, 6, 'filled')
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.chl, 6, 'filled')
+      scatter(data.dt, data.(varHchl), 6, 'filled')
+      scatter(data.dt, data.(varchl), 6, 'filled')
       ylabel('[chl] (mg.m^{-3})')
       legend('Houskeeper [chl]', 'a_{p676}[chl]')
       hold off
       subplot(3,1,3)
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.poc, 6, 'filled')
+      scatter(data.dt, data.(varPOC), 6, 'filled')
       ylabel('[poc] (mg.m^{-3})')
-      xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
-        max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
+      xlim([min(data.dt) ...
+        max(data.dt)]);
       %
-      figure(78);
+      fig(78);
       clf
       subplot(1,2,1)
-      scatter(data.gamma, data.HH_G50, 6, 'filled')
+      scatter(data.(vargam), data.(varHH_G50), 6, 'filled')
       set(gca, 'XScale', 'log', 'YScale', 'log')
       xlabel('gamma (unitless)')
       ylabel('H&H phytoplankton G50: cross-sectional area (\mum)')
       subplot(1,2,2)
-      scatter(data.chl, data.Halh_chl, 6, 'filled')
+      scatter(data.(varchl), data.(varHchl), 6, 'filled')
       set(gca, 'XScale', 'log', 'YScale', 'log')
       xlabel('a_{p676}[chl] (mg.m^{-3})')
       ylabel('Houskeeper [chl] (mg.m^{-3})')
-    elseif contains({'gamma'}, data.Properties.VariableNames)
-      figure(77)
+    elseif any(contains(data.Properties.VariableNames, 'gamma'))
+      vargam = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
+        'gamma')};
+      varchl = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
+        {'ap676lh_chl', 'Chl_lineheight'})};
+      varPOC = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
+        {'poc','POC','POC_cp'})};
+      fig(77);
       clf
       subplot(2,1,1)
       hold on
       yyaxis('left')
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.gamma, 6, 'filled')
+      scatter(data.dt, data.(vargam), 6, 'filled')
       ylabel('gamma (unitless)')
       yyaxis('right')
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.chl, 6, 'filled')
+      scatter(data.dt, data.(varchl), 6, 'filled')
       ylabel('[chl] (mg.m^{-3})')
       legend('gamma', 'a_{p676}[chl]')
       hold off
       subplot(2,1,2)
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.poc, 6, 'filled')
+      scatter(data.dt, data.(varPOC), 6, 'filled')
       ylabel('[poc] (mg.m^{-3})')
-      xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
-        max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
+      xlim([min(data.dt) ...
+        max(data.dt)]);
     end
-    if contains({'base_fit_ag'}, data.Properties.VariableNames)
-      figure(79)
+    if any(contains(data.Properties.VariableNames, 'base_fit_ag'))
+      fig(79);
       clf
       hold on
       yyaxis('left')
       p = [];
-      p1 = scatter(datetime(data.dt(~data.ag_fitflag), 'ConvertFrom', 'datenum'), ...
+      p1 = scatter(data.dt(~data.ag_fitflag), ...
         data.base_fit_ag(~data.ag_fitflag), 20, 'filled');
       p = [p, p1(1)];
       leg = {'a_g'};
       ylabel('a_g fit slope')
       if any(data.ag_fitflag)
         y_lim = ylim;
-        p2 = plot([datetime(data.dt(data.ag_fitflag), 'ConvertFrom', 'datenum') ...
-          datetime(data.dt(data.ag_fitflag), 'ConvertFrom', 'datenum')], ...
+        p2 = plot([data.dt(data.ag_fitflag) ...
+          data.dt(data.ag_fitflag)], ...
           [y_lim(1) y_lim(2)], '--b', 'LineWidth', 0.001);
         p = [p, p2(1)];
         leg = [leg, 'ag fit flagged'];
       end
       yyaxis('right')
-      p3 = scatter(datetime(data.dt(~data.cg_fitflag), 'ConvertFrom', 'datenum'), ...
+      p3 = scatter(data.dt(~data.cg_fitflag), ...
         data.base_fit_cg(~data.cg_fitflag), 20, 'filled');
       p = [p, p3(1)];
       leg = [leg, 'c_g'];
       ylabel('c_g fit slope')
       if any(data.cg_fitflag)
         y_lim = ylim;
-        p4 = plot([datetime(data.dt(data.cg_fitflag), 'ConvertFrom', 'datenum') ...
-          datetime(data.dt(data.cg_fitflag), 'ConvertFrom', 'datenum')], ...
+        p4 = plot([data.dt(data.cg_fitflag) ...
+          data.dt(data.cg_fitflag)], ...
           [y_lim(1) y_lim(2)], '--r', 'LineWidth', 0.001);
         p = [p, p4(1)];
         leg = [leg, 'cg fit flagged'];
       end
       legend(p, leg)
       hold off
-      xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
-        max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
+      xlim([min(data.dt) ...
+        max(data.dt)]);
     end
       
   case {'BB', 'HBB'}
@@ -131,56 +150,55 @@ switch instrument
       lambda(lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
     end
     C = reshape(spectrumRGB(lambda), max(size(lambda)),  3);
-    figure(fignum);
+    fig(fignum);
     clf
     yyaxis('left')
     hold on
-    scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.(toplot), 10, C, 'filled');
+    scatter(data.dt, data.(toplot), 10, C, 'filled');
     ylabel([toplot ' ' unit]);
     leg = cellfun(@(c) [toplot '_{' c 'nm}'], cellstr(num2str(lambda')), 'un', 0);
     if contains(instrument, 'HBB') && any(contains(data.Properties.VariableNames, 'gamma_bbp'))
       yyaxis('right')
       hold on
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.gamma_bbp, 50, ...
+      scatter(data.dt, data.gamma_bbp, 50, ...
         'k', 'filled', 'Marker', 'v');
       ylabel('Gamma bbp (unitless)');
       leg = [leg; {'gamma bbp'}];
     elseif contains(instrument, 'HBB') && any(contains(data.Properties.VariableNames, 'gamma_bbg'))
       yyaxis('right')
-      scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.gamma_bbg, 50, ...
+      scatter(data.dt, data.gamma_bbg, 50, ...
         'k', 'filled', 'Marker', 'v');
       ylabel('Gamma bbg (unitless)');
       leg = [leg; {'gamma bbg'}];
     end
     hold off
     legend(leg)
-    xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
-      max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
+    xlim([min(data.dt) ...
+      max(data.dt)]);
   case 'TSG'
-    figure(90);
+    fig(90);
     clf
     yyaxis('left')
-    scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.t, 6, 'filled'); ylabel('TSG T (°C)');
+    scatter(data.dt, data.t, 6, 'filled'); ylabel('TSG T (°C)');
     yyaxis('right')
-    scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.s, 6, 'filled'); ylabel('TSG S (PSU)');
-    xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
-      max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
+    scatter(data.dt, data.s, 6, 'filled'); ylabel('TSG S (PSU)');
+    xlim([min(data.dt) ...
+      max(data.dt)]);
   case 'PAR'
-    figure(92);
+    fig(92);
     clf
-    scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.par, 6, 'filled');
+    scatter(data.dt, data.par, 6, 'filled');
     ylabel('PAR (\muE.m^{-2}.s^{-1})');
-    xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
-      max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
+    xlim([min(data.dt) ...
+      max(data.dt)]);
   case 'WSCD'
-    figure(94);
+    fig(94);
     clf
-    scatter(datetime(data.dt, 'ConvertFrom', 'datenum'), data.fdom, 6, 'filled');
+    scatter(data.dt, data.fdom, 6, 'filled');
     ylabel('FDOM ppb');
-    xlim([min(datetime(data.dt, 'ConvertFrom', 'datenum')) ...
-      max(datetime(data.dt, 'ConvertFrom', 'datenum'))]);
+    xlim([min(data.dt) ...
+      max(data.dt)]);
 %   case 'LISST'
-    
   otherwise
     warning('%s not supported for product visualisation', instrument)
 end

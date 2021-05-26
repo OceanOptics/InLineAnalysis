@@ -312,9 +312,9 @@ p.poc = cp660.*380;
 ap_a = interp1(lambda.a, p.ap',[650 676 715],'linear')';
 p(ap_a(:,1) > ap_a(:,2), :) = []; % deleted unrealistic spectrum
 ap_a(ap_a(:,1) > ap_a(:,2), :) = []; % deleted unrealistic spectrum
-p.chl_line_height = ap_a(:,2)-(39/65*ap_a(:,1)+26/65*ap_a(:,3));
-p.chl = 157*p.chl_line_height.^1.22;
-p.chl(real(p.chl) ~= p.chl) = NaN;
+p.ap676_lh = ap_a(:,2)-(39/65*ap_a(:,1)+26/65*ap_a(:,3));
+p.ap676lh_chl = 157*p.ap676_line_height.^1.22;
+p.ap676lh_chl(real(p.ap676lh_chl) ~= p.ap676lh_chl) = NaN;
 
 % 3.3 Derive Gamma (does not support NaN values) (Boss et al. 2001)
 % REFERENCES:
