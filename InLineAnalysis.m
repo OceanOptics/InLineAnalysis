@@ -327,11 +327,18 @@ classdef InLineAnalysis < handle
       end
     end
     
-    function DiagnosticPlot (obj, instrument, level)
+    function DiagnosticPlot (obj, instrument, level, save_figure)
+      if nargin < 3
+        error('Not enough input argument')
+      elseif nargin == 3
+        save_figure = false;
+      elseif nargin > 4
+        error('Too many input argument')
+      end
       for i=obj.cfg.instruments2run; i = i{1};
         if  any(contains(i,instrument))
           fprintf('%s Diagnostic plots\n', i);
-          DiagnosticPlot(obj.instrument.(i), i, level);
+          DiagnosticPlot(obj.instrument.(i), i, level, save_figure, obj.meta.cruise);
         end
       end
     end
@@ -790,13 +797,15 @@ classdef InLineAnalysis < handle
                                            obj.cfg.calibrate.(i).interpolation_method,...
                                            obj.instrument.(obj.cfg.calibrate.(i).CDOM_source),...
                                            obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
-                                           obj.cfg.calibrate.(i).di_method);
+                                           obj.cfg.calibrate.(i).di_method, ...
+                                           obj.cfg.calibrate.(i).compute_ad_aphi);
             case 'ACS'
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.cfg.calibrate.(i).interpolation_method,...
                                            obj.instrument.(obj.cfg.calibrate.(i).CDOM_source),...
                                            obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
-                                           obj.cfg.calibrate.(i).di_method);
+                                           obj.cfg.calibrate.(i).di_method, ...
+                                           obj.cfg.calibrate.(i).compute_ad_aphi);
             case {'BB', 'BB3', 'HBB'}
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.instrument.(obj.cfg.calibrate.(i).TSG_source),...
@@ -852,8 +861,10 @@ classdef InLineAnalysis < handle
             obj.instrument.(i).(level).diw = table();
           case 'prod'
             fna = fieldnames(obj.instrument.(i).(level));
-            if ~isempty(fna)
-              obj.instrument.(i).(level).(fna{1}) = table();
+            for j = 1:size(fna, 1)
+              if ~isempty(fna{j})
+                obj.instrument.(i).(level).(fna{j}) = table();
+              end
             end
           otherwise
             error('Level unknown')

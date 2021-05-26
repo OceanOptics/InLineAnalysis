@@ -24,7 +24,12 @@ cfg.meta.measurement_depth = 5;
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-PATH_ROOT = '/Users/emmanuel.boss/Desktop/InLine analysis/Data/EXPORTS02/';
+if ispc
+  PATH_ROOT = 'D:\Data\EXPORTS02\';
+elseif ismac
+  PATH_ROOT = '/Volumes/Samsung_T5/Data/EXPORTS02/';
+end
+% PATH_ROOT = '/Users/emmanuel.boss/Desktop/InLine analysis/Data/EXPORTS02/';
 
 %%% TSG + GPS %%%
 cfg.instruments.TSG = struct();
@@ -263,7 +268,6 @@ cfg.process.qc.RawAutoQCLim.dissolved.bb = 3;
 cfg.process.qc.Saturation_Threshold_bb = 4000; % (counts)
   
 %%% Manually QC %%%
-cfg.process.qc = struct();
 cfg.process.qc.mode = 'ui';
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
@@ -279,12 +283,14 @@ cfg.process.calibrate.ACS298 = struct('compute_dissolved', true, ...
                                   'interpolation_method', 'linear', ...
                                   'CDOM_source', 'SPCD', ... 
                                   'FLOW_source', 'FLOW', ...
-                                  'di_method', 'best_di'); % best_di normal
+                                  'di_method', 'best_di', ... % best_di normal
+                                  'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
 cfg.process.calibrate.ACS91 = struct('compute_dissolved', true, ...
                                   'interpolation_method', 'linear', ...
                                   'CDOM_source', 'SPCD', ... 
                                   'FLOW_source', 'FLOW', ...
-                                  'di_method', 'best_di'); % best_di normal
+                                  'di_method', 'best_di', ... % best_di normal
+                                  'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
 cfg.process.calibrate.BB3 = struct('compute_dissolved', true, ...
                                    'TSG_source', 'TSG', ...
                                    'di_method', 'interpolate'); % interpolate constant

@@ -1,5 +1,5 @@
 function [p, g, bad] = processACS(lambda, tot, filt, modelG50, modelmphi, di, ...
-  cdom, fth, fth_constants, interpolation_method, di_method)
+  cdom, fth, fth_constants, interpolation_method, di_method, compute_ad_aphi)
 % NOTE: wavelength of c are interpolated to wavelength of a
 %% ap & cp
 % check FTH data
@@ -123,10 +123,12 @@ switch interpolation_method
       filt_avg.c = NaN(size(filt_avg,1), size(lambda.c, 2));
       for i=1:size(sel_start, 1)
         sel_filt = fth.dt(sel_start(i)) <= filt.dt & filt.dt <= fth.dt(sel_end(i));
-        filt_avg.a(i,:) = median(filt.a(sel_filt,:), 1);
-        filt_avg.c(i,:) = median(filt.c(sel_filt,:), 1);
-        filt_avg.a_avg_sd(i,:) = median(filt.a_avg_sd(sel_filt,:), 1);
-        filt_avg.c_avg_sd(i,:) = median(filt.c_avg_sd(sel_filt,:), 1);
+        foo = filt(sel_filt,:);
+        % compute 5 percentile for each filter event
+        filt_avg.a(i,:) = prctile(foo.a, 5, 1);
+        filt_avg.c(i,:) = prctile(foo.c, 5, 1);
+        filt_avg.a_avg_sd(i,:) = prctile(foo.a_avg_sd, 5, 1);
+        filt_avg.c_avg_sd(i,:) = prctile(foo.c_avg_sd, 5, 1);
       end
       % Interpolate filtered on total linearly
       filt_interp = table(tot.dt, 'VariableNames', {'dt'});
@@ -188,18 +190,18 @@ end
 
 % QC using ap spectrum
 wla_430 = lambda.a(find(lambda.a <= 430, 1,'last')); % find lower and closest to 430nm wavelength
-wla_710 = lambda.a(find(lambda.a >= 710, 1,'first')); % find higher and closest to 715nm wavelength
+wla_700 = lambda.a(find(lambda.a >= 700, 1,'first')); % find higher and closest to 700nm wavelength
 
 % delete absorption values < -0.0015
 p.ap_sd(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
-p.ap_sd(p.ap < -0.0015 & lambda.a >= wla_710) = NaN;
+p.ap_sd(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
 p.ap(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
-p.ap(p.ap < -0.0015 & lambda.a >= wla_710) = NaN;
-todelete = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_710 | ...
-  p.cp < -0.0015 | p.cp > 4, 2);
-fprintf('%.2f%% (%i) spectrum failed auto-QC step 1: ap 430-710 | cp < -0.0015 | p.cp > 4\n', ...
+p.ap(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
+todelete = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700 | ...
+  p.cp < -0.0015 | p.cp > 10, 2);
+fprintf('%.2f%% (%i) spectrum failed auto-QC step 1: ap 430-700 | cp < -0.0015 | p.cp > 10\n', ...
   sum(todelete) / size(p, 1) * 100, sum(todelete))
-bad = [p(todelete, :) table(repmat({'ap 430-710  | cp < -0.0015 | p.cp > 4'}, ...
+bad = [p(todelete, :) table(repmat({'ap 430-700  | cp < -0.0015 | p.cp > 10'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 p(todelete, :) = [];
 
@@ -212,8 +214,8 @@ if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
   minred_wla = sum(lambda.a <= 700) + foo;
   p.cp(lambda.c > lambda.c(minred_wlc)' & lambda.c > 710) = NaN;
   p.cp_sd(lambda.c > lambda.c(minred_wlc)' & lambda.c > 710) = NaN;
-  p.ap(lambda.a > lambda.a(minred_wla)' & lambda.a > wla_710) = NaN;
-  p.ap_sd(lambda.a > lambda.a(minred_wla)' & lambda.a > wla_710) = NaN;
+  p.ap(lambda.a > lambda.a(minred_wla)' & lambda.a > wla_700) = NaN;
+  p.ap_sd(lambda.a > lambda.a(minred_wla)' & lambda.a > wla_700) = NaN;
   
   % replace unrealistic ap in blue wavelength by NaN
   blue_wl = p.ap;
@@ -236,15 +238,6 @@ if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
   % Auto QC from ratio std 600-650 / 640-676
   ap_450 = p.ap(:, find(lambda.a >= 450, 1,'first'));
   ratiod600_ap450 = sum(abs(diff(p.ap(:, lambda.a > 600 & lambda.a <= 650), 2, 2)),2) ./ ap_450;
-%   ratiostd600676 = std(p.ap(:, lambda.a > 600 & lambda.a <= 650), [], 2) ./ ...
-%     std(p.ap(:, lambda.a >= 676 & lambda.a < 715), [], 2);
-%   ratiostd600676 = sum(abs(diff(p.ap(:, lambda.a > 600 & lambda.a <= 650), 2, 2)),2) ./ ...
-%     sum(abs(diff(p.ap(:, lambda.a >= 676 & lambda.a < 715), 2, 2)),2);
-
-%   figure(66)
-%   hold on
-%   plot(datetime(p.dt, 'ConvertFrom', 'datenum') , sum(abs(diff(p.ap(:, lambda.a > 600 & lambda.a <= 650), 2, 2)),2) ./ ...
-%     sum(abs(diff(p.ap(:, lambda.a >= 676 & lambda.a < 715), 2, 2)),2))
   
   % get automatic threshold for ratio std 600-650 / 640-676
   fudge_list = (0.1:0.1:10)';
@@ -252,58 +245,18 @@ if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
   for i=1:size(fudge_list,1)
     above_median_d600_ap450 = ratiod600_ap450 > fudge_list(i) * median(ratiod600_ap450, 'omitnan');
     ndel_spec(i) = sum(above_median_d600_ap450);
-%     above_median_var600676 = ratiostd600676 > fudge_list(i)*median(ratiostd600676);
-%     ndel_spec(i) = sum(above_median_var600676);
   end
   fudge_factor = fudge_list(find(abs(diff(ndel_spec)) == min(abs(diff(ndel_spec))) & ...
     ndel_spec(2:end) < 0.05 * max(ndel_spec), 1,  'first')); % threshold on first derivative of number of spectrum deleted
   above_median_d600_ap450 = ratiod600_ap450 > fudge_factor * median(ratiod600_ap450);
-%   above_median_var600676 = ratiostd600676 > fudge_factor * median(ratiostd600676);
   fprintf('%.2f%% (%i) spectrum failed auto-QC step 2: sum(abs(d(ap)/d(lambda(600-650)))) / ap450nm\n', ...
     sum(above_median_d600_ap450) / size(p, 1) * 100, sum(above_median_d600_ap450))
-%   fprintf('%.2f%% (%i) spectrum failed auto-QC step 2: sum(abs(d(ap)/d(lambda(600-650)))) / sum(abs(d(ap)/d(lambda(676-715))))\n', ...
-%     sum(above_median_var600676) / size(p, 1) * 100, sum(above_median_var600676))
-  
-%   % plot spectrum that fail auto-QC
-%   visProd3D(lambda.a, p.dt(above_median_d600_ap450, :), ...
-%     p.ap(above_median_d600_ap450, :), false, 'Wavelength', false, 101);
-%   zlabel('ap (m^{-1})')
-%   ylabel('time')
-%   xlabel('lambda')
-%   title('auto-QC step 2 bad spectrum: ratio stdev 600-650/676-715')
-%   % plot spectrum that pass auto-QC
-%   visProd3D(lambda.a, p.dt(~above_median_d600_ap450, :), ...
-%     p.ap(~above_median_d600_ap450, :), false, 'Wavelength', false, 102);
-%   zlabel('ap (m^{-1})')
-%   ylabel('time')
-%   xlabel('lambda')
-%   title('auto-QC step 2 good spectrum: ratio stdev 600-650/676-715')
 
 %   delete bad spectrum
   bad = [bad; p(above_median_d600_ap450, :) ...
     table(repmat({'sum(abs(d(ap)/d(lambda(600-650)))) / ap_{450nm}'}, sum(above_median_d600_ap450), 1), ...
     'VariableNames', {'QC_failed'})];
   p(above_median_d600_ap450, :) = [];
-%   bad = [bad; p(above_median_var600676, :) ...
-%     table(repmat({'sum(abs(d(ap)/d(lambda(600-650)))) / sum(abs(d(ap)/d(lambda(676-715))))'}, sum(above_median_var600676), 1), ...
-%     'VariableNames', {'QC_failed'})];
-%   p(above_median_var600676, :) = [];
-  
-%   figure(67); hold on
-%   plot(fudge_list, ndel_spec)
-%   plot(fudge_list(2:end), diff(ndel_spec))
-%   legend('# spec deleted', 'd(# spec deleted)/threshold')
-%   xlabel('threshold')
-
-%   figure(68); hold on
-%   plot(datetime(p.dt, 'ConvertFrom',  'datenum'), ...
-%     ap_450)
-%   plot(datetime(p.dt, 'ConvertFrom', 'datenum'), ...
-%     above_median_d600_ap450)
-%   yyaxis('right')
-%   plot(datetime(p.dt, 'ConvertFrom', 'datenum'), ...
-%     sum(abs(diff(p.ap(:, lambda.a > 600 & lambda.a <= 650), 2, 2)),2))
-%   legend('ap_{450nm}', 'var600-650', 'above_median_d600_ap450') % 'var630-700',
 end
 
 % Auto QC when a positive first derivatives of ap over
@@ -316,13 +269,6 @@ d460_640 = diff(p.ap(:, lambda.a > 460 & lambda.a <= 640),[],2);
 todelete = any(d460_640 > 0.4 * ap_450,2) | any(abs(diff(d460_640,[],2)) > 0.05, 2);
 fprintf('%.2f%% (%i) spectrum failed auto-QC step 3: d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)\n', ...
   sum(todelete) / size(p, 1) * 100, sum(todelete))
-% % plot spectrum that fail auto-QC
-% visProd3D(lambda.a, p.dt(any(d460_640 > 0.2 * ap_450,2), :), ...
-%   p.ap(any(d460_640 > 0.2 * ap_450,2), :), false, 'Wavelength', false, 102);
-% zlabel('ap (m^{-1})')
-% ylabel('time')
-% xlabel('lambda')
-% title('auto-QC step 3 bad spectrum: d(ap)/d(lambda460-640) > 0.4 * ap_{450nm}')
 bad = [bad; p(todelete, :) table(repmat({'d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 p(todelete, :) = [];
@@ -341,35 +287,13 @@ for i = 1:size(todelete,1)
 end
 fprintf('%.2f%% (%i) spectrum failed auto-QC step 4: 3 consecutive d(ap)/d(lambda485-570) > 0\n', ...
   sum(todelete) / size(p, 1) * 100, sum(todelete))
-% % plot spectrum that fail auto-QC
-% visProd3D(lambda.a, p.dt(todelete, :), ...
-%   p.ap(todelete, :), false, 'Wavelength', false, 103);
-% zlabel('ap (m^{-1})')
-% ylabel('time')
-% xlabel('lambda')
-% title('auto-QC step 4 bad spectrum: 3 consecutive d(ap)/d(lambda485-570) > 0')
-% delete bad spectrum
 bad = [bad; p(todelete, :) table(repmat({'3 consecutive d(ap)/d(lambda485-570) > 0'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 bad = sortrows(bad, 'dt');
 p(todelete, :) = [];
 
-% % run gaussian decomposition for data segments of 10000 rows to save memory
-% agaus = array2table(NaN(size(p,1), 14));
-% seg = 10000;
-% j = 1;
-% while j < size(p,1)
-%   if j + seg <= size(p,1)
-%     p_seg = j:j+seg;
-%   else
-%     p_seg = j:size(p,1);
-%   end
-%   agaus(p_seg, :) = GaussDecomp(p(p_seg, :), lambda.a);
-%   j = j + seg + 1;
-% end
-
 % run gaussian decomposition
-agaus = GaussDecomp(p, lambda.a);
+agaus = GaussDecomp(p, lambda.a, compute_ad_aphi);
 % agaus = GaussDecomp(p_unsmooth, lambda.a);
 p = [p agaus];
 
@@ -503,9 +427,10 @@ if ~isempty(di)
   
 %   % QC with ag and cg spectrums (limited testing on the QC)
 %   g(g.ag(:,1) < 0 & g.cg(:,end-3) < -0.005, :) = [];
+else
+  g = table();
 end
 end
-
 
 function [a_corr, c_corr, a_slope, c_slope] = TemperatureAndSalinityDependence(a, c, wl)
 % Note that a and c does not have to be on the same wvelength, however the
@@ -743,7 +668,7 @@ for i = 1:size(acs_data,2)
 end
 end
 
-function agaus = GaussDecomp(p, lambda)
+function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
 % Gaussian decomposition
 % Ron Zaneveld, WET Labs, Inc., 2005
 % Ali Chase, University of Maine, 2014
@@ -769,48 +694,101 @@ onenm = 400:1:720;
 
 fprintf('Gaussian decomposition ... ')
 
-%interpolate the un-smoothed ap spectra to one nm resolution
-acorr2onenm = interp1(lambda, p.ap', onenm, 'spline');
+% extrapolate NaN tails with constant nearest non-NaN value
+ap_filled = fillmissing(p.ap, 'nearest', 2);
+ap_sd_filled = fillmissing(p.ap_sd, 'nearest', 2);
 
-%define the matrix of component Gaussian functions using the peaks
-%and widths (sigma) above
+% interpolate the un-smoothed ap spectra to one nm resolution
+acorr2onenm = interp1(lambda, ap_filled', onenm, 'spline');
+
+% visProd3D(onenm, p.dt, ...
+%   acorr2onenm', false, 'Wavelength', false, 72);
+% zlabel('a_p (m^{-1})'); xlabel('{\lambda} (nm)'); ylabel('Time');
+
+
+% define the matrix of component Gaussian functions using the peaks
+% and widths (sigma) above
 coef2 = exp(-0.5 .* (((onenm .* ones(size(peak_loc,2),1))' - peak_loc .* ...
     ones(size(onenm,2),1)) ./ lsqsig) .^ 2);
 
-%define a function for non-algal particles and concatenate this to the Gaussian matrix
+% define a function for non-algal particles and concatenate this to the Gaussian matrix
 coef2nap = exp(-0.01 * (onenm - 400));
 coef2 = [coef2nap', coef2];
 
-%normalize both the component functions and the measured ap
-%spectrum by the uncertainty (std dev) in the ap spectra
-ap_sd_int = interp1(lambda, p.ap_sd', onenm, 'linear', 'extrap');
+% normalize both the component functions and the measured ap
+% spectrum by the uncertainty (std dev) in the ap spectra
+ap_sd_int = interp1(lambda, ap_sd_filled', onenm, 'linear', 'extrap');
 acorr2onenm_new = (acorr2onenm ./ ap_sd_int);
 
 amps = NaN(size(p,1), size(coef2,2));
 sumspec_temp = NaN(size(coef2,1), size(p,1));
 % compspec_temp = NaN(size(coef2,1), size(coef2,2), size(p,1));
 
+
+% visProd3D(peak_loc, p.dt, ...
+%   popo(:, 2:end), false, 'Wavelength', false, 73);
+% zlabel('a_p (m^{-1})'); xlabel('{\lambda} (nm)'); ylabel('Time');
+% 
+% visProd3D(peak_loc, p.dt, ...
+%   amps(:, 2:end), false, 'Wavelength', false, 74);
+% zlabel('a_p (m^{-1})'); xlabel('{\lambda} (nm)'); ylabel('Time');
+
+
+
 parfor i = 1:size(acorr2onenm_new,2)
-    coef2_new = coef2 ./ ap_sd_int(:,i);
-    %Inversion analysis
+  
+  coef2_new = coef2 ./ ap_sd_int(:,i);
+  % Inversion analysis
     amps(i, :) = lsqnonneg(coef2_new, acorr2onenm_new(:, i));
-    
-	% Using the inverted amplitudes, build a matrix of new component
-    % spectra (compspec) and the sum of the Gaussian and nap functions (sumspec):
-    sumspec_temp(:, i) = sum(amps(i, :) .* coef2, 2);
-%     compspec_temp(:, :, i) = amps(i, :) .* coef2;
+
+  % Using the inverted amplitudes, build a matrix of new component
+  % spectra (compspec) and the sum of the Gaussian and nap functions (sumspec):
+  sumspec_temp(:, i) = sum(amps(i, :) .* coef2, 2);
+%   compspec_temp(:, :, i) = amps(i, :) .* coef2;
 end
 
-%interpolate back to the original resolution
+% interpolate back to the original resolution
 % compspec = interp1(onenm', compspec_temp, lambda, 'spline');
 sumspec = interp1(onenm, sumspec_temp, lambda, 'spline')';
 
-uncertainty = sum(abs(p.ap(:, lambda > 440 & lambda < 705) - sumspec(:, lambda > 440 & lambda < 705)), 2, 'omitnan') / ...
+uncertainty = sum(abs(p.ap(:, lambda > 440 & lambda < 705) - ...
+  sumspec(:, lambda > 440 & lambda < 705)), 2, 'omitnan') / ...
     size(lambda(lambda > 440 & lambda < 705),2);
-    
+
 agaus = array2table([amps uncertainty], 'VariableNames', ...
     [{'ad_model400'} cellfun(@(x) ['agaus' x], cellstr(num2str(peak_loc'))', 'un', 0) {'agaus-mae'}]);
-agaus.Properties.VariableUnits = repmat({'1/m'}, 1, size(agaus, 2));
 
+if compute_ad_aphi
+  % Compute a non-algal and a phytoplankton from Zheng, G., and D. Stramski (2013) model
+  % Reference: 
+  % Zheng, G., and D. Stramski (2013), A model based on stacked-constraints approach for partitioning the light absorption coefficient of seawater 
+  % into phytoplankton and non-phytoplankton components, J. Geophys. Res. Oceans, 118, 2155?2174, doi:10.1002/jgrc.20115.
+  %
+  % Zheng, G., and D. Stramski (2013), A model for partitioning the light absorption coefficient of suspended marine particles into phytoplankton 
+  % and nonalgal components, J. Geophys. Res. Oceans, 118, 2977?2991, doi:10.1002/jgrc.20206.
+  wl_ZS13 = [400 412 420 430 443 450 467 490 500 510 550 555 630 650 670 700];
+  qwl = unique([wl_ZS13(:)' 442 676]);
+  ap_ZS13 = interp1(lambda, ap_filled', qwl, 'linear', 'extrap'); % need to extrapolate for 400
+
+%   % vectorized partition_ap (DOESN'T WORK)
+%   agaus.ad_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
+%   agaus.aphi_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
+%   [agaus.ad_ZS13, agaus.aphi_ZS13] = partition_ap_vec(ap_ZS13, qwl', 50);  % Must be in colum direction
+  
+  % Run partition_ap
+  ad_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
+  aphi_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
+%   parfor i = 1:300 %size(ap_ZS13, 2)
+  for i = progress(1:300) %size(ap_ZS13, 2)
+    [ad_ZS13(i,:), aphi_ZS13(i,:)] = partition_ap(ap_ZS13(:, i), qwl', 50);
+    [agaus.ad_ZS13(i, :), agaus.aphi_ZS13(i, :)] = partition_ap(ap_ZS13(:, i), qwl', 50);  % Must be in colum direction
+  end
+%   figure; hold on
+%   plot(qwl, ad)
+%   plot(qwl, aphi_ZS13)
+  agaus.Properties.VariableUnits = repmat({'1/m'}, 1, size(agaus, 2));
+end
 fprintf('Done\n')
 end
+
+
