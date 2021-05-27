@@ -194,12 +194,7 @@ else
 end
 
 if ~(~varargin{1} && size(data,2) == 3 && all(~isnan(data),'all') && max(data(:)) <= 1)
-    if exist('mycmap.mat', 'file')
-        S = load('mycmap.mat');
-        colormap(S.mycmap);
-    else
-        colormap(brewermap(128, 'Spectral'));
-    end
+    colormap(brewermap(128, '*Spectral'));
 
     h = colorbar('eastoutside');
 %     set(h, 'ylim', [min(data(:)) max(data(:))]);

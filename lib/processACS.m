@@ -294,7 +294,6 @@ p(todelete, :) = [];
 
 % run gaussian decomposition
 agaus = GaussDecomp(p, lambda.a, compute_ad_aphi);
-% agaus = GaussDecomp(p_unsmooth, lambda.a);
 p = [p agaus];
 
 fprintf('Calculating Chl line height, POC & gamma ... ')
@@ -313,15 +312,15 @@ ap_a = interp1(lambda.a, p.ap',[650 676 715],'linear')';
 p(ap_a(:,1) > ap_a(:,2), :) = []; % deleted unrealistic spectrum
 ap_a(ap_a(:,1) > ap_a(:,2), :) = []; % deleted unrealistic spectrum
 p.ap676_lh = ap_a(:,2)-(39/65*ap_a(:,1)+26/65*ap_a(:,3));
-p.ap676lh_chl = 157*p.ap676_line_height.^1.22;
-p.ap676lh_chl(real(p.ap676lh_chl) ~= p.ap676lh_chl) = NaN;
+p.chl_ap676lh = 157*p.ap676_lh.^1.22;
+p.chl_ap676lh(real(p.chl_ap676lh) ~= p.chl_ap676lh) = NaN;
 
 % 3.3 Derive Gamma (does not support NaN values) (Boss et al. 2001)
 % REFERENCES:
 % Boss, E., W.S. Pegau, W.D. Gardner, J.R.V. Zaneveld, A.H. Barnard., M.S. Twardowski, G.C. Chang, and T.D. Dickey, 2001. Spectral particulate attenuation and particle size distribution in the bottom boundary layer of a continental shelf. Journal of Geophysical Research, 106, 9509-9516.
 % [~,p.gamma] = FitSpectra_HM2(lambda.ref(:,1:end-2),p.cp(:,1:end-2));
 % Correct bu on March 5, 2018, FitSpectra_HM2 does not accept NaNs in cp
-p(all(isnan(p.cp),2),:)=[];
+p(all(isnan(p.cp),2),:) = [];
 sel = ~any(isnan(p.cp));
 [~,p.gamma] = FitSpectra_HM2(lambda.c(:,sel), p.cp(:,sel));
 fprintf('Done\n')
@@ -331,7 +330,7 @@ fprintf('Calculating chlorophyll from cp (H_alh) ... ')
 % Houskeeper, H.F., Draper, D., Kudela, R.M., Boss, E., 2020. Chlorophyll absorption and phytoplankton size information inferred from hyperspectral particulate beam attenuation. Appl. Opt. 59, 6765. https://doi.org/10.1364/AO.396832
 % First compute hskpr P parameters (put link to github of hkpr do not include in github).
 [p.Halh, Pr] = houskeeperetal2020(lambda.c, p.cp);
-p.Halh_chl=157*p.Halh.^1.22;
+p.chl_Halh = 157*p.Halh.^1.22;
 fprintf('Done\n')
 
 fprintf('Estimating G50 and mphi (slope of PSD) ... ')

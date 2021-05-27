@@ -22,15 +22,15 @@ end
 
 switch instrument
   case {'ACS', 'AC'}
-    if all(contains({'Halh_chl', 'HH_G50'}, data.Properties.VariableNames))
+    if all(contains({'chl_Halh', 'HH_G50'}, data.Properties.VariableNames))
       vargam = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
         'gamma')};
       varHH_G50 = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
         'HH_G50')};
       varchl = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
-        {'ap676lh_chl', 'Chl_lineheight'})};
+        {'chl_ap676lh', 'Chl_lineheight'})};
       varHchl = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
-        'Halh_chl')};
+        'chl_Halh')};
       varPOC = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
         {'poc','POC','POC_cp'})};
       fig(77);
@@ -74,7 +74,7 @@ switch instrument
       vargam = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
         'gamma')};
       varchl = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
-        {'ap676lh_chl', 'Chl_lineheight'})};
+        {'chl_ap676lh', 'Chl_lineheight'})};
       varPOC = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
         {'poc','POC','POC_cp'})};
       fig(77);
