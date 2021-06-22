@@ -87,14 +87,17 @@ classdef HBB < Instrument
       end
     end
     
-    function Calibrate(obj, compute_dissolved, TSG, di_method)
+    function Calibrate(obj, compute_dissolved, TSG, SWT, di_method)
+      SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       param = struct('lambda', obj.lambda, 'theta', obj.theta);
 %       param = struct('lambda', obj.lambda, 'theta', obj.theta, 'muFactors', obj.muFactors);
       % linear interpolation only, CDOM interpolation is not yet available
       if compute_dissolved
-        [obj.prod.p, obj.prod.g] = processHBB(param, obj.qc.tsw, obj.qc.fsw, obj.bin.diw, TSG.qc.tsw, di_method);
+        [obj.prod.p, obj.prod.g] = processHBB(param, obj.qc.tsw, obj.qc.fsw, ...
+          obj.bin.diw, TSG.qc.tsw, di_method, SWT.qc.tsw, SWT_constants);
       else
-        [obj.prod.p] = processHBB(param, obj.qc.tsw, obj.qc.fsw);
+        [obj.prod.p] = processHBB(param, obj.qc.tsw, obj.qc.fsw, [], [], [], ...
+          SWT.qc.tsw, SWT_constants);
       end
     end
   end

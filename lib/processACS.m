@@ -11,14 +11,20 @@ else
   SWITCH_FILTERED = fth_constants.SWITCH_FILTERED;
   SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
 end
-fth.swt = fth.swt > 0;
+
+% interpolate fth.swt onto binned data to fill missing flow data
+fth_interp = table([tot.dt; fth.dt; filt.dt], 'VariableNames', {'dt'});
+[~,b] = sort(fth_interp.dt); % sort dates
+fth_interp.dt = fth_interp.dt(b,:);
+fth_interp.swt = interp1(fth.dt, fth.swt, fth_interp.dt, 'previous');%, 'linear', 'extrap');
+fth_interp.swt = fth_interp.swt > 0;
 % Find switch events from total to filtered
-sel_start = find(fth.swt(1:end-1) == SWITCH_TOTAL & fth.swt(2:end) == SWITCH_FILTERED);
+sel_start = find(fth_interp.swt(1:end-1) == SWITCH_TOTAL & fth_interp.swt(2:end) == SWITCH_FILTERED);
 % Find switch events from filtered to total
-sel_end = find(fth.swt(1:end-1) == SWITCH_FILTERED & fth.swt(2:end) == SWITCH_TOTAL);
+sel_end = find(fth_interp.swt(1:end-1) == SWITCH_FILTERED & fth_interp.swt(2:end) == SWITCH_TOTAL);
 % Verify selections of filtered period
 if sel_start(1) > sel_end(1); sel_end(1) = []; end
-if sel_start(end) > sel_end(end); sel_end(end+1) = size(fth.swt,1); end
+if sel_start(end) > sel_end(end); sel_end(end+1) = size(fth_interp.swt,1); end
 if size(sel_start,1) ~= size(sel_end,1); error('Inconsistent fth data'); end
 % interpolate filtered event
 switch interpolation_method
@@ -28,14 +34,14 @@ switch interpolation_method
     param_extrap_threshold = 4;  % counts
     param_min_variability = 1;   % counts
     % Make filtered period median
-    filt_avg = table((fth.dt(sel_start) + fth.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
+    filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
     filt_avg.cdom = NaN(size(filt_avg,1),1);
     filt_avg.a = NaN(size(filt_avg,1), size(lambda.a, 2));
     filt_avg.c = NaN(size(filt_avg,1), size(lambda.c, 2));
     for i=1:size(sel_start, 1)
-      sel_cdom = fth.dt(sel_start(i)) <= cdom.dt & cdom.dt <= fth.dt(sel_end(i));
+      sel_cdom = fth_interp.dt(sel_start(i)) <= cdom.dt & cdom.dt <= fth_interp.dt(sel_end(i));
       filt_avg.cdom(i) = median(cdom.fdom(sel_cdom));
-      sel_filt = fth.dt(sel_start(i)) <= filt.dt & filt.dt <= fth.dt(sel_end(i));
+      sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
       filt_avg.a(i,:) = median(filt.a(sel_filt,:));
       filt_avg.c(i,:) = median(filt.c(sel_filt,:));
     end
@@ -117,12 +123,12 @@ switch interpolation_method
     filt_interp.c_avg_sd = interp1(filt.dt, filt.c_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
     
   case 'linear'
-      % Make filtered period median
-      filt_avg = table((fth.dt(sel_start) + fth.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
+      % Compute filtered period median
+      filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
       filt_avg.a = NaN(size(filt_avg,1), size(lambda.a, 2));
       filt_avg.c = NaN(size(filt_avg,1), size(lambda.c, 2));
       for i=1:size(sel_start, 1)
-        sel_filt = fth.dt(sel_start(i)) <= filt.dt & filt.dt <= fth.dt(sel_end(i));
+        sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
         foo = filt(sel_filt,:);
         % compute 5 percentile for each filter event
         filt_avg.a(i,:) = prctile(foo.a, 5, 1);
@@ -130,6 +136,7 @@ switch interpolation_method
         filt_avg.a_avg_sd(i,:) = prctile(foo.a_avg_sd, 5, 1);
         filt_avg.c_avg_sd(i,:) = prctile(foo.c_avg_sd, 5, 1);
       end
+      filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2), :) = [];
       % Interpolate filtered on total linearly
       filt_interp = table(tot.dt, 'VariableNames', {'dt'});
       filt_interp.a = interp1(filt_avg.dt, filt_avg.a, filt_interp.dt);%, 'linear', 'extrap');
@@ -138,6 +145,14 @@ switch interpolation_method
       filt_interp.c_avg_sd = interp1(filt_avg.dt, filt_avg.c_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
   otherwise
     error('Method not supported.');
+end
+
+if exist('visFlag', 'file')
+  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'a', round(size(tot.a, 2)/2), [], fth);
+  title('Check filter event interpolation, press q to continue', 'FontSize', 14)
+  legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
+    'AutoUpdate','off', 'FontSize', 12)
+  guiSelectOnTimeSeries(fh);
 end
 
 % Remove lines of NaNs

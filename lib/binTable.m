@@ -1,5 +1,5 @@
 function [ bin, gflag ] = binTable( raw, bin_size, mode, prctile_dtc, prctile_avg, dt_discontinus, parallel_flag, verbose )
-%BINTABLE compute median,, 5 and 95 percentiles, standard deviation, and number
+%BINTABLE compute median, 5 and 95 percentiles, standard deviation, and number
 %  observation for each bin. The size of each bin is defined by bin_size
 % bin_size is in seconds
 % raw must contain a dt column
@@ -143,12 +143,12 @@ switch mode
           avg_sel = any(avg_pl(i,:) <= raw_var_sel & raw_var_sel <= avg_ph(i,:),2);
           dtc_n(i) = sum(dtc_sel);
           avg_n(i) = sum(avg_sel);
-          dtc_md(i,:) = nanmedian(raw_var_sel(dtc_sel,:));
-          dtc_mn(i,:) = nanmean(raw_var_sel(dtc_sel,:));
-          dtc_sd(i,:) = nanstd(raw_var_sel(dtc_sel,:));
-          avg_md(i,:) = nanmedian(raw_var_sel(avg_sel,:));
-          avg_mn(i,:) = nanmean(raw_var_sel(avg_sel,:));
-          avg_sd(i,:) = nanstd(raw_var_sel(avg_sel,:));
+          dtc_md(i,:) = median(raw_var_sel(dtc_sel,:), 'omitnan');
+          dtc_mn(i,:) = mean(raw_var_sel(dtc_sel,:), 'omitnan');
+          dtc_sd(i,:) = std(raw_var_sel(dtc_sel,:), 'omitnan');
+          avg_md(i,:) = median(raw_var_sel(avg_sel,:), 'omitnan');
+          avg_mn(i,:) = mean(raw_var_sel(avg_sel,:), 'omitnan');
+          avg_sd(i,:) = std(raw_var_sel(avg_sel,:), 'omitnan');
         end
       end
       % Detection stats

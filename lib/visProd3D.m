@@ -39,7 +39,11 @@ if nargin < 6; autorotate=false; end
 if nargin < 7; figid = 72; end
 
  %% 3D Mesh Plot
+if ishghandle(figid)
+  clf(figid)
+end
 fh = fig(figid);
+% pause(0.0001)
 %   waterfall(x, dt, Z, C);
 mesh(x, dt(sel), Z, C);
 

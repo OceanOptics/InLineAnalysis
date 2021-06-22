@@ -1,4 +1,4 @@
-function saveGraph(fig_name, savefmt, varargin)
+function saveGraph(fig_name, savefmt, resol)
 % Author: Guillaume Bourdin
 % Date: 2020-08-23
 % 
@@ -13,8 +13,8 @@ function saveGraph(fig_name, savefmt, varargin)
 %%
 if nargin < 2
     error('not enough input variable')
-elseif nargin == 2
-    varargin{1} = 200;
+elseif nargin < 3
+    resol = 200;
 elseif nargin > 3
     error('Too many input variable')
 end
@@ -30,14 +30,14 @@ switch savefmt
         end
     case {'jpg', 'jpeg'}
         if vers >= 2020
-            exportgraphics(gcf, [fig_name '.jpg'],'Resolution',varargin{1})
+            exportgraphics(gcf, [fig_name '.jpg'],'Resolution', resol)
         else
             set(gcf,'renderer','Painters');
-            print(fig_name, '-djpeg', ['-r' num2str(varargin{1})]);
+            print(fig_name, '-djpeg', ['-r' num2str(resol)]);
         end
     case 'svg'
         set(gcf,'renderer','Painters');
-        print(fig_name, '-dsvg', ['-r' num2str(varargin{1})]);
+        print(fig_name, '-dsvg', ['-r' num2str(resol)]);
     case 'fig'
         savefig(gcf, [fig_name '.' savefmt]);
     case 'png'

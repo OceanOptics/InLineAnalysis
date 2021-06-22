@@ -1,4 +1,4 @@
-function DiagnosticPlot(data, instrument, level, save_figure, prefix)
+function user_selection = DiagnosticPlot(data, instrument, level, save_figure, prefix, toClean)
 % Plot all level of processing 3D spectrums of BB and AC sensors to
 % quality check along processing
 %
@@ -17,9 +17,13 @@ if nargin < 3
 elseif nargin == 3
   save_figure = false;
   prefix = 'plot';
+  toClean = {'',''};
 elseif nargin == 4
   prefix = 'plot';
-elseif nargin > 5
+  toClean = {'',''};
+elseif nargin == 5
+  toClean = {'',''};
+elseif nargin > 6
   error('Too many input argument')
 end
 
@@ -34,6 +38,7 @@ else
   error('Intrument not supported')
 end
 
+user_selection = [];
 for j = 1:length(level)
   fieldna = fieldnames(data.(level{j}));
   if any(strcmp(fieldna, 'bad'))
@@ -147,6 +152,10 @@ for j = 1:length(level)
             'FaceAlpha',0.3, 'EdgeAlpha',0.2)
           text(676, max(data.(level{j}).(tabletoplot{i}).dt(sel)), zsc(2)-zsc(2)/5, '676 nm')
           hold off
+        end
+        if any(strcmp(toClean{1}, tabletoplot{i})) && any(strcmp(toClean{2}, toplot{i, k}))
+          [ ~, ~, ~, user_sel ] = guiSelectOnTimeSeries(fh);
+          user_selection = [user_selection; user_sel];
         end
         if save_figure
           pause(0.01)

@@ -99,7 +99,7 @@ if read_margin
     pre_data = pre_data(dt(1)-margin <= pre_data.dt,:);
   end
   post_data = iRead( fun, dirname_in, dirname_out, prefix, dt(end)+1+margin, ...
-      software, force, nowrite, verbose, false, postfix, parallel_flag, otherarg1, otherarg1 );
+      software, force, nowrite, verbose, false, postfix, parallel_flag, otherarg1, otherarg2 );
   if ~isempty(post_data)
     post_data = post_data(post_data.dt <= dt(end)+1+margin,:);
   end

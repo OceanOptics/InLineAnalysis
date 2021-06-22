@@ -234,6 +234,13 @@ elseif contains(instrument, 'HBB')
   Nbad.bb = sum(bad_bb) / size(data.beta,1) * 100;
 end
 
+fnames = fieldnames(Nbad);
+for i = 1:size(fnames,1)
+  if isempty(Nbad.(fnames{i}))
+    Nbad.(fnames{i}) = 0;
+  end
+end
+
 % visProd3D(lambda.bb, datanorm.dt, datanorm.beta, ...
 %   false, 'Wavelength', false, 72); zlabel('beta (m^{-1})'); %, 'Wavelength', true
 % visProd3D(lambda.bb, datanorm.dt, diff_bb, ...

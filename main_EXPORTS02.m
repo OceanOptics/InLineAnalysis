@@ -5,7 +5,8 @@ clear
 close all
 if feature('IsDebugMode'); dbquit all; end
 
-cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master/')
+% cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master/')
+cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master/')
 
 % Load InLineAnalysis and the configuration
 ila = InLineAnalysis('cfg/EXPORTS02_cfg.m');
@@ -30,12 +31,15 @@ ila.cfg.days2run = datenum(2021,5,2,0,0,0):datenum(2021,5,5,0,0,0);
 %% SeapointCD
  ila.cfg.days2run = datenum(2021,1,2,0,0,0):datenum(2021,5,5,0,0,0);
  
+%% LISST
+ ila.cfg.days2run = datenum(2021,5,19,0,0,0):datenum(2021,5,20,0,0,0);
+ 
 %% HBB
- ila.cfg.days2run = datenum(2021,5,5,0,0,0):datenum(2021,5,10,0,0,0);
+ ila.cfg.days2run = datenum(2021,5,15,0,0,0):datenum(2021,5,17,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','ACS91'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91'
-ila.cfg.qcref.view = 'ACS91';
+ila.cfg.instruments2run = {'FLOW','TSG'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
+ila.cfg.qcref.view = 'TSG';
 ila.cfg.parallel = Inf;
 
 %% 1.Normal Import | Load raw data
@@ -66,11 +70,11 @@ ila.instrument.BB3.Sync(0);
 % % % ila.instrument.LISST.Sync(1);
 % % ila.instrument.WSCD1082P.Sync(40);
 % ila.instrument.WSCD859.Sync(40);
-% % ila.instrument.TSG.Sync(0);
+ila.instrument.TSG.Sync(0);
 % % ila.instrument.ALFA.Sync(15); 
 % % Quick visualizzation to sync with TSG
-% % fig(30, 'sync TSG');
-% % yyaxis('left'); plot(ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t); ylabel('Temperature (^o C)');
+fig(30, 'sync TSG');
+yyaxis('left'); plot(ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t); ylabel('Temperature (^o C)');
 % % yyaxis('right'); plot(ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,2)); ylabel('\beta (m^{-1} sr^{-1})'); ylim([80 300]);
 % % datetick2_doy();
 % visSync(ila.instrument.FLOW.data, ila.instrument.ACS007.data.dt, ila.instrument.ACS007.data.a(:,20), 'a (m^{-1})');
@@ -102,9 +106,9 @@ visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB
 % % % instrument = ila.cfg.qcref.view;
 % % % FLOW = ila.instrument.FLOW.data;
 
-ila.cfg.qcref.MinFiltPeriod = 65; % filter even period in minute % ACS: 55 % BB3: 60
-ila.cfg.qcref.szFilt = 12; % filter even length in minute % default = 10
-ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
+% ila.cfg.qcref.MinFiltPeriod = 65; % filter even period in minute % ACS: 55 % BB3: 60
+% ila.cfg.qcref.szFilt = 12; % filter even length in minute % default = 10
+% ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
 
 %% 3.Normal QC Reference
 % run with mode ui during first run (it saves your work for the next run)
@@ -112,7 +116,7 @@ ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
 % Note: when redoing QC of a given period of time (days2run) the previous
 % QC during the same period of time is erased, QC done on other periods of
 % time is kept in the json file
-ila.cfg.qcref.mode='load'; % 'ui' or 'load'
+ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
 ila.QCRef();
 
 %% 4.Normal Split fsw and tsw
@@ -127,12 +131,12 @@ ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 %% 5.Normal and DI automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR values
 % fudge factor for auto QC ACS.
 % Varies between ACS: 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
-ila.cfg.qc.RawAutoQCLim.filtered.a = 3; % 6
-ila.cfg.qc.RawAutoQCLim.filtered.c = 6; % 15
-ila.cfg.qc.RawAutoQCLim.total.a = 2; % 4
-ila.cfg.qc.RawAutoQCLim.total.c = 3; % 12
-ila.cfg.qc.RawAutoQCLim.dissolved.a = 3; % 4
-ila.cfg.qc.RawAutoQCLim.dissolved.c = 3; % 12
+ila.cfg.qc.RawAutoQCLim.filtered.a = 3;
+ila.cfg.qc.RawAutoQCLim.filtered.c = 6;
+ila.cfg.qc.RawAutoQCLim.total.a = 2;
+ila.cfg.qc.RawAutoQCLim.total.c = 3;
+ila.cfg.qc.RawAutoQCLim.dissolved.a = 3;
+ila.cfg.qc.RawAutoQCLim.dissolved.c = 3;
 % fudge factor for auto QC BB.
 % 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
 ila.cfg.qc.RawAutoQCLim.filtered.bb = 4;
@@ -141,7 +145,7 @@ ila.cfg.qc.RawAutoQCLim.dissolved.bb = 3;
 % remove saturated periods in BB
 ila.cfg.qc.Saturation_Threshold_bb = 4000; % saturate above 4000 counts
 ila.RawAutoQC(ila.cfg.qc.RawAutoQCLim, ila.cfg.qc.Saturation_Threshold_bb, 'raw');
-% ila.CheckDataStatus();
+ila.CheckDataStatus();
 
 %% Normal and DI Diagnostic Plot
 % check raw spectrums AC or BB sensors
@@ -269,6 +273,10 @@ ila.Write('prod')
 % % Notify with a song that the job is done
 % notif_sound = load('gong'); sound(notif_sound.y, notif_sound.Fs); % handel
 % return
+
+
+
+
 
 
 

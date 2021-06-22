@@ -11,6 +11,7 @@ function visProd_timeseries(data, instrument, lambda)
 %     - <N-1xM double> data
 %   instrument: <char> instrument name
 %%
+% get rid of numbers in instrument name
 instrument = instrument(isstrprop(instrument,'alpha'));
 if ~isdatetime(data.dt)
   data.dt = datetime(data.dt, 'ConvertFrom', 'datenum');
@@ -44,6 +45,7 @@ switch instrument
       scatter(data.dt, data.(varHH_G50), 6, 'filled')
       ylabel('H&H phytoplankton G50: cross-sectional area (\mum)')
       legend('gamma', 'H&H phytoplankton G50')
+      xlim([min(data.dt) max(data.dt)]);
       hold off
       subplot(3,1,2)
       hold on
@@ -51,12 +53,12 @@ switch instrument
       scatter(data.dt, data.(varchl), 6, 'filled')
       ylabel('[chl] (mg.m^{-3})')
       legend('Houskeeper [chl]', 'a_{p676}[chl]')
+      xlim([min(data.dt) max(data.dt)]);
       hold off
       subplot(3,1,3)
       scatter(data.dt, data.(varPOC), 6, 'filled')
       ylabel('[poc] (mg.m^{-3})')
-      xlim([min(data.dt) ...
-        max(data.dt)]);
+      xlim([min(data.dt) max(data.dt)]);
       %
       fig(78);
       clf
@@ -84,6 +86,7 @@ switch instrument
       yyaxis('left')
       scatter(data.dt, data.(vargam), 6, 'filled')
       ylabel('gamma (unitless)')
+      xlim([min(data.dt) max(data.dt)]);
       yyaxis('right')
       scatter(data.dt, data.(varchl), 6, 'filled')
       ylabel('[chl] (mg.m^{-3})')
@@ -92,8 +95,7 @@ switch instrument
       subplot(2,1,2)
       scatter(data.dt, data.(varPOC), 6, 'filled')
       ylabel('[poc] (mg.m^{-3})')
-      xlim([min(data.dt) ...
-        max(data.dt)]);
+      xlim([min(data.dt) max(data.dt)]);
     end
     if any(contains(data.Properties.VariableNames, 'base_fit_ag'))
       fig(79);
@@ -114,6 +116,7 @@ switch instrument
         p = [p, p2(1)];
         leg = [leg, 'ag fit flagged'];
       end
+      xlim([min(data.dt) max(data.dt)]);
       yyaxis('right')
       p3 = scatter(data.dt(~data.cg_fitflag), ...
         data.base_fit_cg(~data.cg_fitflag), 20, 'filled');
@@ -128,10 +131,9 @@ switch instrument
         p = [p, p4(1)];
         leg = [leg, 'cg fit flagged'];
       end
+      xlim([min(data.dt) max(data.dt)]);
       legend(p, leg)
       hold off
-      xlim([min(data.dt) ...
-        max(data.dt)]);
     end
       
   case {'BB', 'HBB'}
@@ -164,40 +166,46 @@ switch instrument
         'k', 'filled', 'Marker', 'v');
       ylabel('Gamma bbp (unitless)');
       leg = [leg; {'gamma bbp'}];
+      xlim([min(data.dt) max(data.dt)]);
     elseif contains(instrument, 'HBB') && any(contains(data.Properties.VariableNames, 'gamma_bbg'))
       yyaxis('right')
       scatter(data.dt, data.gamma_bbg, 50, ...
         'k', 'filled', 'Marker', 'v');
       ylabel('Gamma bbg (unitless)');
       leg = [leg; {'gamma bbg'}];
+      xlim([min(data.dt) max(data.dt)]);
     end
     hold off
     legend(leg)
     xlim([min(data.dt) ...
       max(data.dt)]);
   case 'TSG'
+    varT = data.Properties.VariableNames{strcmp(data.Properties.VariableNames, 't') | ...
+      strcmp(data.Properties.VariableNames, 'sst') | ...
+      strcmp(data.Properties.VariableNames, 'SST')};
+    varS = data.Properties.VariableNames{strcmp(data.Properties.VariableNames, 's') | ...
+      strcmp(data.Properties.VariableNames, 'sss') | ...
+      strcmp(data.Properties.VariableNames, 'SSS') | ...
+      strcmp(data.Properties.VariableNames, 'sss_adj')};
     fig(90);
     clf
     yyaxis('left')
-    scatter(data.dt, data.t, 6, 'filled'); ylabel('TSG T (°C)');
+    scatter(data.dt, data.(varT), 6, 'filled'); ylabel('TSG T (°C)');
     yyaxis('right')
-    scatter(data.dt, data.s, 6, 'filled'); ylabel('TSG S (PSU)');
-    xlim([min(data.dt) ...
-      max(data.dt)]);
+    scatter(data.dt, data.(varS), 6, 'filled'); ylabel('TSG S (PSU)');
+    xlim([min(data.dt) max(data.dt)]);
   case 'PAR'
     fig(92);
     clf
     scatter(data.dt, data.par, 6, 'filled');
     ylabel('PAR (\muE.m^{-2}.s^{-1})');
-    xlim([min(data.dt) ...
-      max(data.dt)]);
+    xlim([min(data.dt) max(data.dt)]);
   case 'WSCD'
     fig(94);
     clf
     scatter(data.dt, data.fdom, 6, 'filled');
     ylabel('FDOM ppb');
-    xlim([min(data.dt) ...
-      max(data.dt)]);
+    xlim([min(data.dt) max(data.dt)]);
 %   case 'LISST'
   otherwise
     warning('%s not supported for product visualisation', instrument)

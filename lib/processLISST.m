@@ -1,4 +1,4 @@
-function [p, bin_size] = processLISST(param, tot, filt)
+function [p, bin_size] = processLISST(param, tot, filt, fth, fth_constants)
 % PROCESSLISST process LISST from flow through system with both
 %   filtered and total periods
 %
@@ -16,12 +16,65 @@ path_length = 0.05;
 % Fraction of circle covered by detectors
 phi = 1/6;
 
+if ~exist('fth', 'var')
+  % check FTH data
+  if ~exist('fth_constants', 'var')
+    % Assume most recent FlowControl software
+    SWITCH_FILTERED = 1;
+    SWITCH_TOTAL = 0;
+  else
+    SWITCH_FILTERED = fth_constants.SWITCH_FILTERED;
+    SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
+  end
+
+  % interpolate fth.swt onto binned data to fill missing flow data
+  fth_interp = table([tot.dt; fth.dt; filt.dt], 'VariableNames', {'dt'});
+  [~,b] = sort(fth_interp.dt); % sort dates
+  fth_interp.dt = fth_interp.dt(b,:);
+  fth_interp.swt = interp1(fth.dt, fth.swt, fth_interp.dt, 'previous');%, 'linear', 'extrap');
+  fth_interp.swt = fth_interp.swt > 0;
+  % Find switch events from total to filtered
+  sel_start = find(fth_interp.swt(1:end-1) == SWITCH_TOTAL & fth_interp.swt(2:end) == SWITCH_FILTERED);
+  % Find switch events from filtered to total
+  sel_end = find(fth_interp.swt(1:end-1) == SWITCH_FILTERED & fth_interp.swt(2:end) == SWITCH_TOTAL);
+  % Verify selections of filtered period
+  if sel_start(1) > sel_end(1); sel_end(1) = []; end
+  if sel_start(end) > sel_end(end); sel_end(end+1) = size(fth_interp.swt,1); end
+  if size(sel_start,1) ~= size(sel_end,1); error('Inconsistent fth data'); end
+
+  % Compute filtered period median
+  filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
+  for i=1:size(sel_start, 1)
+    sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
+    foo = filt(sel_filt,:);
+    % compute 5 percentile for each filter event
+    filt_avg.beta(i,:) = prctile(foo.beta, 5, 1);
+    filt_avg.beta_avg_sd(i,:) = prctile(foo.beta_avg_sd, 5, 1);
+    filt_avg.laser_reference(i,:) = prctile(foo.laser_reference, 5, 1);
+    filt_avg.laser_transmission(i,:) = prctile(foo.laser_transmission, 5, 1);
+  end
+  filt_avg(all(isnan(filt_avg.beta), 2), :) = [];
+else
+  filt_avg = filt;
+end
+
 % Interpolate filtered on Total
 filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-filt_interp.beta = interp1(filt.dt, filt.beta, filt_interp.dt, 'linear', 'extrap');
-filt_interp.beta_avg_sd = interp1(filt.dt, filt.beta_avg_sd, filt_interp.dt, 'linear', 'extrap');
-filt_interp.laser_reference = interp1(filt.dt, filt.laser_reference, filt_interp.dt, 'linear', 'extrap');
-filt_interp.laser_transmission = interp1(filt.dt, filt.laser_transmission, filt_interp.dt, 'linear', 'extrap');
+filt_interp.beta = interp1(filt_avg.dt, filt_avg.beta, filt_interp.dt, 'linear', 'extrap');
+filt_interp.beta_avg_sd = interp1(filt_avg.dt, filt_avg.beta_avg_sd, filt_interp.dt, 'linear', 'extrap');
+filt_interp.laser_reference = interp1(filt_avg.dt, filt_avg.laser_reference, filt_interp.dt, 'linear', 'extrap');
+filt_interp.laser_transmission = interp1(filt_avg.dt, filt_avg.laser_transmission, filt_interp.dt, 'linear', 'extrap');
+
+if exist('visFlag', 'file') && exist('fth', 'var')
+  visFlag(tot, filt_interp, [], [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], fth);
+  title('Check filter event interpolation')
+  legend('Total', 'Filtered interpolated', 'Filtered median', 'Flow rate')
+elseif exist('visFlag', 'file')
+  visFlag(tot, filt_interp, [], [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], []);
+  title('Check filter event interpolation')
+  legend('Total', 'Filtered interpolated', 'Filtered median')
+end
+  
 
 % Set output table
 p = table(tot.dt, 'VariableNames', {'dt'});

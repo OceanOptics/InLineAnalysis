@@ -82,7 +82,7 @@ d = data(i_data,:);
 % Init few variables
 n = size(swt,1);
 flag_buffer = false(n,1);
-sampling_frequency = 1 / (nanmedian(data.dt(2:end) - data.dt(1:end-1)) * 3600 * 24); % hertz 
+sampling_frequency = 1 / (median(data.dt(2:end) - data.dt(1:end-1), 'omitnan') * 3600 * 24); % hertz 
 step_buffer = round(buffer * sampling_frequency);
 % Find switch events from filtered to total
 sel = find(swt(1:end-1) == SWITCH_FILTERED & swt(2:end) == SWITCH_TOTAL);

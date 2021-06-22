@@ -327,18 +327,37 @@ classdef InLineAnalysis < handle
       end
     end
     
-    function DiagnosticPlot (obj, instrument, level, save_figure)
+    function DiagnosticPlot (obj, instrument, level, save_figure, toClean)
       if nargin < 3
         error('Not enough input argument')
       elseif nargin == 3
         save_figure = false;
-      elseif nargin > 4
+        toClean = {'',''};
+      elseif nargin == 4
+        toClean = {'',''};
+      elseif nargin > 5
         error('Too many input argument')
       end
+      if size(toClean,2) < 2 || ~iscell(toClean)
+        error("Please indicate the table and variable in cell array, e.g. {'p', 'ap'} to clean ACS product visualising ap spectrum")
+      end
       for i=obj.cfg.instruments2run; i = i{1};
-        if  any(contains(i,instrument))
+        if any(contains(i,instrument))
           fprintf('%s Diagnostic plots\n', i);
-          DiagnosticPlot(obj.instrument.(i), i, level, save_figure, obj.meta.cruise);
+          [user_selection] = DiagnosticPlot(obj.instrument.(i), i, level, ...
+            save_figure, obj.meta.cruise, toClean);
+          % Apply user selection
+          if ~isempty(user_selection)
+            obj.instrument.(i).DeleteUserSelection(user_selection);
+            % Save user selection
+            filename = [obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'];
+            if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
+            if strcmp(toClean{1}, 'g')
+              obj.updatejson_userselection_bad(filename, user_selection, toClean{2}(1));
+            else
+              obj.updatejson_userselection_bad(filename, user_selection);
+            end
+          end
         end
       end
     end
@@ -595,7 +614,7 @@ classdef InLineAnalysis < handle
               obj.instrument.(i).DeleteUserSelection(user_selection);
               % Save user selection
               filename = [obj.instrument.(i).path.ui i '_QCGlobal_UserSelection.json'];
-              if ~isdir(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
+              if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
               obj.updatejson_userselection_bad(filename, user_selection);
             end
           end
@@ -636,7 +655,7 @@ classdef InLineAnalysis < handle
               obj.instrument.(i).DeleteUserSelection(user_selection);
               % Save user selection
               filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json'];
-              if ~isdir(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
+              if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
               obj.updatejson_userselection_bad(filename, user_selection);
             end
           end
@@ -663,17 +682,37 @@ classdef InLineAnalysis < handle
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               fprintf('QC LOAD Specific: %s\n', i);
               file_selection = loadjson([obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json']);
-              % Convert datestr to datenum for newer format
-              try
-                  if ~isempty(file_selection.bad)
-                      file_selection.bad = [datenum(file_selection.bad(1)), datenum(file_selection.bad(2))]; end
-              catch
-                  if ~isempty(file_selection.bad)
-                      file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)),...
-                          datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))];
-                  end
+              if isfile([obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'])
+                file_pick_selection = loadjson([obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json']);
+                sel_picktoload = fieldnames(file_pick_selection);
               end
-              obj.instrument.(i).DeleteUserSelection(file_selection.bad);
+              sel_toload = fieldnames(file_selection);
+              % Convert datestr to datenum for newer format
+              for j = 1:size(sel_toload, 1)
+                if ~isempty(file_selection.(sel_toload{j}))
+                  if iscell(file_selection.(sel_toload{j}){1}) && iscell(file_selection.(sel_toload{j}){1})
+                    file_selection.(sel_toload{j}) = [datenum(cellfun(@(x) char(x), file_selection.(sel_toload{j}){1}, 'UniformOutput', false)),...
+                      datenum(cellfun(@(x) char(x), file_selection.(sel_toload{j}){2}, 'UniformOutput', false))];
+                  else
+                    file_selection.(sel_toload{j}) = [datenum(file_selection.(sel_toload{j})(:, 1)),...
+                      datenum(file_selection.(sel_toload{j})(:, 2))];
+                  end
+                end
+                obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}));
+              end
+              if isfile([obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'])
+                for j = 1:size(sel_picktoload, 1)
+                  % load hand picked bad values
+                  if ~isempty(file_pick_selection.(sel_picktoload{j}))
+                    if iscell(file_pick_selection.(sel_picktoload{j}){1}) && iscell(file_pick_selection.(sel_picktoload{j}){1})
+                      file_pick_selection.(sel_picktoload{j}) = datenum(cellfun(@(x) char(x), file_pick_selection.(sel_picktoload{j}){1}, 'UniformOutput', false));
+                    else
+                      file_pick_selection.(sel_picktoload{j}) = datenum(file_pick_selection.(sel_picktoload{j})(:, 1));
+                    end
+                  end
+                  obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}));
+                end
+              end
             end
           end
           if ~obj.cfg.qc.global.active && ~obj.cfg.qc.specific.active
@@ -711,7 +750,7 @@ classdef InLineAnalysis < handle
               toqc = 'qc';
             end
             % create folder for user input
-            if ~isdir(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
+            if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
             ColorSet = lines(2);
             fh = fig(52); hold('on');
             if contains(i, 'AC')
@@ -750,8 +789,12 @@ classdef InLineAnalysis < handle
           for i=obj.cfg.instruments2run; i = i{1};
             if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
             fprintf('QC DI LOAD: %s\n', i);
-            if exist([obj.instrument.(i).path.ui i '_QCDI_UserSelection.json'], 'file')
+            if isfile([obj.instrument.(i).path.ui i '_QCDI_UserSelection.json'])
               file_selection = loadjson([obj.instrument.(i).path.ui i '_QCDI_UserSelection.json']);
+              if isfile([obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'])
+                file_pick_selection = loadjson([obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json']);
+                sel_picktoload = fieldnames(file_pick_selection);
+              end
               sel_toload = fieldnames(file_selection);
               % Convert datestr to datenum for newer format
               for j = 1:size(sel_toload, 1)
@@ -771,6 +814,25 @@ classdef InLineAnalysis < handle
                   obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}));
                 end
               end
+              if isfile([obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'])
+                for j = 1:size(sel_picktoload, 1)
+                  % load hand picked bad values
+                  if ~isempty(file_pick_selection.(sel_picktoload{j}))
+                    if iscell(file_pick_selection.(sel_picktoload{j}){1}) && iscell(file_pick_selection.(sel_picktoload{j}){1})
+                      file_pick_selection.(sel_picktoload{j}) = datenum(cellfun(@(x) char(x), file_pick_selection.(sel_picktoload{j}){1}, 'UniformOutput', false));
+                    else
+                      file_pick_selection.(sel_picktoload{j}) = datenum(file_pick_selection.(sel_picktoload{j})(:, 1));
+                    end
+                  end
+                  if contains(i, 'AC')
+                    channel = strsplit(sel_picktoload{j}, '_');
+                    obj.instrument.(i).DeleteUserSelection(file_selection.(sel_picktoload{j}), channel{end});
+                  else
+                    obj.instrument.(i).DeleteUserSelection(file_selection.(sel_picktoload{j}));
+                  end
+                end
+              end
+              
             else
               warning('No user input saved')
             end
@@ -780,6 +842,195 @@ classdef InLineAnalysis < handle
         otherwise
           error('Unknown mode.');
       end
+    end
+    
+    function QCSwitchPosition(obj, shift_flow)
+      if isempty(obj.instrument.(obj.cfg.qcref.view).qc.tsw)
+        error('No %s qc tsw data loaded', obj.cfg.qcref.view)
+      end
+      if isempty(obj.instrument.(obj.cfg.qcref.view).qc.fsw)
+        error('No %s qc fsw data loaded', obj.cfg.qcref.view)
+      end
+      if isempty(obj.instrument.FLOW.qc.tsw)
+        error('No FLOW qc data loaded')
+      end
+      filtdt = datetime(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt, 'ConvertFrom', 'datenum');
+      filtdt = dateshift(filtdt, 'start', 'minute');
+      flowdt = datetime(obj.instrument.FLOW.qc.tsw.dt, 'ConvertFrom', 'datenum');
+      flowdt = dateshift(flowdt, 'start', 'minute');
+      fprintf('%.2f%% of filtered data is included into filtered switch position before QC\n', ...
+        sum(ismember(filtdt, flowdt)) / size(filtdt,1) * 100)
+      if nargin == 1
+        % Automatically detect how much to shift flow data time so that switch filtered
+        % position include the most filtered data in number of minutes
+        shift_flow_list = (-20:20)';
+        matchs = NaN(size(shift_flow_list));
+        for sh = 1:size(shift_flow_list, 1)
+          popoflow = obj.instrument.FLOW.qc.tsw(obj.instrument.FLOW.qc.tsw.swt == 1, :);
+          if shift_flow_list(sh) > 0
+            linetoadd_dt = (datetime(min(popoflow.dt), 'ConvertFrom', 'datenum') - ...
+              minutes(shift_flow_list(sh)):minutes(1):datetime(min(popoflow.dt), 'ConvertFrom', 'datenum') - ...
+              minutes(1))';
+            linetoadd = table(datenum(linetoadd_dt), zeros(size(linetoadd_dt)), zeros(size(linetoadd_dt)), ...
+              NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), ...
+              'VariableNames', popoflow.Properties.VariableNames);
+            popoflow = [repmat(linetoadd, shift_flow_list(sh), 1); popoflow(1:end-shift_flow_list(sh),:)];
+          elseif shift_flow_list(sh) < 0
+            linetoadd_dt = (datetime(max(popoflow.dt), 'ConvertFrom', 'datenum') + ...
+              minutes(shift_flow_list(sh)):minutes(1):datetime(min(popoflow.dt), 'ConvertFrom', 'datenum') + ...
+              minutes(1))';
+            linetoadd = table(datenum(linetoadd_dt), zeros(size(linetoadd_dt)), zeros(size(linetoadd_dt)), ...
+              NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), ...
+              'VariableNames', popoflow.Properties.VariableNames);
+            popoflow = [popoflow(abs(shift_flow_list(sh))+1:end, :); repmat(linetoadd, abs(shift_flow_list(sh)), 1)];
+          end
+          popoflow.dt = datenum(datetime(popoflow.dt, 'ConvertFrom', 'datenum') + minutes(shift_flow_list(sh)));
+          filtdt = datetime(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt, 'ConvertFrom', 'datenum');
+          filtdt = dateshift(filtdt, 'start', 'minute');
+          flowdt = datetime(popoflow.dt, 'ConvertFrom', 'datenum');
+          flowdt = dateshift(flowdt, 'start', 'minute');
+          matchs(sh) = sum(ismember(filtdt, flowdt));
+        end
+        shift_flow = shift_flow_list(matchs == max(matchs));
+        shift_flow = min(shift_flow);
+        if shift_flow ~= 0
+          fprintf('Switch position shifted automatically to best match filtered data: %i minute(s)\n', shift_flow)
+        end
+      elseif nargin > 2
+        error('Too many input arguments')
+      end
+      % Apply shift to flow data
+      shift_flow = round(shift_flow);
+      if shift_flow > 0
+        linetoadd_dt = (datetime(min(obj.instrument.FLOW.qc.tsw.dt), 'ConvertFrom', 'datenum') - ...
+          minutes(shift_flow):minutes(1):datetime(min(obj.instrument.FLOW.qc.tsw.dt), 'ConvertFrom', 'datenum') - ...
+          minutes(1))';
+        linetoadd = table(datenum(linetoadd_dt), zeros(size(linetoadd_dt)), zeros(size(linetoadd_dt)), ...
+          NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), ...
+          'VariableNames', obj.instrument.FLOW.qc.tsw.Properties.VariableNames);
+        obj.instrument.FLOW.qc.tsw = [repmat(linetoadd, shift_flow, 1); obj.instrument.FLOW.qc.tsw(1:end-shift_flow,:)];
+      elseif shift_flow < 0
+        linetoadd_dt = (datetime(max(obj.instrument.FLOW.qc.tsw.dt), 'ConvertFrom', 'datenum') + ...
+          minutes(shift_flow):minutes(1):datetime(min(obj.instrument.FLOW.qc.tsw.dt), 'ConvertFrom', 'datenum') + ...
+          minutes(1))';
+        linetoadd = table(datenum(linetoadd_dt), zeros(size(linetoadd_dt)), zeros(size(linetoadd_dt)), ...
+          NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), ...
+          'VariableNames', obj.instrument.FLOW.qc.tsw.Properties.VariableNames);
+        obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw(abs(shift_flow)+1:end, :); repmat(linetoadd, abs(shift_flow), 1)];
+      end
+      obj.instrument.FLOW.qc.tsw.dt = datenum(datetime(obj.instrument.FLOW.qc.tsw.dt, 'ConvertFrom', 'datenum') + minutes(shift_flow));
+      % create filter event duplicate when long period without filter event 
+      fh = visFlag([], [], obj.instrument.(obj.cfg.qcref.view).qc.tsw, [], ...
+        obj.instrument.(obj.cfg.qcref.view).qc.fsw, [], obj.instrument.(obj.cfg.qcref.view).view.varname, ...
+        obj.instrument.(obj.cfg.qcref.view).view.varcol, [], obj.instrument.FLOW.qc.tsw);
+      plot(obj.instrument.FLOW.qc.tsw.dt, obj.instrument.FLOW.qc.tsw.swt, '-k')
+      title(['Select filter event to duplicate (press f)' newline 'Select new time slot for filter event duplicated (press s)' newline 'Change switch position (press t)'], ...
+        'FontSize', 14)
+      legend('Total', 'Filtered', 'Flow rate','switch position (1=filtered | 0=total)',...
+        'AutoUpdate','off', 'FontSize', 12)
+      [toswitch_t, toduplicate_f, newtime_s] = guiSelectOnTimeSeries(fh);
+      % check number of entries
+      if size(toduplicate_f,1) ~= size(newtime_s,1)
+        fprintf('Warning: Inconsistent number of entries (f and t), new filter event ignored\n')
+        toduplicate_f = [];
+        newtime_s = [];
+      end
+      % duplicate filter events f and s commands
+      for j = 1:size(toduplicate_f, 1)
+        idx_acs = obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt >= toduplicate_f(j, 1) & ...
+          obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt <= toduplicate_f(j, 2);
+        if sum(idx_acs) > 0
+          % copy closest filter event to specific new time slot
+          new_filt = obj.instrument.(obj.cfg.qcref.view).qc.fsw(idx_acs, :);
+          new_filt.dt = datenum(repmat(datetime(newtime_s(j), 'ConvertFrom', 'datenum'), size(new_filt,1), 1) + ...
+            minutes(0:size(new_filt,1)-1)');
+          obj.instrument.(obj.cfg.qcref.view).qc.fsw = [obj.instrument.(obj.cfg.qcref.view).qc.fsw; new_filt];
+          % sort by date
+          [~,b] = sort(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt);
+          obj.instrument.(obj.cfg.qcref.view).qc.fsw = obj.instrument.(obj.cfg.qcref.view).qc.fsw(b,:);
+          idx_flow_newfilt = obj.instrument.FLOW.qc.tsw.dt >= new_filt.dt(1) & obj.instrument.FLOW.qc.tsw.dt <= new_filt.dt(end);
+          if sum(idx_flow_newfilt) > 0
+            obj.instrument.FLOW.qc.tsw.swt(idx_flow_newfilt) = 1;
+            obj.instrument.FLOW.qc.tsw.swt_avg_sd(idx_flow_newfilt) = 1;
+          end
+          remaining_idx = size(new_filt,1) - sum(idx_flow_newfilt);
+          if remaining_idx > 0
+            % create flow table
+            new_flow = table();
+            new_flow.dt = new_filt.dt(end-remaining_idx+1:end);
+            new_flow.swt = ones(remaining_idx,1);
+            new_flow.swt_avg_sd = zeros(remaining_idx,1);
+            new_flow.swt_avg_n = NaN(remaining_idx,1);
+            new_flow.spd = NaN(remaining_idx,1);
+            new_flow.spd_avg_sd = NaN(remaining_idx,1);
+            new_flow.spd_avg_n = NaN(remaining_idx,1);
+            obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw; new_flow];
+          end
+
+          flow_swt_off = table(datenum(datetime(new_filt.dt(end), 'ConvertFrom', 'datenum') + ...
+            minutes(1)'), 0, 0, NaN, NaN, NaN, NaN, 'VariableNames', ...
+            obj.instrument.FLOW.qc.tsw.Properties.VariableNames);
+          obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw; flow_swt_off];
+           % sort by date
+          [~,b] = sort(obj.instrument.FLOW.qc.tsw.dt);
+          obj.instrument.FLOW.qc.tsw = obj.instrument.FLOW.qc.tsw(b,:);
+        end
+      end
+      % change switch position t command
+      for j = 1:size(toswitch_t, 1)
+        idx_flow = obj.instrument.FLOW.qc.tsw.dt > toswitch_t(j, 1) & ...
+          obj.instrument.FLOW.qc.tsw.dt < toswitch_t(j, 2);
+        nbtoswitch = floor(minutes(abs(datetime(toswitch_t(j, 2), 'ConvertFrom', 'datenum') - ...
+          datetime(toswitch_t(j, 1), 'ConvertFrom', 'datenum'))));
+        if sum(idx_flow) < nbtoswitch % replace all FLOW data with new table
+            obj.instrument.FLOW.qc.tsw(idx_flow, :) = [];
+            closest_position = obj.instrument.FLOW.qc.tsw.swt(abs(obj.instrument.FLOW.qc.tsw.dt - mean(toswitch_t(j, :))) == ...
+              min(abs(obj.instrument.FLOW.qc.tsw.dt - mean(toswitch_t(j, :))))); % get the closest switch position in time
+            new_flow = table();
+            new_flow.dt = datenum(datetime(toswitch_t(j, 1), 'ConvertFrom', 'datenum'):...
+              minutes(1):datetime(toswitch_t(j, 2), 'ConvertFrom', 'datenum'))';
+            if closest_position > 0 % set the switch position to the opposite to the closest switch position
+              new_flow.swt = zeros(size(new_flow,1),1);
+            else
+              new_flow.swt = ones(size(new_flow,1),1);
+            end
+            new_flow.swt_avg_sd = zeros(size(new_flow,1),1);
+            new_flow.swt_avg_n = NaN(size(new_flow,1),1);
+            new_flow.spd = NaN(size(new_flow,1),1);
+            new_flow.spd_avg_sd = NaN(size(new_flow,1),1);
+            new_flow.spd_avg_n = NaN(size(new_flow,1),1);
+            obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw; new_flow];
+             % sort by date
+            [~,b] = sort(obj.instrument.FLOW.qc.tsw.dt);
+            obj.instrument.FLOW.qc.tsw = obj.instrument.FLOW.qc.tsw(b,:);
+        else
+    %       obj.instrument.FLOW.qc.tsw.swt(idx_flow) = 1;
+          if sum(obj.instrument.FLOW.qc.tsw.swt(idx_flow) == 0) > sum(obj.instrument.FLOW.qc.tsw.swt(idx_flow) > 0)
+            obj.instrument.FLOW.qc.tsw.swt(idx_flow) = 1;
+          else
+            obj.instrument.FLOW.qc.tsw.swt(idx_flow) = 0;
+          end
+        end
+      end
+      % check for duplicats in flow data and delete
+      [~, L, ~] = unique(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt,'first');
+      indexToDump = not(ismember(1:numel(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt),L));
+      if sum(indexToDump) > 0
+        fprintf('Warning: %i identical dates in AC data => deleted\n', sum(indexToDump))
+        obj.instrument.(obj.cfg.qcref.view).qc.fsw(indexToDump, :) = [];
+      end
+      [~, L, ~] = unique(obj.instrument.FLOW.qc.tsw.dt,'first');
+      indexToDump = not(ismember(1:numel(obj.instrument.FLOW.qc.tsw.dt),L));
+      if sum(indexToDump) > 0
+        fprintf('Warning: %i identical dates in FLOW data => deleted\n', sum(indexToDump))
+        obj.instrument.FLOW.qc.tsw(indexToDump, :) = [];
+      end
+      filtdt = datetime(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt, 'ConvertFrom', 'datenum');
+      filtdt = dateshift(filtdt, 'start', 'minute');
+      flowdt = datetime(obj.instrument.FLOW.qc.tsw.dt, 'ConvertFrom', 'datenum');
+      flowdt = dateshift(flowdt, 'start', 'minute');
+      fprintf('%.2f%% of filtered data is included into filtered switch position after QC\n', ...
+        sum(ismember(filtdt, flowdt)) / size(filtdt,1) * 100)
     end
     
     % Process
@@ -809,6 +1060,7 @@ classdef InLineAnalysis < handle
             case {'BB', 'BB3', 'HBB'}
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.instrument.(obj.cfg.calibrate.(i).TSG_source),...
+                                           obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
                                            obj.cfg.calibrate.(i).di_method)
             otherwise
               obj.instrument.(i).Calibrate()
@@ -872,14 +1124,15 @@ classdef InLineAnalysis < handle
         if  any(strcmp(i,obj.cfg.write.skip))
           fprintf('LOAD: Skip %s\n', i);
         else
+          day2read = [min(obj.cfg.days2run)-1 obj.cfg.days2run max(obj.cfg.days2run)-1];
           fprintf('LOAD: %s\n', i);
           switch obj.cfg.write.mode
             case 'One file'
               % Read all days2run in one file
-              obj.instrument.(i).Read([i '_ALL'], obj.cfg.days2run, level);
+              obj.instrument.(i).Read([i '_ALL'], day2read, level);
             case 'One day one file'
               % Read each day from days2run in independent files
-              for d=obj.cfg.days2run
+              for d=day2read
                 obj.instrument.(i).Read([i '*_' datestr(d,'yyyymmdd')], d, level);
               end
             otherwise
@@ -1008,11 +1261,19 @@ classdef InLineAnalysis < handle
           if ~isempty(file_selection.(fiedna{i}))
             % Convert datestr to datenum for newer format
             if iscell(file_selection.(fiedna{i}){1})
-              file_selection.(fiedna{i}) = [datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){1}', 'UniformOutput', false)),...
-                  datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){2}', 'UniformOutput', false))];
+              if size(file_selection.(fiedna{i}), 2) == 2
+                file_selection.(fiedna{i}) = [datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){1}', 'UniformOutput', false)),...
+                    datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){2}', 'UniformOutput', false))];
+              elseif size(file_selection.(fiedna{i}), 2) == 1
+                file_selection.(fiedna{i}) = datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){1}', 'UniformOutput', false));
+              end
             else
-              file_selection.(fiedna{i}) = [datenum(file_selection.(fiedna{i})(1)), ...
-                datenum(file_selection.(fiedna{i})(2))];
+              if size(file_selection.(fiedna{i}), 2) == 2
+                file_selection.(fiedna{i}) = [datenum(file_selection.(fiedna{i})(1)), ...
+                  datenum(file_selection.(fiedna{i})(2))];
+              elseif size(file_selection.(fiedna{i}), 2) == 1
+                file_selection.(fiedna{i}) = datenum(file_selection.(fiedna{i})(1)');
+              end
             end
           end
         end
@@ -1033,8 +1294,14 @@ classdef InLineAnalysis < handle
       end
       % Convert datenum to datestr for newer format
       for i = 1:size(fiedna,1)
-        if ~isempty(file_selection.(fiedna{i})); file_selection.(fiedna{i}) = ...
-            {datestr(file_selection.(fiedna{i})(:,1)), datestr(file_selection.(fiedna{i})(:,2))};end
+        if ~isempty(file_selection.(fiedna{i}))
+          if size(file_selection.(fiedna{i}), 2) == 2
+            file_selection.(fiedna{i}) = {datestr(file_selection.(fiedna{i})(:,1)), ...
+              datestr(file_selection.(fiedna{i})(:,2))};
+          elseif size(file_selection.(fiedna{i}), 2) == 1
+            file_selection.(fiedna{i}) = {datestr(file_selection.(fiedna{i}))};
+          end
+        end
       end
       % Save user selection
       savejson('',file_selection,filename); 

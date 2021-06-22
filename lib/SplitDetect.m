@@ -220,11 +220,11 @@ for i = progress(1:size(seg,1)-1)
         if isempty(popohpk)
           filt_st (k) = NaT;
         else
-          filt_st (k) = (popohpk - seconds(55));
+          filt_st (k) = (popohpk - seconds(60));
         end
 %         filt_st (k) = NaT;
       else
-        filt_st (k) = (popohpk - seconds(55));
+        filt_st (k) = (popohpk - seconds(60));
       end
 
       lowpk = dtAFtmp(AFtemp < 0.7 * min(AFtemp)); % local low peak < 70% of min local peak of derivative

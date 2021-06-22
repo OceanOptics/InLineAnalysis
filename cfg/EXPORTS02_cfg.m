@@ -189,7 +189,7 @@ cfg.process.force_import = false;
 cfg.process.parallel = Inf; % 0: disable parallel or Inf: as many thread available
 cfg.process.di = struct();
 cfg.process.di.skip = {'FLOW', 'TSG', 'LISST', 'SPCD','Hyperbb'};
-cfg.process.di.qc = struct('mode', 'load');
+cfg.process.di.qc = struct('mode', 'ui');
 cfg.process.di.bin = struct('bin_size', 30);
 
 %%% Synchronization %%%
@@ -208,7 +208,7 @@ cfg.process.qcref = struct();
 cfg.process.qcref.reference = 'FLOW';
 cfg.process.qcref.view = 'BB3';
 cfg.process.qcref.mode = 'load'; % load or ui
-cfg.process.qcref.MinFiltPeriod = 50; % filter even period in minute
+cfg.process.qcref.MinFiltPeriod = 50; % filter event period in minute
 cfg.process.qcref.szFilt = 12; % filter even length in minute
 
 %%% Split total/filtered %%%
@@ -292,11 +292,13 @@ cfg.process.calibrate.ACS91 = struct('compute_dissolved', true, ...
                                   'di_method', 'best_di', ... % best_di normal
                                   'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
 cfg.process.calibrate.BB3 = struct('compute_dissolved', true, ...
-                                   'TSG_source', 'TSG', ...
-                                   'di_method', 'interpolate'); % interpolate constant
+                                  'TSG_source', 'TSG', ...
+                                  'FLOW_source', 'FLOW', ...
+                                  'di_method', 'interpolate'); % interpolate constant
 cfg.process.calibrate.HBB = struct('compute_dissolved', true, ...
-                                   'TSG_source', 'TSG', ...
-                                   'di_method', 'interpolate'); % interpolate constant
+                                  'TSG_source', 'TSG', ...
+                                  'FLOW_source', 'FLOW', ...
+                                  'di_method', 'interpolate'); % interpolate constant
 cfg.process.calibrate.skip = {'FLOW', 'TSG', 'SPCD'};
 
 %%% Write %%%

@@ -103,7 +103,8 @@ classdef LISST < Instrument
       obj.diameters = sqrt(obj.ds(1:end-1) .* obj.ds(2:end));
     end
     
-    function Calibrate(obj)
+    function Calibrate(obj, SWT)
+      SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       param = struct('zsc', obj.zsc, 'dcal', obj.dcal, 'vcc', obj.vcc,...
                      'non_spherical', NaN, 'ds', obj.ds,...
                      'diameters', obj.diameters, 'theta', obj.theta);
@@ -115,7 +116,7 @@ classdef LISST < Instrument
         otherwise
           error('Unknown inversion type.');
       end
-      obj.prod.p = processLISST(param, obj.qc.tsw, obj.qc.fsw);
+      obj.prod.p = processLISST(param, obj.qc.tsw, obj.qc.fsw, SWT.qc.tsw, SWT_constants);
     end
     
     % Old deprecated method overload (can now use standard methods)

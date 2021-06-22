@@ -215,20 +215,44 @@ classdef (Abstract) Instrument < handle
       if nargin < 3
         chan = 'all';
       end
-      for i=1:size(user_selection, 1)
-%         obj.bad.tsw = obj.qc.tsw(user_selection(i,1) <= obj.qc.tsw.dt & obj.qc.tsw.dt <= user_selection(i,2),:);
-%         obj.bad.fsw(user_selection(i,1) <= obj.qc.fsw.dt & obj.qc.fsw.dt <= user_selection(i,2),:);
-        if ~isempty(obj.qc.tsw)
-          obj.qc.tsw(user_selection(i,1) <= obj.qc.tsw.dt & obj.qc.tsw.dt <= user_selection(i,2),:) = []; 
+      if size(user_selection, 2) == 2
+        for i=1:size(user_selection, 1)
+  %         obj.bad.tsw = obj.qc.tsw(user_selection(i,1) <= obj.qc.tsw.dt & obj.qc.tsw.dt <= user_selection(i,2),:);
+  %         obj.bad.fsw(user_selection(i,1) <= obj.qc.fsw.dt & obj.qc.fsw.dt <= user_selection(i,2),:);
+          if ~isempty(obj.qc.tsw)
+            obj.qc.tsw(user_selection(i,1) <= obj.qc.tsw.dt & obj.qc.tsw.dt <= user_selection(i,2),:) = []; 
+          end
+          if ~isempty(obj.qc.fsw)
+            obj.qc.fsw(user_selection(i,1) <= obj.qc.fsw.dt & obj.qc.fsw.dt <= user_selection(i,2),:) = []; 
+          end
+          if ~isempty(obj.qc.diw)
+            if strcmp(chan, 'all')
+              obj.qc.diw(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = [];
+            else
+              obj.qc.diw.(chan)(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = NaN;
+            end
+          end
         end
-        if ~isempty(obj.qc.fsw)
-          obj.qc.fsw(user_selection(i,1) <= obj.qc.fsw.dt & obj.qc.fsw.dt <= user_selection(i,2),:) = []; 
-        end
-        if ~isempty(obj.qc.diw)
-          if strcmp(chan, 'all')
-            obj.qc.diw(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = [];
-          else
-            obj.qc.diw.(chan)(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = NaN;
+      elseif size(user_selection, 2) == 1
+        for i=1:size(user_selection, 1)
+          fieldn = fieldnames(obj.qc);
+          for j = fieldn; j = j{1};
+            if ~isempty(obj.qc.(j))
+              obj.qc.(j)(obj.qc.(j).dt == user_selection(i,1), :) = []; 
+            end
+          end
+          fieldn = fieldnames(obj.prod);
+          for j = fieldn; j = j{1};
+            if ~isempty(obj.prod.(j))
+              obj.prod.(j)(obj.prod.(j).dt == user_selection(i,1), :) = []; 
+            end
+          end
+          if ~isempty(obj.qc.diw)
+            if strcmp(chan, 'all')
+              obj.qc.diw(obj.qc.diw.dt == user_selection(i,1),:) = [];
+            else
+              obj.qc.diw.(chan)(obj.qc.diw.dt == user_selection(i,1),:) = NaN;
+            end
           end
         end
       end
@@ -245,7 +269,7 @@ classdef (Abstract) Instrument < handle
           sel = min(days2write) <= obj.(level).(f).dt & obj.(level).(f).dt < max(days2write) + 1;
           if ~any(sel); fprintf('WRITE: %s_%s_%s No data.\n', filename_prefix, level, f); continue; end
           data = obj.(level).(f)(sel,:);
-          if ~isdir(obj.path.wk); mkdir(obj.path.(level)); end
+          if ~isfolder(obj.path.wk); mkdir(obj.path.(level)); end
           save([obj.path.wk filename], 'data');
         end
       else
@@ -256,7 +280,7 @@ classdef (Abstract) Instrument < handle
         sel = min(days2write) <= obj.(level).dt & obj.(level).dt < max(days2write) + 1;
         if ~any(sel); fprintf('WRITE: %s_%s No data.\n', filename_prefix, level); return; end
         data = obj.(level)(sel,:);
-        if ~isdir(obj.path.wk); mkdir(obj.path.(level)); end
+        if ~isfolder(obj.path.wk); mkdir(obj.path.(level)); end
         save([obj.path.wk filename], 'data');
       end
     end
@@ -282,6 +306,7 @@ classdef (Abstract) Instrument < handle
         for f = {l.name}; f = f{1};
           fprintf('\t\t%s', f); tic;
           load([obj.path.wk f], 'data'); % data variable is created
+          data = sortrows(data, 1);
           if isempty(data)
             warning('%s is empty, the file was deleted', f)
             delete([obj.path.wk f])
