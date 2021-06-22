@@ -1,4 +1,4 @@
-function [y_intercp, base, SSE, MSE, RMSE] = FitExp(lambda, meas)
+function [y_intercp, base, SSE, MSE, RMSE] = FitExp(lambda, meas, meas_sd)
 % Author: Guillaume bourdin
 % Date: May 19, 2021
 %
@@ -9,7 +9,7 @@ lambda = lambda(:)';
 
 if length(lambda)~=nlambd, error('Invalid lambda'); end
 
-x0 =[50 -0.015 0];
+x0 =[mean(meas(:, abs(lambda-440)==min(abs(lambda-440)))) -0.015];
 
 y_intercp = NaN(nspect,1);
 base = NaN(nspect,1);
@@ -27,11 +27,9 @@ parfor i = 1:nspect
   if all(isfinite(meas(i,:))) && ~any(isnan(meas(i, :)), 2)
     
     % define exponential function
-    expfun = @(p, xd) p(1) * exp(p(2) * xd) + p(3);
-%     expfun = @(p, xd) p(1) .* exp(-p(2) .* xd) + p(3) .* exp(-p(4) .* xd) + p(5) .* exp(-p(6) .* xd);
-%     expfun = @(p, xd) p(1) .* exp(-p(2) .* xd) + p(3) .* exp(-p(4) .* xd) + p(5);
-    % define sum-squared error
-    errfun = @(p) sum((expfun(p, lambda) - meas(i, :)) .^2);
+    expfun = @(p, xd) p(1) * exp(p(2) * xd - 440);
+    % define sum/std error
+    errfun = @(p) sum(abs((expfun(p, lambda) - meas(i, :)) ./ meas_sd(i,:)));
     %run the minimizer
     pfit = fminsearch(errfun, x0, opts);
     y_intercp(i) = pfit(1);

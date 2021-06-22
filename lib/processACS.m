@@ -429,11 +429,13 @@ if ~isempty(di)
   fprintf('Exponential fit to ag and cg ... ')
   sel_a = lambda.a < 660 & ~any(isnan(g.ag(~all(isnan(g.ag),2), :)));
   sel_c = lambda.c < 660 & ~any(isnan(g.cg(~all(isnan(g.cg),2), :)));
-  [g.y_intercp_fit_ag, g.base_fit_ag, ~, ~, g.RMSE_fit_ag] = FitExp(lambda.a(sel_a), g.ag(:, sel_a));
+  [g.y_intercp_fit_ag, g.base_fit_ag, ~, ~, g.RMSE_fit_ag] = FitExp(lambda.a(sel_a), ...
+    g.ag(:, sel_a), g.ag_sd(:, sel_a));
   % add fit flag
   g.ag_fitflag = false(size(g, 1), 1);
   g.ag_fitflag(g.RMSE_fit_ag > 0.0025) = true;
-  [g.y_intercp_fit_cg, g.base_fit_cg, ~, ~, g.RMSE_fit_cg] = FitExp(lambda.c(sel_c), g.cg(:, sel_c));
+  [g.y_intercp_fit_cg, g.base_fit_cg, ~, ~, g.RMSE_fit_cg] = FitExp(lambda.c(sel_c), ...
+    g.cg(:, sel_c), g.cg_sd(:, sel_c));
   % add fit flag
   g.cg_fitflag = false(size(g, 1), 1);
   g.cg_fitflag(g.RMSE_fit_cg > 0.0025) = true;

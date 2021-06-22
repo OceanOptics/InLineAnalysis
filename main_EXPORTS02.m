@@ -5,8 +5,8 @@ clear
 close all
 if feature('IsDebugMode'); dbquit all; end
 
-% cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master/')
-cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master/')
+cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master/')
+% cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master/')
 
 % Load InLineAnalysis and the configuration
 ila = InLineAnalysis('cfg/EXPORTS02_cfg.m');

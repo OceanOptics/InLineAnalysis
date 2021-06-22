@@ -24,12 +24,12 @@ cfg.meta.measurement_depth = 5;
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-if ispc
-  PATH_ROOT = 'D:\Data\EXPORTS02\';
-elseif ismac
-  PATH_ROOT = '/Volumes/Samsung_T5/Data/EXPORTS02/';
-end
-% PATH_ROOT = '/Users/emmanuel.boss/Desktop/InLine analysis/Data/EXPORTS02/';
+% if ispc
+%   PATH_ROOT = 'D:\Data\EXPORTS02\';
+% elseif ismac
+%   PATH_ROOT = '/Volumes/Samsung_T5/Data/EXPORTS02/';
+% end
+PATH_ROOT = '/Users/emmanuel.boss/Desktop/InLine analysis/Data/EXPORTS02/';
 
 %%% TSG + GPS %%%
 cfg.instruments.TSG = struct();
@@ -40,7 +40,7 @@ cfg.instruments.TSG.path = struct('raw',  [PATH_ROOT 'raw' filesep 'TSG' filesep
                                   'wk',   [PATH_ROOT 'wk' filesep 'TSG' filesep],...
                                   'prod', [PATH_ROOT 'prod' filesep],...
                                   'ui', [PATH_ROOT 'ui' filesep 'TSG' filesep]);
-cfg.instruments.TSG.view = struct('varname', 't');
+cfg.instruments.TSG.view = struct('varname', 's');
 
 %%% FLOW (FlowControl) %%%
 cfg.instruments.FLOW = struct();
@@ -283,13 +283,13 @@ cfg.process.calibrate.ACS298 = struct('compute_dissolved', true, ...
                                   'interpolation_method', 'linear', ...
                                   'CDOM_source', 'SPCD', ... 
                                   'FLOW_source', 'FLOW', ...
-                                  'di_method', 'best_di', ... % best_di normal
+                                  'di_method', 'normal', ... % best_di normal
                                   'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
 cfg.process.calibrate.ACS91 = struct('compute_dissolved', true, ...
                                   'interpolation_method', 'linear', ...
                                   'CDOM_source', 'SPCD', ... 
                                   'FLOW_source', 'FLOW', ...
-                                  'di_method', 'best_di', ... % best_di normal
+                                  'di_method', 'normal', ... % best_di normal
                                   'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
 cfg.process.calibrate.BB3 = struct('compute_dissolved', true, ...
                                   'TSG_source', 'TSG', ...
