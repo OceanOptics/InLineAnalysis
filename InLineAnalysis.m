@@ -1124,7 +1124,7 @@ classdef InLineAnalysis < handle
         if  any(strcmp(i,obj.cfg.write.skip))
           fprintf('LOAD: Skip %s\n', i);
         else
-          day2read = [min(obj.cfg.days2run)-1 obj.cfg.days2run max(obj.cfg.days2run)-1];
+          day2read = [min(obj.cfg.days2run)-1 obj.cfg.days2run max(obj.cfg.days2run)+1];
           fprintf('LOAD: %s\n', i);
           switch obj.cfg.write.mode
             case 'One file'
