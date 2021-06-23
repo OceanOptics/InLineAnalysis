@@ -1262,10 +1262,15 @@ classdef InLineAnalysis < handle
             % Convert datestr to datenum for newer format
             if iscell(file_selection.(fiedna{i}){1})
               if size(file_selection.(fiedna{i}), 2) == 2
-                file_selection.(fiedna{i}) = [datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){1}', 'UniformOutput', false)),...
-                    datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){2}', 'UniformOutput', false))];
+                file_selection.(fiedna{i}) = [datenum(cellfun(@(x) char(x), ...
+                  file_selection.(fiedna{i}){1}', 'UniformOutput', false)),...
+                  datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){2}', ...
+                  'UniformOutput', false))];
               elseif size(file_selection.(fiedna{i}), 2) == 1
-                file_selection.(fiedna{i}) = datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){1}', 'UniformOutput', false));
+                file_selection.(fiedna{i}) = datenum(cellfun(@(x) char(x), ...
+                  file_selection.(fiedna{i}){1}', 'UniformOutput', false));
+              else
+                error('Date/time size in .json file not supported, check %\n', filename)
               end
             else
               if size(file_selection.(fiedna{i}), 2) == 2
@@ -1273,6 +1278,8 @@ classdef InLineAnalysis < handle
                   datenum(file_selection.(fiedna{i})(2))];
               elseif size(file_selection.(fiedna{i}), 2) == 1
                 file_selection.(fiedna{i}) = datenum(file_selection.(fiedna{i})(1)');
+              else
+                error('Date/time size in .json file not supported, check %\n', filename)
               end
             end
           end
