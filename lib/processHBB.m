@@ -6,7 +6,7 @@ function [p, g] = processHBB(param, tot, filt, di, tsg, di_method, fth, fth_cons
 %   param.dark  <1xM double> dark (DEPRECATED)
 %   param.slope <1xM double> slope (DEPRECATED)
 
-if ~exist('fth', 'var')
+if exist('fth', 'var')
   % check FTH data
   if ~exist('fth_constants', 'var')
     % Assume most recent FlowControl software

@@ -6,7 +6,7 @@ function [p, g] = processBB3(param, tot, filt, di, tsg, di_method, fth, fth_cons
 %   param.dark  <1x3 double> dark
 %   param.slope <1x3 double> slope
 
-if ~exist('fth', 'var')
+if exist('fth', 'var')
   % check FTH data
   if ~exist('fth_constants', 'var')
     % Assume most recent FlowControl software

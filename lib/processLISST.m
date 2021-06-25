@@ -16,7 +16,7 @@ path_length = 0.05;
 % Fraction of circle covered by detectors
 phi = 1/6;
 
-if ~exist('fth', 'var')
+if exist('fth', 'var')
   % check FTH data
   if ~exist('fth_constants', 'var')
     % Assume most recent FlowControl software
