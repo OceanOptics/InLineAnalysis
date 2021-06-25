@@ -38,9 +38,11 @@ if ~exist('fth', 'var')
   for i=1:size(sel_start, 1)
     sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
     foo = filt(sel_filt,:);
-    % compute 5 percentile for each filter event
-    filt_avg.beta(i,:) = prctile(foo.beta, 5, 1);
-    filt_avg.beta_avg_sd(i,:) = prctile(foo.beta_avg_sd, 5, 1);
+    foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+    foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+    % compute average of all values smaller than 25th percentile for each filter event
+    filt_avg.beta(i,:) = mean(foo.beta, 1, 'omitnan');
+    filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 1, 'omitnan');
   end
   filt_avg(all(isnan(filt_avg.beta), 2), :) = [];
 else

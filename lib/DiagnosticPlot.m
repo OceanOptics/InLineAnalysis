@@ -1,8 +1,10 @@
 function user_selection = DiagnosticPlot(data, instrument, level, save_figure, prefix, toClean)
 % Plot all level of processing 3D spectrums of BB and AC sensors to
-% quality check along processing
+% quality check while processing
+% Option to save the plots (save_figure)
+% Option to hand pick bad spectra (toClean)
 %
-%% Author: Guillaume BOurdin
+%% Author: Guillaume Bourdin
 % Date: 26 Nov. 2019
 %
 % INPUT:
@@ -11,6 +13,14 @@ function user_selection = DiagnosticPlot(data, instrument, level, save_figure, p
 %     - <N-1xM double> data
 %   instrument: <char> instrument name
 %   level: <1xL cellstr> processing levels to plot
+%
+% OPTIONAL INPUT:
+%   save_figure: <1x1 boolean> to save plot or not
+%   prefix: <char> prefix to add in the filename of the saved plot
+%   toClean: <1x2 cellstr> name of the table and variable to clean hand-picking bad spectra 
+%
+% OUTPUT:
+%   user_selection: <Px1 cellstr> hand-picked time of bad spectra (if variable 'toClean' is input)
 %%
 if nargin < 3
   error('Not enough input argument')
@@ -26,10 +36,11 @@ elseif nargin == 5
 elseif nargin > 6
   error('Too many input argument')
 end
-
+  
 if contains(instrument,'BB')
   wl = data.lambda;
   instrument = 'BB';
+  
 elseif contains(instrument,'AC')
   wla = data.lambda_a;
   wlc = data.lambda_c;
@@ -56,8 +67,14 @@ for j = 1:length(level)
       day_to_plot = [max(szdt(:,1)) max(szdt(:,2)) + sztoplot.(instrument)];
       if contains(instrument,'AC')
         toplot = repmat({'a','c'}, size(tabletoplot));
+        if strcmp(toClean{end}, 'all')
+          toClean{end} = 'a';
+        end
       else
         toplot = repmat({'beta'}, size(tabletoplot));
+        if strcmp(toClean{end}, 'all')
+          toClean{end} = 'beta';
+        end
       end
     case {'bin', 'qc'}
       szdt = NaN(size(tabletoplot, 1), 2);
@@ -68,8 +85,14 @@ for j = 1:length(level)
       day_to_plot = [min(szdt(:,1)) max(szdt(:,2))];
       if contains(instrument,'AC')
         toplot = repmat({'a','c'}, size(tabletoplot));
+        if strcmp(toClean{end}, 'all')
+          toClean{end} = 'a';
+        end
       else
         toplot = repmat({'beta'}, size(tabletoplot));
+        if strcmp(toClean{end}, 'all')
+          toClean{end} = 'beta';
+        end
       end
     case 'prod'
       szdt = NaN(size(tabletoplot, 1), 2);
@@ -81,18 +104,21 @@ for j = 1:length(level)
       if contains(instrument,'AC')
         toplot = [cellfun(@(x) ['a' x], tabletoplot, 'un', 0) ...
           cellfun(@(x) ['c' x], tabletoplot, 'un', 0)];
+        if strcmp(toClean{end}, 'all')
+          toClean{end} = cellfun(@(x) ['a' x], tabletoplot, 'un', 0);
+        end
         if any(contains(toplot, 'QCfailed'))
           toplot(contains(toplot, 'QCfailed')) = {'ap', 'cp'};
         end
-%         toplot = {['a' tabletoplot{~contains(tabletoplot, 'QCfailed')}] ...
-%           ['c' tabletoplot{~contains(tabletoplot, 'QCfailed')}]};
       else
         toplot = [cellfun(@(x) ['beta' x], tabletoplot, 'un', 0) ...
           cellfun(@(x) ['bb' x], tabletoplot, 'un', 0)];
+        if strcmp(toClean{end}, 'all')
+          toClean{end} = cellfun(@(x) ['bb' x], tabletoplot, 'un', 0);
+        end
         if any(contains(toplot, 'QCfailed'))
           toplot(contains(toplot, 'QCfailed')) = {'betap', 'bbp'};
         end
-%         toplot = {['beta' tabletoplot{1}], ['bb' tabletoplot{1}]};
       end
   end
   

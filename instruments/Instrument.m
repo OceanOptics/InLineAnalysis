@@ -140,7 +140,8 @@ classdef (Abstract) Instrument < handle
         fprintf('\tTSW\n');
         switch mode
           case 'OneShot'
-            obj.bin.tsw = binTable(obj.raw.tsw, bin_size_days, obj.bin_method, prctile_detection, prctile_average, false, parallel, false);
+            obj.bin.tsw = binTable(obj.raw.tsw, bin_size_days, obj.bin_method, ...
+              prctile_detection, prctile_average, false, parallel, false);
           case 'ByDay'
             for d = floor(min(obj.raw.tsw.dt)):floor(max(obj.raw.tsw.dt))
               fprintf('\t\t%s', datestr(d)); tic;
@@ -149,7 +150,8 @@ classdef (Abstract) Instrument < handle
                 fprintf('  No total data to bin\n');
                 continue
               end
-              obj.bin.tsw = [obj.bin.tsw; binTable(obj.raw.tsw(sel,:), bin_size_days, obj.bin_method, prctile_detection, prctile_average, false, parallel, false)];
+              obj.bin.tsw = [obj.bin.tsw; binTable(obj.raw.tsw(sel,:), bin_size_days, ...
+                obj.bin_method, prctile_detection, prctile_average, false, parallel, false)];
               t = toc; fprintf('  %1.3f s\n', t);
             end
           otherwise
@@ -164,7 +166,8 @@ classdef (Abstract) Instrument < handle
         fprintf('\tFSW\n');
         switch mode
           case 'OneShot'
-            obj.bin.fsw = binTable(obj.raw.fsw, bin_size_days, obj.bin_method, prctile_detection, prctile_average, false, parallel, false);
+            obj.bin.fsw = binTable(obj.raw.fsw, bin_size_days/3, obj.bin_method, ...
+              prctile_detection, prctile_average, false, parallel, false);
           case 'ByDay'
             for d = floor(min(obj.raw.tsw.dt)):floor(max(obj.raw.tsw.dt))
               fprintf('\t\t%s', datestr(d)); tic;
@@ -173,7 +176,8 @@ classdef (Abstract) Instrument < handle
                 fprintf('  No filtered data to bin\n');
                 continue
               end
-              obj.bin.fsw = [obj.bin.fsw; binTable(obj.raw.fsw(sel,:), bin_size_days, obj.bin_method, prctile_detection, prctile_average, false, parallel, false)];
+              obj.bin.fsw = [obj.bin.fsw; binTable(obj.raw.fsw(sel,:), bin_size_days/3, ...
+                obj.bin_method, prctile_detection, prctile_average, false, parallel, false)];
               t = toc; fprintf('  %1.3f s\n', t);
             end
           otherwise
@@ -190,7 +194,8 @@ classdef (Abstract) Instrument < handle
       if isempty(obj.qc.diw)
         fprintf('WARNING: No qc.diw data to bin\n');
       else
-        obj.bin.diw = binTable(obj.qc.diw, bin_size_days, obj.bin_method, prctile_detection, prctile_average, true, parallel, false);
+        obj.bin.diw = binTable(obj.qc.diw, bin_size_days, obj.bin_method, prctile_detection, ....
+          prctile_average, true, parallel, false);
       end
     end
     
@@ -198,63 +203,98 @@ classdef (Abstract) Instrument < handle
       % Make flags
       flags_tsw = flagTable(obj.bin.tsw, params.tot);
       % Make flag selection
-      [sel_good_tsw, sel_suspect_tsw] = selFlag(flags_tsw, params.tot.primary_varname, params.tot.min_flag_n);
+      [sel_good_tsw, sel_suspect_tsw] = selFlag(flags_tsw, params.tot.primary_varname, ...
+        params.tot.min_flag_n);
       % Keep data
       obj.qc.tsw = obj.bin.tsw(sel_good_tsw,:);
       obj.suspect.tsw = obj.bin.tsw(sel_suspect_tsw,:);
       % Same for filtered sea water (fsw)
       if ~isempty(obj.bin.fsw)
         flags_fsw = flagTable(obj.bin.fsw, params.filt);
-        [sel_good_fsw, sel_suspect_fsw] = selFlag(flags_fsw, params.filt.primary_varname, params.filt.min_flag_n);
+        [sel_good_fsw, sel_suspect_fsw] = selFlag(flags_fsw, params.filt.primary_varname, ...
+          params.filt.min_flag_n);
         obj.suspect.fsw = obj.bin.fsw(sel_suspect_fsw,:);
         obj.qc.fsw = obj.bin.fsw(sel_good_fsw,:);
       end
     end
     
-    function DeleteUserSelection(obj, user_selection, chan)
+    function DeleteUserSelection(obj, user_selection, level, chan)
       if nargin < 3
-        chan = 'all';
+        level = 'qc';
+        chan = {'all'};
+      elseif nargin < 4
+        chan = {'all'};
+      end
+      if size(chan, 2) < 2 || any(cellfun('isempty', chan))
+        chan = {'all'};
       end
       if size(user_selection, 2) == 2
-        for i=1:size(user_selection, 1)
-  %         obj.bad.tsw = obj.qc.tsw(user_selection(i,1) <= obj.qc.tsw.dt & obj.qc.tsw.dt <= user_selection(i,2),:);
-  %         obj.bad.fsw(user_selection(i,1) <= obj.qc.fsw.dt & obj.qc.fsw.dt <= user_selection(i,2),:);
-          if ~isempty(obj.qc.tsw)
-            obj.qc.tsw(user_selection(i,1) <= obj.qc.tsw.dt & obj.qc.tsw.dt <= user_selection(i,2),:) = []; 
+        if any(strcmp(chan{1}, 'all'))
+          fieldn = fieldnames(obj.(level))';
+          for j = fieldn; j = j{1};
+            if ~isempty(obj.(level).(j))
+              for i=1:size(user_selection, 1)
+                obj.(level).(j)(user_selection(i,1) <= obj.(level).(j).dt & ...
+                  obj.(level).(j).dt <= user_selection(i,2), :) = []; 
+              end
+            end
           end
-          if ~isempty(obj.qc.fsw)
-            obj.qc.fsw(user_selection(i,1) <= obj.qc.fsw.dt & obj.qc.fsw.dt <= user_selection(i,2),:) = []; 
+        elseif any(strcmp(chan{2}, 'all'))
+          if ~isempty(obj.(level).(chan{1}))
+            for i=1:size(user_selection, 1)
+              obj.(level).(chan{1})(user_selection(i,1) <= obj.(level).(chan{1}).dt & ...
+                obj.(level).(chan{1}).dt <=  user_selection(i,2), :) = [];
+            end
           end
-          if ~isempty(obj.qc.diw)
-            if strcmp(chan, 'all')
-              obj.qc.diw(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = [];
-            else
-              obj.qc.diw.(chan)(user_selection(i,1) <= obj.qc.diw.dt & obj.qc.diw.dt <= user_selection(i,2),:) = NaN;
+        else
+          if ~isempty(obj.(level).(chan{1}))
+            for i=1:size(user_selection, 1)
+              obj.(level).(chan{1}).(chan{2})(user_selection(i,1) <= obj.(level).(chan{1}).dt & ...
+                obj.(level).(chan{1}).dt <=  user_selection(i,2), :) = NaN;
             end
           end
         end
       elseif size(user_selection, 2) == 1
-        for i=1:size(user_selection, 1)
-          fieldn = fieldnames(obj.qc);
+        if any(strcmp(chan{1}, 'all'))
+          fieldn = fieldnames(obj.(level))';
           for j = fieldn; j = j{1};
-            if ~isempty(obj.qc.(j))
-              obj.qc.(j)(obj.qc.(j).dt == user_selection(i,1), :) = []; 
+            if ~isempty(obj.(level).(j))
+              for i=1:size(user_selection, 1)
+                obj.(level).(j)(obj.(level).(j).dt == user_selection(i,1), :) = [];
+              end
             end
           end
-          fieldn = fieldnames(obj.prod);
-          for j = fieldn; j = j{1};
-            if ~isempty(obj.prod.(j))
-              obj.prod.(j)(obj.prod.(j).dt == user_selection(i,1), :) = []; 
+        elseif any(strcmp(chan{2}, 'all'))
+          if ~isempty(obj.(level).(chan{1}))
+            for i=1:size(user_selection, 1)
+              obj.(level).(chan{1})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = [];
             end
           end
-          if ~isempty(obj.qc.diw)
-            if strcmp(chan, 'all')
-              obj.qc.diw(obj.qc.diw.dt == user_selection(i,1),:) = [];
-            else
-              obj.qc.diw.(chan)(obj.qc.diw.dt == user_selection(i,1),:) = NaN;
+        else
+          if ~isempty(obj.(level).(chan{1}))
+            for i=1:size(user_selection, 1)
+              obj.(level).(chan{1}).(chan{2})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = NaN;
             end
           end
         end
+%         for i=1:size(user_selection, 1)
+%           if any(strcmp(chan{1}, 'all'))
+%             fieldn = fieldnames(obj.(level))';
+%             for j = fieldn; j = j{1};
+%               if ~isempty(obj.(level).(j))
+%                 obj.(level).(j)(obj.(level).(j).dt == user_selection(i,1), :) = []; 
+%               end
+%             end
+%           elseif any(strcmp(chan{2}, 'all'))
+%             if ~isempty(obj.(level).(chan{1}))
+%               obj.(level).(chan{1})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = [];
+%             end
+%           else
+%             if ~isempty(obj.(level).(chan{1}))
+%               obj.(level).(chan{1}).(chan{2})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = NaN;
+%             end
+%           end
+%         end
       end
     end
     

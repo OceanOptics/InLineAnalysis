@@ -61,8 +61,8 @@ for i=1:length(dt)
     else
       % Import data from selection
       ddata = [];
-      for j=1:size(l,1)
-%       parfor (j=1:size(l,1), parallel_flag)
+%       for j=1:size(l,1)
+      parfor (j=1:size(l,1), parallel_flag)
         if isempty(otherarg1) && isempty(otherarg2)
           foo = fun([dir_in l{j}], verbose);
         elseif isempty(otherarg2)

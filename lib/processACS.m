@@ -130,11 +130,15 @@ switch interpolation_method
       for i=1:size(sel_start, 1)
         sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
         foo = filt(sel_filt,:);
-        % compute 5 percentile for each filter event
-        filt_avg.a(i,:) = prctile(foo.a, 5, 1);
-        filt_avg.c(i,:) = prctile(foo.c, 5, 1);
-        filt_avg.a_avg_sd(i,:) = prctile(foo.a_avg_sd, 5, 1);
-        filt_avg.c_avg_sd(i,:) = prctile(foo.c_avg_sd, 5, 1);
+        foo.a_avg_sd(foo.a > prctile(foo.a, 25, 1)) = NaN;
+        foo.c_avg_sd(foo.c > prctile(foo.c, 25, 1)) = NaN;
+        foo.a(foo.a > prctile(foo.a, 25, 1)) = NaN;
+        foo.c(foo.c > prctile(foo.c, 25, 1)) = NaN;
+        % compute average of all values smaller than 25th percentile for each filter event
+        filt_avg.a(i,:) = mean(foo.a, 1, 'omitnan');
+        filt_avg.c(i,:) = mean(foo.c, 1, 'omitnan');
+        filt_avg.a_avg_sd(i,:) = mean(foo.a_avg_sd, 1, 'omitnan');
+        filt_avg.c_avg_sd(i,:) = mean(foo.c_avg_sd, 1, 'omitnan');
       end
       filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2), :) = [];
       % Interpolate filtered on total linearly
@@ -385,6 +389,9 @@ if ~isempty(di)
       best_di_c(i) = foo_c(1);
     end
   end
+  
+  % remove NaNs
+  filt(all(isnan(filt.a), 2) | all(isnan(filt.c), 2),:) = [];
   
   % Interpolate filtered on Total
   di_interp = table(filt.dt, 'VariableNames', {'dt'});

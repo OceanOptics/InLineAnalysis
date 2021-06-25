@@ -24,12 +24,12 @@ cfg.meta.measurement_depth = 5;
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-% if ispc
-%   PATH_ROOT = 'D:\Data\EXPORTS02\';
-% elseif ismac
-%   PATH_ROOT = '/Volumes/Samsung_T5/Data/EXPORTS02/';
-% end
-PATH_ROOT = '/Users/emmanuel.boss/Desktop/InLine analysis/Data/EXPORTS02/';
+if ispc
+  PATH_ROOT = 'D:\Data\EXPORTS02\';
+elseif ismac
+  PATH_ROOT = '/Volumes/Samsung_T5/Data/EXPORTS02/';
+end
+% PATH_ROOT = '/Users/emmanuel.boss/Desktop/InLine analysis/Data/EXPORTS02/';
 
 %%% TSG + GPS %%%
 cfg.instruments.TSG = struct();
@@ -190,6 +190,7 @@ cfg.process.parallel = Inf; % 0: disable parallel or Inf: as many thread availab
 cfg.process.di = struct();
 cfg.process.di.skip = {'FLOW', 'TSG', 'LISST', 'SPCD','Hyperbb'};
 cfg.process.di.qc = struct('mode', 'ui');
+ila.process.di.qc.qc_once_for_AandC = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
 cfg.process.di.bin = struct('bin_size', 30);
 
 %%% Synchronization %%%
@@ -269,6 +270,7 @@ cfg.process.qc.Saturation_Threshold_bb = 4000; % (counts)
   
 %%% Manually QC %%%
 cfg.process.qc.mode = 'ui';
+ila.process.qc.qc_once_for_AandC = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
 cfg.process.qc.global.view = 'ACS91';
