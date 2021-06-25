@@ -24,10 +24,10 @@ opts = optimset(opts, 'MaxIter', 500000);
 opts = optimset(opts, 'MaxFunEvals', 100000);   % usually 100*number of params
 opts = optimset(opts, 'TolFun', 1e-9);
 
-for i = 1:nspect
+parfor i = 1:nspect
   if all(isfinite(meas(i,:))) && ~any(isnan(meas(i, :)), 2)
     % define exponential function
-    expfun = @(p, xd) p(1) * exp(p(2) * xd);% - 440
+    expfun = @(p, xd) p(1) * exp(p(2) * (xd - 440));
     % define sum/std error
     errfun = @(p) sum(abs((expfun(p, lambda) - meas(i, :)) ./ meas_sd(i,:)));
     %run the minimizer

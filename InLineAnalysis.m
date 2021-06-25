@@ -436,27 +436,20 @@ classdef InLineAnalysis < handle
           if exist(filename, 'file')
             % Load file
             file_selection = loadjson(filename);
-            % Convert datestr to datenum for newer format
-            try
-              if ~isempty(file_selection.total)
-                file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))];
-              end
-            catch
-              if ~isempty(file_selection.total)
-                file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
-                    datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
-              end
+            % Convert datestr to datenum and change from cell to array format
+            if ~isempty(file_selection.total)
+              file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
+                  datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
+            else
+              file_selection.total = [];
             end
-            try
-              if ~isempty(file_selection.filtered)
-                file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))];
-              end
-            catch
-              if ~isempty(file_selection.filtered)
-                file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
-                    datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
-              end
+            if ~isempty(file_selection.filtered)
+              file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
+                  datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
+            else
+              file_selection.filtered = [];
             end
+%             end
 %             % Remove old (days2run) selections REMOVED TO KEEP ALL HISTORY OF USER SELECTION
 %             if ~isempty(file_selection.total)
 %               sel = min(obj.cfg.days2run) <= file_selection.total(:,1) & file_selection.total(:,1) < max(obj.cfg.days2run) + 1;
@@ -488,26 +481,18 @@ classdef InLineAnalysis < handle
           fprintf('QCRef LOAD: %s\n', obj.cfg.qcref.reference);
           % Load previous QC and apply it
           file_selection = loadjson([obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json']);
-          % Convert datestr to datenum for newer format
-          try
-            if ~isempty(file_selection.total)
-              file_selection.total = [datenum(file_selection.total(1)), datenum(file_selection.total(2))];
-            end
-          catch
-            if ~isempty(file_selection.total)
-              file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
-                  datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
-            end
+          % Convert datestr to datenum and change from cell to array format
+          if ~isempty(file_selection.total)
+            file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
+                datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
+          else
+            file_selection.total = [];
           end
-          try
-            if ~isempty(file_selection.filtered)
-              file_selection.filtered = [datenum(file_selection.filtered(1)), datenum(file_selection.filtered(2))];
-            end
-          catch
-            if ~isempty(file_selection.filtered)
-              file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
-                  datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
-            end
+          if ~isempty(file_selection.filtered)
+            file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
+                datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
+          else
+            file_selection.filtered = [];
           end
           % Remove selection from days before & after days2run
           if ~isempty(file_selection.total)
