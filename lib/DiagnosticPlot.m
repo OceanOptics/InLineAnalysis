@@ -129,12 +129,18 @@ for j = 1:length(level)
           sel = true(size(data.(level{j}).(tabletoplot{i}).dt));
         else
           sel = false(size(data.(level{j}).(tabletoplot{i}).dt));
-          if size(sel,1) < 20000
+          if contains(instrument,'AC') && size(sel,1) < 20000
             sel(1:end) = true;
-          else
+          elseif contains(instrument,'AC')
             warning('Large dataset, only the first 20000 %s %s %s spectrum were plotted to save computer memory', ...
               level{j}, tabletoplot{i}, toplot{i, k})
             sel(1:20000) = true;
+          elseif contains(instrument,'BB') && size(sel,1) < 80000
+            sel(1:end) = true;
+          else
+            warning('Large dataset, only the first 80000 %s %s %s spectrum were plotted to save computer memory', ...
+              level{j}, tabletoplot{i}, toplot{i, k})
+            sel(1:80000) = true;
           end
 %           sel = data.(level{j}).(tabletoplot{i}).dt >= day_to_plot(1) & ...
 %             data.(level{j}).(tabletoplot{i}).dt <= day_to_plot(2);
