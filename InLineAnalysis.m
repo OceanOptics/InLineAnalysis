@@ -360,14 +360,14 @@ classdef InLineAnalysis < handle
               end
               obj.updatejson_userselection_bad(filename, user_selection, level{:}, toClean);
             else
-              obj.instrument.(i).DeleteUserSelection(user_selection);
+              obj.instrument.(i).DeleteUserSelection(user_selection, level{:}, toClean);
               % Save user selection
               if strcmp(toClean{1}, 'diw')
                 filename = [obj.instrument.(i).path.ui i '_QCDIpickSpecific_UserSelection.json'];
               else
                 filename = [obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'];
               end
-              obj.updatejson_userselection_bad(filename, user_selection);
+              obj.updatejson_userselection_bad(filename, user_selection, level{:}, toClean);
             end
           end
         end
@@ -658,7 +658,7 @@ classdef InLineAnalysis < handle
                              foo.qc.tsw, foo.suspect.tsw, foo.qc.fsw, foo.suspect.fsw,...
                              foo.view.varname, foo.view.varcol, foo.raw.bad, fooflow);
                 end
-                title([i ' QC all' newline 'Trash both a & c section pressing t (q to save)']);
+                title([i ' QC all' newline 'Trash full section pressing t (q to save)']);
                 fprintf('Trash section pressing t (q to save)\n');
                 user_selection = guiSelectOnTimeSeries(fh);
                 % Apply user selection
@@ -818,7 +818,7 @@ classdef InLineAnalysis < handle
             else
               plot(foo.qc.diw.dt, foo.qc.diw.(foo.view.varname)(:,foo.view.varcol), '.', 'Color', ColorSet(1,:));
               ylabel(foo.view.varname);
-              title([i ' QC all' newline 'Trash both a & c section pressing t (q to save)']);
+              title([i ' QC all' newline 'Trash full section pressing t (q to save)']);
               datetick2_doy();
               set(datacursormode(fh), 'UpdateFcn', @data_cursor_display_date);
               % Get user selection
@@ -1131,7 +1131,10 @@ classdef InLineAnalysis < handle
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.instrument.(obj.cfg.calibrate.(i).TSG_source),...
                                            obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
-                                           obj.cfg.calibrate.(i).di_method)
+                                           obj.cfg.calibrate.(i).di_method,...
+                                           obj.cfg.calibrate.(i).filt_method)
+            case 'CD'
+              obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved)
             otherwise
               obj.instrument.(i).Calibrate()
           end
@@ -1177,6 +1180,7 @@ classdef InLineAnalysis < handle
           case 'bin'
             obj.instrument.(i).(level).tsw = table();
             obj.instrument.(i).(level).fsw = table();
+            obj.instrument.(i).(level).diw = table();
           case 'qc'
             obj.instrument.(i).(level).tsw = table();
             obj.instrument.(i).(level).fsw = table();

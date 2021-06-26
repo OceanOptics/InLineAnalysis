@@ -200,7 +200,7 @@ switch instrument
     scatter(data.dt, data.par, 6, 'filled');
     ylabel('PAR (\muE.m^{-2}.s^{-1})');
     xlim([min(data.dt) max(data.dt)]);
-  case 'WSCD'
+  case {'WSCD','SPCD'}
     fig(94);
     clf
     scatter(data.dt, data.fdom, 6, 'filled');

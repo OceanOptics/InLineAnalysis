@@ -128,7 +128,7 @@ cfg.instruments.SPCD.path = struct('raw',  [PATH_ROOT 'raw' filesep ['SPCD' SN] 
                                   'wk',   [PATH_ROOT 'wk' filesep ['SPCD' SN] filesep],...
                                   'prod', [PATH_ROOT 'prod/'],...
                                   'ui', [PATH_ROOT 'ui' filesep ['SPCD' SN] filesep]);
-cfg.instruments.SPCD.view = struct('varname', 'fdom', 'varcol', 2);
+cfg.instruments.SPCD.view = struct('varname', 'fdom', 'varcol', 1);
 
 %%% WSCD %%%
 SN = '1052';
@@ -147,7 +147,7 @@ cfg.instruments.WSCD.path = struct('raw',  [PATH_ROOT 'raw' filesep ['WSCD' SN] 
                                   'wk',   [PATH_ROOT 'wk' filesep ['WSCD' SN] filesep],...
                                   'prod', [PATH_ROOT 'prod' filesep],...
                                   'ui', [PATH_ROOT 'ui' filesep ['WSCD' SN] filesep]);
-cfg.instruments.WSCD.view = struct('varname', 'fdom', 'varcol', 2);
+cfg.instruments.WSCD.view = struct('varname', 'fdom', 'varcol', 1);
 
 %%% LISST %%%
 SN = '1183';
@@ -188,7 +188,7 @@ cfg.process.write = true;
 cfg.process.force_import = false;
 cfg.process.parallel = Inf; % 0: disable parallel or Inf: as many thread available
 cfg.process.di = struct();
-cfg.process.di.skip = {'FLOW', 'TSG', 'LISST', 'SPCD','Hyperbb'};
+cfg.process.di.skip = {'FLOW', 'TSG'};
 cfg.process.di.qc = struct('mode', 'ui');
 ila.process.di.qc.qc_once_for_AandC = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
 cfg.process.di.bin = struct('bin_size', 30);
@@ -220,7 +220,7 @@ cfg.process.split.buffer.ACS91 = [180, 30];
 cfg.process.split.buffer.BB3 = [420, 220];
 cfg.process.split.buffer.HBB = [540, 340];
 cfg.process.split.buffer.LISST = [540, 360];
-cfg.process.split.buffer.SPCD = [310, 20];
+cfg.process.split.buffer.SPCD = [540, 20];
 cfg.process.split.skip = {'FLOW', 'TSG'};
 
 %%% Binning %%%
@@ -296,11 +296,13 @@ cfg.process.calibrate.ACS91 = struct('compute_dissolved', true, ...
 cfg.process.calibrate.BB3 = struct('compute_dissolved', true, ...
                                   'TSG_source', 'TSG', ...
                                   'FLOW_source', 'FLOW', ...
-                                  'di_method', 'interpolate'); % interpolate constant
+                                  'di_method', 'interpolate', ... % interpolate constant
+                                  'filt_method', '25percentil'); % 25percentil exponential_fit
 cfg.process.calibrate.HBB = struct('compute_dissolved', true, ...
                                   'TSG_source', 'TSG', ...
                                   'FLOW_source', 'FLOW', ...
-                                  'di_method', 'interpolate'); % interpolate constant
+                                  'di_method', 'interpolate', ... % interpolate constant
+                                  'filt_method', '25percentil'); % 25percentil exponential_fit
 cfg.process.calibrate.skip = {'FLOW', 'TSG', 'SPCD'};
 
 %%% Write %%%

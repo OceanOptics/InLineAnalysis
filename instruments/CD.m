@@ -20,9 +20,14 @@ classdef CD < ECO
       obj.split.mode = 'rmBuffer';
     end
 
-    function Calibrate(obj)
+    function Calibrate(obj, compute_dissolved)
       param = struct('slope', obj.slope, 'dark', obj.dark);
-      obj.prod.pd = processCD(param, obj.qc.tsw);
+      % linear interpolation only
+      if compute_dissolved
+        obj.prod.pd = processCD(param, obj.qc.tsw, obj.bin.diw);
+      else
+        obj.prod.pd = processCD(param, obj.qc.tsw, []);
+      end
     end
   end
 end

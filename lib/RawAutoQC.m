@@ -184,10 +184,11 @@ elseif contains(instrument, 'HBB')
   datanorm.beta = fillmissing(datanorm.beta, 'linear', 2); % interpolate missing data
   datanorm.beta = datanorm.beta - min(datanorm.beta(:)) + 2; % normalise to the min value + 2
   
-  diff_bb = [diff(datanorm.beta,[],2) NaN(size(datanorm,1),1)]; % first derivative ov er lambda
+  diff_bb = [diff(datanorm.beta,[],2) NaN(size(datanorm,1),1)]; % first derivative over lambda
   diff_bb(:,1) = median(diff_bb(:, lambda.bb < 660),2, 'omitnan'); % replace first value
   if any(all(isnan(diff_bb),2))
-    diff_bb(all(isnan(diff_bb),2), :) = median(diff_bb, 1, 'omitnan');
+    diff_bb(all(isnan(diff_bb),2), :) = repmat(median(diff_bb, 1, 'omitnan'), ...
+      sum(all(isnan(diff_bb),2)), 1);
   end
   
   diff_neg = diff_bb;

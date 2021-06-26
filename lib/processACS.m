@@ -81,7 +81,7 @@ switch interpolation_method
   %       filt_interp.a = interp1(cdom_fun.dt, cdom_fun.a, filt_interp.dt);%, 'linear', 'extrap');
   %       filt_interp.c = interp1(cdom_fun.dt, cdom_fun.c, filt_interp.dt);%, 'linear', 'extrap');
   %       warning('on', 'stats:regress:RankDefDesignMat');
-     % Use simple mathematical function to interpolate based on CDOM
+    % Use simple mathematical function to interpolate based on CDOM
     n_periods = size(filt_avg,1)-1;
     filt_interp = table(tot.dt, 'VariableNames', {'dt'});
     filt_interp.cdom = interp1(cdom.dt, cdom.fdom, tot.dt); % as independent from tot|filt period
@@ -123,36 +123,48 @@ switch interpolation_method
     filt_interp.c_avg_sd = interp1(filt.dt, filt.c_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
     
   case 'linear'
-      % Compute filtered period median
-      filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
-      filt_avg.a = NaN(size(filt_avg,1), size(lambda.a, 2));
-      filt_avg.c = NaN(size(filt_avg,1), size(lambda.c, 2));
-      for i=1:size(sel_start, 1)
-        sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
-        foo = filt(sel_filt,:);
-        foo.a_avg_sd(foo.a > prctile(foo.a, 25, 1)) = NaN;
-        foo.c_avg_sd(foo.c > prctile(foo.c, 25, 1)) = NaN;
-        foo.a(foo.a > prctile(foo.a, 25, 1)) = NaN;
-        foo.c(foo.c > prctile(foo.c, 25, 1)) = NaN;
-        % compute average of all values smaller than 25th percentile for each filter event
-        filt_avg.a(i,:) = mean(foo.a, 1, 'omitnan');
-        filt_avg.c(i,:) = mean(foo.c, 1, 'omitnan');
-        filt_avg.a_avg_sd(i,:) = mean(foo.a_avg_sd, 1, 'omitnan');
-        filt_avg.c_avg_sd(i,:) = mean(foo.c_avg_sd, 1, 'omitnan');
-      end
-      filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2), :) = [];
-      % Interpolate filtered on total linearly
-      filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-      filt_interp.a = interp1(filt_avg.dt, filt_avg.a, filt_interp.dt);%, 'linear', 'extrap');
-      filt_interp.c = interp1(filt_avg.dt, filt_avg.c, filt_interp.dt);%, 'linear', 'extrap');
-      filt_interp.a_avg_sd = interp1(filt_avg.dt, filt_avg.a_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
-      filt_interp.c_avg_sd = interp1(filt_avg.dt, filt_avg.c_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
+    % Compute filtered period median
+    filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
+    filt_avg.a = NaN(size(filt_avg,1), size(lambda.a, 2));
+    filt_avg.c = NaN(size(filt_avg,1), size(lambda.c, 2));
+    filt_avg.a_avg_sd = NaN(size(filt_avg,1), size(lambda.a, 2));
+    filt_avg.c_avg_sd = NaN(size(filt_avg,1), size(lambda.c, 2));
+    filt_avg.a_avg_n = NaN(size(filt_avg,1), 1);
+    filt_avg.c_avg_n = NaN(size(filt_avg,1), 1);
+    for i=1:size(sel_start, 1)
+      sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
+      foo = filt(sel_filt,:);
+      foo.a_avg_sd(foo.a > prctile(foo.a, 25, 1)) = NaN;
+      foo.c_avg_sd(foo.c > prctile(foo.c, 25, 1)) = NaN;
+      foo.a(foo.a > prctile(foo.a, 25, 1)) = NaN;
+      foo.c(foo.c > prctile(foo.c, 25, 1)) = NaN;
+      % compute average of all values smaller than 25th percentile for each filter event
+      filt_avg.a(i,:) = mean(foo.a, 1, 'omitnan');
+      filt_avg.c(i,:) = mean(foo.c, 1, 'omitnan');
+      filt_avg.a_avg_sd(i,:) = mean(foo.a_avg_sd, 1, 'omitnan');
+      filt_avg.c_avg_sd(i,:) = mean(foo.c_avg_sd, 1, 'omitnan');
+      filt_avg.a_avg_n(i) = sum(foo.a_avg_n(any(~isnan(foo.a), 2)), 'omitnan');
+      filt_avg.c_avg_n(i) = sum(foo.c_avg_n(any(~isnan(foo.c), 2)), 'omitnan');
+    end
+    filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2), :) = [];
+    % Interpolate filtered on total linearly
+    filt_interp = table(tot.dt, 'VariableNames', {'dt'});
+    filt_interp.a = interp1(filt_avg.dt, filt_avg.a, filt_interp.dt);%, 'linear', 'extrap');
+    filt_interp.c = interp1(filt_avg.dt, filt_avg.c, filt_interp.dt);%, 'linear', 'extrap');
+    filt_interp.a_avg_sd = interp1(filt_avg.dt, filt_avg.a_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
+    filt_interp.c_avg_sd = interp1(filt_avg.dt, filt_avg.c_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
   otherwise
-    error('Method not supported.');
+  error('Method not supported.');
 end
 
-if exist('visFlag', 'file')
+if exist('visFlag', 'file') && exist('fth', 'var')
   fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'a', round(size(tot.a, 2)/2), [], fth);
+  title('Check filter event interpolation, press q to continue', 'FontSize', 14)
+  legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
+    'AutoUpdate','off', 'FontSize', 12)
+  guiSelectOnTimeSeries(fh);
+elseif exist('visFlag', 'file')
+  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'a', round(size(tot.a, 2)/2), [], []);
   title('Check filter event interpolation, press q to continue', 'FontSize', 14)
   legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
     'AutoUpdate','off', 'FontSize', 12)
@@ -391,19 +403,19 @@ if ~isempty(di)
   end
   
   % remove NaNs
-  filt(all(isnan(filt.a), 2) | all(isnan(filt.c), 2),:) = [];
+  filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2),:) = [];
   
   % Interpolate filtered on Total
-  di_interp = table(filt.dt, 'VariableNames', {'dt'});
+  di_interp = table(filt_avg.dt, 'VariableNames', {'dt'});
   di_interp.a = interp1(di.dt, di.a, di_interp.dt, 'linear', 'extrap');
   di_interp.c = interp1(di.dt, di.c, di_interp.dt, 'linear', 'extrap');
   di_interp.a_avg_sd = interp1(di.dt, di.a_avg_sd, di_interp.dt, 'linear', 'extrap');
   di_interp.c_avg_sd = interp1(di.dt, di.c_avg_sd, di_interp.dt, 'linear', 'extrap');
 
   % Dissolved = Filtered - DI
-  g = table(filt.dt, 'VariableNames', {'dt'});
-  g.ag = filt.a - di_interp.a;
-  g.cg = filt.c - di_interp.c;
+  g = table(filt_avg.dt, 'VariableNames', {'dt'});
+  g.ag = filt_avg.a - di_interp.a;
+  g.cg = filt_avg.c - di_interp.c;
   % Interpolate wavelength of c on a 
   % g.cg = cell2mat(arrayfun(@(i) interp1(c_wl, g.cg(i,:), a_wl, 'linear', 'extrap'), 1:size(g,1), 'UniformOutput', false)');
   g.ag = interp1(lambda.a', g.ag', lambda.ref', 'linear', 'extrap')';
@@ -417,10 +429,10 @@ if ~isempty(di)
   % Propagate error
   %   Note: Error is not propagated through Scattering & Residual temperature
   %         correction as required by SeaBASS
-  g.ag_sd = sqrt(filt.a_avg_sd + di_interp.a_avg_sd);
-  g.cg_sd = sqrt(filt.c_avg_sd + di_interp.c_avg_sd);
-  g.ag_n = filt.a_avg_n;
-  g.cg_n = filt.c_avg_n;
+  g.ag_sd = sqrt(filt_avg.a_avg_sd + di_interp.a_avg_sd);
+  g.cg_sd = sqrt(filt_avg.c_avg_sd + di_interp.c_avg_sd);
+  g.ag_n = filt_avg.a_avg_n;
+  g.cg_n = filt_avg.c_avg_n;
   
 %   visProd3D(lambda.a, g.dt, g.ag, false, 'Wavelength', false, 70);
 %   title('ag with auto best DI 72h')

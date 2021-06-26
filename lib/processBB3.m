@@ -1,4 +1,4 @@
-function [p, g] = processBB3(param, tot, filt, di, tsg, di_method, fth, fth_constants)
+function [p, g] = processBB3(param, tot, filt, di, tsg, di_method, filt_method, fth, fth_constants)
 % Note DI is not interpolated as it's assume to be stable in time
 % BB3 parameters is a structure
 %   param.lambda <1x3 double> wavelength (nm)
@@ -35,14 +35,28 @@ if exist('fth', 'var')
   % Compute filtered period median
   filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
   filt_avg.beta = NaN(size(filt_avg,1), size(param.lambda, 2));
-  for i=1:size(sel_start, 1)
-    sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
-    foo = filt(sel_filt,:);
-    foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-    foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-    % compute average of all values smaller than 25th percentile for each filter event
-    filt_avg.beta(i,:) = mean(foo.beta, 1, 'omitnan');
-    filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 1, 'omitnan');
+  filt_avg.beta_avg_sd = NaN(size(filt_avg,1), size(param.lambda, 2));
+  filt_avg.beta_avg_n = NaN(size(filt_avg,1), 1);
+  switch filt_method
+    case '25percentil'
+      for i=1:size(sel_start, 1)
+        sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
+        if sum(sel_filt) > 0
+          foo = filt(sel_filt,:);
+          foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+          foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+          % compute average of all values smaller than 25th percentile for each filter event
+          filt_avg.beta(i,:) = mean(foo.beta, 1, 'omitnan');
+          filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 1, 'omitnan');
+          filt_avg.beta_avg_n(i) = sum(foo.beta_avg_n(any(~isnan(foo.beta), 2)), 'omitnan');
+        end
+      end
+    case 'exponential_fit' % CURRENTLY NOT WORKING
+      fprintf('Fitting exponential to filter events ... ')
+      filt_avg = FiltExpFit(filt_avg, filt, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
+      fprintf('Done\n')
+    otherwise
+      error('filter event method "filt_method" not supported')
   end
   filt_avg(all(isnan(filt_avg.beta), 2), :) = [];
 else
@@ -55,13 +69,17 @@ filt_interp.beta = interp1(filt_avg.dt, filt_avg.beta, filt_interp.dt);%, 'linea
 filt_interp.beta_avg_sd = interp1(filt_avg.dt, filt_avg.beta_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
 
 if exist('visFlag', 'file') && exist('fth', 'var')
-  visFlag(tot, filt_interp, [], [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], fth);
-  title('Check filter event interpolation')
-  legend('Total', 'Filtered interpolated', 'Filtered median', 'Flow rate')
+  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], fth);
+  title('Check filter event interpolation, press q to continue', 'FontSize', 14)
+  legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
+    'AutoUpdate','off', 'FontSize', 12)
+  guiSelectOnTimeSeries(fh);
 elseif exist('visFlag', 'file')
-  visFlag(tot, filt_interp, [], [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], []);
-  title('Check filter event interpolation')
-  legend('Total', 'Filtered interpolated', 'Filtered median')
+  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], []);
+  title('Check filter event interpolation, press q to continue', 'FontSize', 14)
+  legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
+    'AutoUpdate','off', 'FontSize', 12)
+  guiSelectOnTimeSeries(fh);
 end
 
 % Compute beta particulate
@@ -96,17 +114,20 @@ fprintf('Done\n')
 % Estimate POC and Cphyto from bbp
 [p.poc, ~, ~, p.cphyto, ~, ~,] = estimatePOC_Cphyto(p.bbp, [470 532 650], 'soccom');
 
-% QC
+% remove negative values
 p(any(p.bbp < 0,2),:) = [];
 
 if nargout > 1 && nargin > 4
-  t = interp1(tsg.dt, tsg.t, filt.dt);
-  s = interp1(tsg.dt, tsg.s, filt.dt);
+  if isempty(tsg)
+    error('T/S data required:, no TSG data loaded')
+  end
+  t = interp1(tsg.dt, tsg.t, filt_avg.dt);
+  s = interp1(tsg.dt, tsg.s, filt_avg.dt);
   switch di_method
     case 'interpolate'
       % Interpolate DI on Filtered
       %     + recommende if sensor drift with time
-      di_pp = table(filt.dt, 'VariableNames', {'dt'});
+      di_pp = table(filt_avg.dt, 'VariableNames', {'dt'});
       di_pp.beta = interp1(di.dt, di.beta, di_pp.dt);
       di_pp.beta_avg_sd = interp1(di.dt, di.beta_avg_sd, di_pp.dt);
     case 'constant'
@@ -140,37 +161,37 @@ if nargout > 1 && nargin > 4
   switch di_method
     case {'interpolate', 'constant'}
       % Get beta salt from Zhang et al. 2009
-      beta_s = NaN(size(filt.beta));
+      beta_s = NaN(size(filt_avg.beta));
       for j = 1:size(t,1)
         beta_s(j, :) = betasw_ZHH2009(param.lambda, t(j), param.theta, s(j)) - ...
           betasw_ZHH2009(param.lambda, t(j), param.theta, 0);
       end
       % Compute beta dissolved
-      g = table(filt.dt, 'VariableNames', {'dt'});
-      g.betag = param.slope .* (filt.beta - di_pp.beta) - beta_s ;
+      g = table(filt_avg.dt, 'VariableNames', {'dt'});
+      g.betag = param.slope .* (filt_avg.beta - di_pp.beta) - beta_s ;
       % Propagate error
       %   Note: Error is not propagated through Scattering & Residual temperature
       %         correction as required by SeaBASS
-      g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
+      g.betag_sd = param.slope .* sqrt(filt_avg.beta_avg_sd + di_pp.beta_avg_sd);
     case 'SW_scattering'
       % Get beta salt from Zhang et al. 2009
-      beta_sw = NaN(size(filt.beta));
+      beta_sw = NaN(size(filt_avg.beta));
       for j = 1:size(t,1)
         beta_sw(j, :) = betasw_ZHH2009(param.lambda, t(j), param.theta, s(j));
       end
       % Compute beta dissolved
-      g = table(filt.dt, 'VariableNames', {'dt'});
+      g = table(filt_avg.dt, 'VariableNames', {'dt'});
       % g.betag = param.slope .* filt.beta - beta_s ;
-      g.betag = param.slope .* (filt.beta - param.dark) - beta_sw ;
+      g.betag = param.slope .* (filt_avg.beta - param.dark) - beta_sw ;
       % Propagate error
       %   Note: Error is not propagated through Scattering & Residual temperature
       %         correction as required by SeaBASS
       % g.betag_sd = param.slope .* sqrt(filt.beta_avg_sd + di_pp.beta_avg_sd);
-      g.betag_sd = filt.beta_avg_sd;
+      g.betag_sd = filt_avg.beta_avg_sd;
     otherwise
       error('Method not supported.');
   end
-  g.betag_n = filt.beta_avg_n;
+  g.betag_n = filt_avg.beta_avg_n;
   
   % Compute bbg and gamma_bbg
   g.bbg = 2 * pi * X_p .* g.betag;
@@ -183,6 +204,64 @@ if nargout > 1 && nargin > 4
   fprintf('Done\n')
 else
   g = table();
+end
+end
+
+function filt_avg = FiltExpFit(filt_avg, filt, filt_st, filt_end)
+% Author: Guillaume bourdin
+% Date: June 25, 2021
+%
+% Exponential fit to filter event
+%%
+% dt = filt_avg.dt(:)';
+[nspect, nlamda] = size(filt_avg.beta);
+
+filt_avg.delt_filt_asymp = NaN(size(filt_avg.beta));
+filt_avg.RMSE_asymp = NaN(size(filt_avg.beta));
+
+%setting options for fmisearch
+opts = optimset('fminsearch');
+opts = optimset(opts, 'MaxIter', 500000);
+opts = optimset(opts, 'MaxFunEvals', 100000);   % usually 100*number of params
+opts = optimset(opts, 'TolFun', 1e-9);
+
+% compute exp fit at each wavelength and each filter event
+for i = 1:nspect
+  % select filter event
+  sel_filt = filt_st(i) <= filt.dt & filt.dt <= filt_end(i);
+  if sum(sel_filt) > 0
+    foo = filt(sel_filt,:);
+    for j = 1:nlamda
+      if all(isfinite(foo.beta(:,j))) && all(~isnan(foo.beta(:,j)))
+        % define exponential function
+        expfun = @(p, xd) p(1) * exp(p(2) * (xd - foo.dt(1))) + p(3);
+        % define x0
+        x0 = [foo.beta(1,j) -1/180 0];
+        % define weight
+        weigh_std = 1 - 0.5 * (1:size(foo, 1)) / size(foo, 1);
+        % define error function: sum_err/std
+        errfun = @(p) sum(abs((expfun(p, foo.dt) - foo.beta(:,j))) ./ weigh_std');
+%         errfun = @(p) sum((expfun(p, foo.dt) - foo.beta(:,j)) .^2);
+        %run the minimizer
+        pfit = fminsearch(errfun, x0, opts);
+        
+        % evaluate goodness
+        SSE = sum((expfun(pfit, foo.dt) - foo.beta(:,j)) .^2);
+        MSE = SSE / (size(foo, 1) - size(x0, 2));
+        filt_avg.RMSE_asymp(i,j) = sqrt(MSE);
+        filt_avg.beta(i,j) = pfit(3);
+      end
+    end
+    if size(foo,1) > 2
+      filt_avg.delt_filt_asymp(i,:) = mean(foo.beta(end-2:end,:), 'omitnan') - filt_avg.beta(i,:);
+    elseif size(foo,1) == 2
+      filt_avg.delt_filt_asymp(i,:) = mean(foo.beta(end-1:end,:), 'omitnan') - filt_avg.beta(i,:);
+    else
+      filt_avg.delt_filt_asymp(i,:) = foo.beta(end,:) - filt_avg.beta(i,:);
+    end
+    filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 'omitnan');
+    filt_avg.beta_avg_n(i,:) = sum(foo.beta_avg_n);
+  end
 end
 end
 

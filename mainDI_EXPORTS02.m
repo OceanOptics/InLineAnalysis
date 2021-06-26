@@ -32,8 +32,8 @@ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','ACS91'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
-ila.cfg.qcref.view = 'ACS91';
+ila.cfg.instruments2run = {'FLOW','SPCD'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
+ila.cfg.qcref.view = 'SPCD';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = true;
 
@@ -47,7 +47,7 @@ ila.CheckDataStatus();
 
 %% 1.1. Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
+ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
 
 %% 2. Automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR values
 % fudge factor for auto QC ACS.
@@ -64,12 +64,12 @@ ila.CheckDataStatus();
 
 %% 2.1. Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
+ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
 
 %% Load processed data from mat files: 'data' = Raw | 'bin' = Bin | 'qc' = QCed | 'prod' = product
 % ila.Read('data');
-% ila.Read('bin');
-% ila.Read('qc');
+ila.Read('bin');
+ila.Read('qc');
 % ila.Read('prod');
 
 %% 3. QC DI
@@ -83,7 +83,7 @@ ila.RawAutoQC(ila.cfg.qc.RawAutoQCLim, ila.cfg.qc.Saturation_Threshold_bb, 'qc')
 %% 4.1. Diagnostic Plot
 % check QCed spectrums AC or BB sensors
 % {'raw','bin','qc','prod'}
-ila.DiagnosticPlot('AC',{'qc'}); % AC or BB
+ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
 
 %% 4.2. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:
@@ -96,7 +96,7 @@ ila.DiagnosticPlot('AC',{'qc'}); % AC or BB
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.DiagnosticPlot('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
-ila.DiagnosticPlot('AC',{'qc'}, false, {'diw','a'});
+ila.DiagnosticPlot('BB',{'qc'}, false, {'diw','beta'});
 
 %% 5. Write QC
 ila.Write('qc')
@@ -108,15 +108,14 @@ ila.BinDI();
 
 %% 6.1. Diagnostic Plot
 % check binned spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'bin'}); % AC or BB
+ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
 
 %% 7. Write bin DI
 ila.Write('bin')
 ila.CheckDataStatus();
 
 %% 8. Calibrate
-% ila.cfg.calibrate.ACS.compute_dissolved = false;
-% ila.cfg.calibrate.BB3.compute_dissolved = false;
+ila.cfg.calibrate.BB3.filt_method = '25percentil'; % 25percentil exponential_fit
 ila.cfg.calibrate.skip = {'FLOW', 'TSG'};
 ila.Calibrate();
 ila.CheckDataStatus();
@@ -125,7 +124,7 @@ ila.CheckDataStatus();
 % save_figures = true;
 
 %%% ACS 3D %%%
-ila.DiagnosticPlot('AC',{'prod'}); % AC or BB
+ila.DiagnosticPlot('BB',{'prod'}); % AC or BB
 
 %%% BB 3D %%%
 % ila.DiagnosticPlot('BB',{'prod'}); % AC or BB

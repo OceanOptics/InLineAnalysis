@@ -38,8 +38,8 @@ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','ACS91'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
-ila.cfg.qcref.view = 'ACS91';
+ila.cfg.instruments2run = {'FLOW','HBB'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
+ila.cfg.qcref.view = 'HBB';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 
@@ -62,8 +62,8 @@ ila.instrument.ACS91.Sync(0);
 ila.instrument.HBB.Sync(0);
 ila.instrument.BB3.Sync(0);
 % % % ila.instrument.LISST.Sync(1);
-% % ila.instrument.WSCD1082P.Sync(40);
-% ila.instrument.WSCD859.Sync(40);
+% % ila.instrument.WSCD1082P.Sync(0);
+ila.instrument.SPCD.Sync(40);
 ila.instrument.TSG.Sync(0);
 % % ila.instrument.ALFA.Sync(15); 
 % % Quick visualizzation to sync with TSG
@@ -82,7 +82,7 @@ visSync(ila.instrument.FLOW.data, ila.instrument.ACS91.data.dt, ila.instrument.A
 visSync(ila.instrument.FLOW.data, ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,1), '\beta (counts)');
 visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB.data.beta(:,14), '\beta (counts)');
 % % visSync(ila.instrument.FLOW.data, ila.instrument.LISST.data.dt, ila.instrument.LISST.data.beta(:,10), '\beta (counts)');
-% % visSync(ila.instrument.('FLOW').data, ila.instrument.('WSCD').data.dt, ila.instrument.('WSCD').data.fdom, 'FDOM (counts)');
+visSync(ila.instrument.FLOW.data, ila.instrument.SPCD.data.dt, ila.instrument.SPCD.data.fdom, 'FDOM (counts)');
 % % visSync(ila.instrument.('FLOW').data, ila.instrument.('WSCD1082P').data.dt, ila.instrument.('WSCD1082P').data.fdom, 'FDOM (counts)');
 % % visSync(ila.instrument.('BB3').data, ila.instrument.('TSG').data.dt, ila.instrument.('TSG').data.t, 'Temp (C)');
 % % % visSync(ila.instrument.FLOW.data, ila.instrument.ALFA.data.dt, ila.instrument.ALFA.data.Chlb, 'chlb');yyaxis('left'); ylim([0 2]);
@@ -106,7 +106,7 @@ visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB
 % Note: when redoing QC of a given period of time (days2run) the previous
 % QC during the same period of time is erased, QC done on other periods of
 % time is kept in the json file
-ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
+ila.cfg.qcref.mode='load'; % 'ui' or 'load'
 ila.QCRef();
 
 %% 4. Split fsw and tsw
@@ -116,7 +116,7 @@ ila.CheckDataStatus();
 
 %% 4.1. Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
+ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
 
 %% 5. Automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR values
 % fudge factor for auto QC ACS.
@@ -136,7 +136,7 @@ ila.CheckDataStatus();
 
 %% 5.1. Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
+ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
 
 %% 5.2. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:
@@ -149,7 +149,7 @@ ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.DiagnosticPlot('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
-ila.DiagnosticPlot('AC',{'raw'}, false, {'fsw','a'});
+ila.DiagnosticPlot('BB',{'raw'}, false, {'fsw','all'});
 
 %% 5.3. Loading previous qc pick selection at raw level
 ila.cfg.qc.mode='load';  % load or ui
@@ -167,7 +167,7 @@ ila.CheckDataStatus();
 
 %% 6.1. Diagnostic Plot
 % check binned spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'bin'}); % AC or BB
+ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
 
 %% 6.2. Write bin
 ila.Write('bin')
@@ -176,7 +176,7 @@ ila.CheckDataStatus();
 %% Load processed data from mat files: 'data' = Raw | 'bin' = Bin | 'qc' = QCed | 'prod' = product
 % ila.Read('data');
 % ila.Read('bin');
-ila.Read('qc');
+% ila.Read('qc');
 % ila.Read('prod');
 
 %% 7. Flag
@@ -195,7 +195,7 @@ ila.CheckDataStatus();
 %% 8.1. Diagnostic Plot
 % check QCed spectrums AC or BB sensors
 % {'raw','bin','qc','prod'}
-ila.DiagnosticPlot('AC',{'qc'}); % AC or BB
+ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
 
 %% 8.2. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:
@@ -208,8 +208,8 @@ ila.DiagnosticPlot('AC',{'qc'}); % AC or BB
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.DiagnosticPlot('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
-ila.DiagnosticPlot('AC',{'qc'}, false, {'fsw','a'});
-ila.DiagnosticPlot('AC',{'qc'}, false, {'fsw','all'});
+ila.DiagnosticPlot('BB',{'qc'}, false, {'fsw','a'});
+ila.DiagnosticPlot('BB',{'qc'}, false, {'fsw','all'});
 
 %% 9. QC Switch position
 % QC switch position to make sure each filter event is separated by a
@@ -221,8 +221,6 @@ ila.Write('qc')
 ila.CheckDataStatus();
 
 %% 10. Calibrate and compute products
-% ila.cfg.calibrate.ACS.compute_dissolved = false;
-% ila.cfg.calibrate.BB3.compute_dissolved = false;
 ila.cfg.calibrate.skip = {'FLOW', 'TSG'};
 ila.Calibrate();
 ila.CheckDataStatus();
@@ -269,7 +267,7 @@ ila.visProd_timeseries()
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.DiagnosticPlot('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
-ila.DiagnosticPlot('AC',{'prod'}, false, {'p','ap'});
+ila.DiagnosticPlot('BB',{'prod'}, false, {'p','all'});
 
 %% 11.1. Load previous qc pick selection at prod level
 ila.cfg.qc.mode='load';  % load or ui

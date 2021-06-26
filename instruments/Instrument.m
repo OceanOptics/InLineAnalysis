@@ -223,7 +223,7 @@ classdef (Abstract) Instrument < handle
         level = 'qc';
         chan = {'all'};
       elseif nargin < 4
-        chan = {'all'};
+        chan{2} = {'all'};
       end
       if size(chan, 2) < 2 || any(cellfun('isempty', chan))
         chan = {'all'};
