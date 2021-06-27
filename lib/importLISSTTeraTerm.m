@@ -1,5 +1,5 @@
 function [ data ] = importLISSTTeraTerm( filename, verbose )
-%IMPORTINLININO Import LISST data logged and Timestamped with TeraTerm during NAAMES 3
+%importLISSTTeraTerm Import LISST data logged and Timestamped with TeraTerm during NAAMES 3
 
 if nargin < 2; verbose = false; end
 if verbose

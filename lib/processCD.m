@@ -16,14 +16,10 @@ if isempty(diw)
   pd.fdom_sd = param.slope * (data.fdom_avg_sd * gain - param.dark) / 1000;
   pd.fdom_n = data.fdom_avg_n;
   
-else % method with DIW measurement (slope and dark not required)
-  % Interpolate DI on data
-  di_pp = table(pd.dt, 'VariableNames', {'dt'});
-  di_pp.fdom = interp1(diw.dt, diw.fdom, di_pp.dt);
-  di_pp.fdom_avg_sd = interp1(diw.dt, diw.fdom_avg_sd, di_pp.dt);
-  
-  pd.fdom = (data.fdom * gain - di_pp.fdom) / 1000;
+else % method with DIW measurement (dark not required)  
+  % Consider the lowest DIW of the whole period as the dark 
+  pd.fdom = (data.fdom * gain - min(diw.fdom)) / 1000;
   % Propagate error
-  pd.fdom_sd = (data.fdom_avg_sd * gain - di_pp.fdom_avg_sd) / 1000;
+  pd.fdom_sd = (data.fdom_avg_sd * gain - diw.fdom_avg_sd(diw.fdom == min(diw.fdom))) / 1000;
   pd.fdom_n = data.fdom_avg_n;
 end
