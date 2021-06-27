@@ -122,7 +122,6 @@ if nargout > 1 || strcmp(mode, 'rmBuffer')
 end
 
 if nargout > 2
-  
   data_reject = d(flag_buffer,:);
 end
 

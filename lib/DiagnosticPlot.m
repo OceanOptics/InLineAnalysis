@@ -40,7 +40,6 @@ end
 if contains(instrument,'BB')
   wl = data.lambda;
   instrument = 'BB';
-  
 elseif contains(instrument,'AC')
   wla = data.lambda_a;
   wlc = data.lambda_c;
@@ -51,11 +50,8 @@ end
 
 user_selection = [];
 for j = 1:length(level)
-  fieldna = fieldnames(data.(level{j}));
-  if any(strcmp(fieldna, 'bad'))
-    data.(level{j}).bad = [];
-  end
-  tabletoplot = fieldna(~structfun(@isempty, data.(level{j})));
+  tabletoplot = fieldnames(data.(level{j}));
+  tabletoplot(strcmp(tabletoplot, 'bad')) = [];
   sztoplot = table(0.4, 8, 'VariableNames', {'AC', 'BB'});
   switch level{j}
     case 'raw'

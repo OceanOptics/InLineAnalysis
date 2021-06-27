@@ -123,7 +123,7 @@ fprintf('Done\n')
 % remove negative values
 p(any(p.bbp < 0,2),:) = [];
 
-if nargout > 1 && nargin > 4
+if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering'))
   if isempty(tsg)
     error('T/S data required:, no TSG data loaded')
   end
