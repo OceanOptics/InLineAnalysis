@@ -438,14 +438,22 @@ classdef InLineAnalysis < handle
             file_selection = loadjson(filename);
             % Convert datestr to datenum and change from cell to array format
             if ~isempty(file_selection.total)
-              file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
-                  datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
+              if iscell(file_selection.total{1})
+                file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
+                    datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
+              else
+                file_selection.total = [datenum(file_selection.total{1}) datenum(file_selection.total{2})];
+              end
             else
               file_selection.total = [];
             end
             if ~isempty(file_selection.filtered)
-              file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
-                  datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
+              if iscell(file_selection.filtered{1})
+                file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
+                    datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
+              else
+                file_selection.filtered = [datenum(file_selection.filtered{1}) datenum(file_selection.filtered{2})];
+              end
             else
               file_selection.filtered = [];
             end
@@ -483,14 +491,22 @@ classdef InLineAnalysis < handle
           file_selection = loadjson([obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json']);
           % Convert datestr to datenum and change from cell to array format
           if ~isempty(file_selection.total)
-            file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
-                datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
+            if iscell(file_selection.total{1})
+              file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
+                  datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
+            else
+              file_selection.total = [datenum(file_selection.total{1}) datenum(file_selection.total{2})];
+            end
           else
             file_selection.total = [];
           end
           if ~isempty(file_selection.filtered)
-            file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
-                datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
+            if iscell(file_selection.filtered{1})
+              file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
+                  datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
+            else
+              file_selection.filtered = [datenum(file_selection.filtered{1}) datenum(file_selection.filtered{2})];
+            end
           else
             file_selection.filtered = [];
           end
@@ -600,7 +616,7 @@ classdef InLineAnalysis < handle
             fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                        foo.qc.fsw, foo.suspect.fsw, foo.view.varname, foo.view.varcol,...
                        foo.raw.bad, fooflow);
-            title('Global QC');
+            title('Global QC: Trash section pressing t (q to save)');
             user_selection = guiSelectOnTimeSeries(fh);
             % For each instrument 
             for i=obj.cfg.qc.global.apply; i = i{1};
@@ -608,8 +624,10 @@ classdef InLineAnalysis < handle
               % Apply user selection
               obj.instrument.(i).DeleteUserSelection(user_selection);
               % Save user selection
-              filename = [obj.instrument.(i).path.ui i '_QCGlobal_UserSelection.json'];
-              if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
+              filename = [fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.json'];
+              if ~isfolder(fileparts(fileparts(obj.instrument.(i).path.ui)))
+                mkdir(fileparts(fileparts(obj.instrument.(i).path.ui)));
+              end
               obj.updatejson_userselection_bad(filename, user_selection);
             end
           end
@@ -678,7 +696,7 @@ classdef InLineAnalysis < handle
             for i=obj.cfg.qc.global.apply; i = i{1};
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               fprintf('QC LOAD Global: %s\n', i);
-              file_selection = loadjson([obj.instrument.(i).path.ui i '_QCGlobal_UserSelection.json']);
+              file_selection = loadjson([fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.json']);
               % Convert datestr to datenum for newer format
               if ~isempty(file_selection.bad)
                   file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)),...
