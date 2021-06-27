@@ -994,11 +994,10 @@ classdef InLineAnalysis < handle
         obj.instrument.(obj.cfg.qcref.view).qc.tsw, [], obj.instrument.(obj.cfg.qcref.view).qc.fsw, [], ...
         obj.instrument.(obj.cfg.qcref.view).view.varname, obj.instrument.(obj.cfg.qcref.view).view.varcol, ...
         obj.instrument.(obj.cfg.qcref.view).raw.bad, obj.instrument.FLOW.qc.tsw);
-      plot(obj.instrument.FLOW.qc.tsw.dt, obj.instrument.FLOW.qc.tsw.swt, '-k')
+      leg = plot(obj.instrument.FLOW.qc.tsw.dt, obj.instrument.FLOW.qc.tsw.swt, '-k');
       title(['Select filter event to duplicate (press f)' newline 'Select new time slot for filter event duplicated (press s)' newline 'Change switch position (press t)'], ...
         'FontSize', 14)
-      legend('Total', 'Filtered', 'Flow rate','switch position (1=filtered | 0=total)',...
-        'AutoUpdate','off', 'FontSize', 12)
+      legend(leg, 'switch position (1=filtered | 0=total)','AutoUpdate','off', 'FontSize', 12)
       [toswitch_t, toduplicate_f, newtime_s] = guiSelectOnTimeSeries(fh);
       % check number of entries
       if size(toduplicate_f,1) ~= size(newtime_s,1)
