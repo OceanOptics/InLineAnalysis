@@ -277,24 +277,6 @@ classdef (Abstract) Instrument < handle
             end
           end
         end
-%         for i=1:size(user_selection, 1)
-%           if any(strcmp(chan{1}, 'all'))
-%             fieldn = fieldnames(obj.(level))';
-%             for j = fieldn; j = j{1};
-%               if ~isempty(obj.(level).(j))
-%                 obj.(level).(j)(obj.(level).(j).dt == user_selection(i,1), :) = []; 
-%               end
-%             end
-%           elseif any(strcmp(chan{2}, 'all'))
-%             if ~isempty(obj.(level).(chan{1}))
-%               obj.(level).(chan{1})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = [];
-%             end
-%           else
-%             if ~isempty(obj.(level).(chan{1}))
-%               obj.(level).(chan{1}).(chan{2})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = NaN;
-%             end
-%           end
-%         end
       end
     end
     

@@ -38,8 +38,8 @@ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','HBB'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
-ila.cfg.qcref.view = 'HBB';
+ila.cfg.instruments2run = {'FLOW','LISST'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
+ila.cfg.qcref.view = 'LISST';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 
@@ -55,36 +55,30 @@ ila.CheckDataStatus();
 % % TSG is assumed to be set at zero
 % % No noticeable difference was observed between the TSG of EXPORTS and the BB3
 % % ila.instrument.FLOW.Sync(30);
-% ila.instrument.ACS57.Sync(10);
+ila.instrument.TSG.Sync(0);
+ila.instrument.SPCD.Sync(40);
 ila.instrument.ACS91.Sync(0);
-% % ila.instrument.ACS111.Sync(60);
-% % ila.instrument.ACS279.Sync(55);
 ila.instrument.HBB.Sync(0);
 ila.instrument.BB3.Sync(0);
-% % % ila.instrument.LISST.Sync(1);
+ila.instrument.LISST.Sync(0);
+% ila.instrument.ACS57.Sync(10);
+% % ila.instrument.ACS111.Sync(60);
+% % ila.instrument.ACS279.Sync(55);
 % % ila.instrument.WSCD1082P.Sync(0);
-ila.instrument.SPCD.Sync(40);
-ila.instrument.TSG.Sync(0);
 % % ila.instrument.ALFA.Sync(15); 
 % % Quick visualizzation to sync with TSG
-fig(30, 'sync TSG');
-yyaxis('left'); plot(ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t); ylabel('Temperature (^o C)');
+% fig(30, 'sync TSG');
+% yyaxis('left'); plot(ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t); ylabel('Temperature (^o C)');
 % % yyaxis('right'); plot(ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,2)); ylabel('\beta (m^{-1} sr^{-1})'); ylim([80 300]);
 % % datetick2_doy();
-% visSync(ila.instrument.FLOW.data, ila.instrument.ACS007.data.dt, ila.instrument.ACS007.data.a(:,20), 'a (m^{-1})');
-% visSync(ila.instrument.FLOW.data, ila.instrument.ACS007.data.dt, ila.instrument.ACS007.data.c(:,40), 'c (m^{-1})');
+% visSync(ila.instrument.BB3.data, ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t, 'Temp (C)');
+visSync(ila.instrument.FLOW.data, ila.instrument.SPCD.data.dt, ila.instrument.SPCD.data.fdom, 'FDOM (counts)');
 visSync(ila.instrument.FLOW.data, ila.instrument.ACS91.data.dt, ila.instrument.ACS91.data.a(:,20), 'a (m^{-1})');
 visSync(ila.instrument.FLOW.data, ila.instrument.ACS91.data.dt, ila.instrument.ACS91.data.c(:,40), 'c (m^{-1})');
-% % visSync(ila.instrument.FLOW.data, ila.instrument.ACS111.data.dt, ila.instrument.ACS111.data.a(:,20), 'a (m^{-1})');
-% % visSync(ila.instrument.FLOW.data, ila.instrument.ACS111.data.dt, ila.instrument.ACS111.data.c(:,40), 'c (m^{-1})');
-% % visSync(ila.instrument.FLOW.data, ila.instrument.ACS279.data.dt, ila.instrument.ACS279.data.a(:,20), 'a (m^{-1})');
-% % visSync(ila.instrument.FLOW.data, ila.instrument.ACS279.data.dt, ila.instrument.ACS279.data.c(:,40), 'c (m^{-1})');
-visSync(ila.instrument.FLOW.data, ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,1), '\beta (counts)');
 visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB.data.beta(:,14), '\beta (counts)');
-% % visSync(ila.instrument.FLOW.data, ila.instrument.LISST.data.dt, ila.instrument.LISST.data.beta(:,10), '\beta (counts)');
-visSync(ila.instrument.FLOW.data, ila.instrument.SPCD.data.dt, ila.instrument.SPCD.data.fdom, 'FDOM (counts)');
-% % visSync(ila.instrument.('FLOW').data, ila.instrument.('WSCD1082P').data.dt, ila.instrument.('WSCD1082P').data.fdom, 'FDOM (counts)');
-% % visSync(ila.instrument.('BB3').data, ila.instrument.('TSG').data.dt, ila.instrument.('TSG').data.t, 'Temp (C)');
+visSync(ila.instrument.FLOW.data, ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,1), '\beta (counts)');
+visSync(ila.instrument.FLOW.data, ila.instrument.LISST.data.dt, ila.instrument.LISST.data.beta(:,10), '\beta (counts)');
+% % visSync(ila.instrument.FLOW.data, ila.instrument.WSCD1082P.data.dt, ila.instrument.WSCD1082P.data.fdom, 'FDOM (counts)');
 % % % visSync(ila.instrument.FLOW.data, ila.instrument.ALFA.data.dt, ila.instrument.ALFA.data.Chlb, 'chlb');yyaxis('left'); ylim([0 2]);
 % % 
 % % % xlim([datenum(2018,08,14,9,55,0) datenum(2018,08,14,11,05,0)]);
@@ -176,8 +170,8 @@ ila.CheckDataStatus();
 %% Load processed data from mat files: 'data' = Raw | 'bin' = Bin | 'qc' = QCed | 'prod' = product
 % ila.Read('data');
 % ila.Read('bin');
-% ila.Read('qc');
-% ila.Read('prod');
+ila.Read('qc');
+ila.Read('prod');
 
 %% 7. Flag
 ila.Flag() % Now deprecated will just copy data to next level

@@ -1,4 +1,4 @@
-function [p, bin_size] = processLISST(param, tot, filt, fth, fth_constants)
+function [p, bin_size, g] = processLISST(param, tot, filt, di, fth, fth_constants, di_method)
 % PROCESSLISST process LISST from flow through system with both
 %   filtered and total periods
 %
@@ -9,8 +9,10 @@ function [p, bin_size] = processLISST(param, tot, filt, fth, fth_constants)
 %     p.PSD     % <Nx32 double> numbers / mL / m
 %     p.VSD     % <Nx32 double> numbers x 10^-6  / m
 %
-
-% Instrument constants
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %%
+%%%%%%% DIW NOT IMPLEMENTED BUT READY TO BE %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Instrument constants
 % Path Length (m)
 path_length = 0.05;
 % Fraction of circle covered by detectors
@@ -44,18 +46,30 @@ if exist('fth', 'var')
 
   % Compute filtered period median
   filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
+  filt_avg.beta = NaN(size(filt_avg,1), size(filt.beta, 2));
+  filt_avg.beta_avg_sd = NaN(size(filt_avg,1), size(filt.beta_avg_sd, 2));
+  filt_avg.laser_reference = NaN(size(filt_avg,1), size(filt.beta, 2));
+  filt_avg.laser_transmission = NaN(size(filt_avg,1), size(filt.beta, 2));
   for i=1:size(sel_start, 1)
     sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
     foo = filt(sel_filt,:);
-    foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-    foo.laser_reference(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-    foo.laser_transmission(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-    foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-    % compute average of all values smaller than 25th percentile for each filter event
-    filt_avg.beta(i,:) = mean(foo.beta, 1, 'omitnan');
-    filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 1, 'omitnan');
-    filt_avg.laser_reference(i,:) = mean(foo.laser_reference, 1, 'omitnan');
-    filt_avg.laser_transmission(i,:) = mean(foo.laser_transmission, 1, 'omitnan');
+    if sum(sel_filt) == 1
+      filt_avg.beta(i,:) = foo.beta;
+      filt_avg.beta_avg_sd(i,:) = foo.beta_avg_sd;
+      filt_avg.laser_reference(i,:) = foo.laser_reference;
+      filt_avg.laser_transmission(i,:) = foo.laser_transmission;
+    else
+      foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+      foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+      % compute average of all values smaller than 25th percentile for each filter event
+      filt_avg.beta(i,:) = mean(foo.beta, 1, 'omitnan');
+      filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 1, 'omitnan');
+      % add the corresponding laser_reference and laser_transmission for the selected measures
+      for j = 1:size(foo,1)
+        filt_avg.laser_reference(i, ~isnan(foo.beta(j, :))) = foo.laser_reference(j);
+        filt_avg.laser_transmission(i, ~isnan(foo.beta(j, :))) = foo.laser_transmission(j);
+      end
+    end
   end
   filt_avg(all(isnan(filt_avg.beta), 2), :) = [];
 else
@@ -64,24 +78,27 @@ end
 
 % Interpolate filtered on Total
 filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-filt_interp.beta = interp1(filt_avg.dt, filt_avg.beta, filt_interp.dt, 'linear', 'extrap');
-filt_interp.beta_avg_sd = interp1(filt_avg.dt, filt_avg.beta_avg_sd, filt_interp.dt, 'linear', 'extrap');
-filt_interp.laser_reference = interp1(filt_avg.dt, filt_avg.laser_reference, filt_interp.dt, 'linear', 'extrap');
-filt_interp.laser_transmission = interp1(filt_avg.dt, filt_avg.laser_transmission, filt_interp.dt, 'linear', 'extrap');
+filt_interp.beta = interp1(filt_avg.dt, filt_avg.beta, filt_interp.dt);
+filt_interp.beta_avg_sd = interp1(filt_avg.dt, filt_avg.beta_avg_sd, filt_interp.dt);
+filt_interp.laser_reference = interp1(filt_avg.dt, filt_avg.laser_reference, filt_interp.dt);
+filt_interp.laser_transmission = interp1(filt_avg.dt, filt_avg.laser_transmission, filt_interp.dt);
 
 if exist('visFlag', 'file') && exist('fth', 'var')
-  visFlag(tot, filt_interp, [], [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], fth);
-  title('Check filter event interpolation')
-  legend('Total', 'Filtered interpolated', 'Filtered median', 'Flow rate')
+  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], fth);
+  title('Check filter event interpolation, press q to continue', 'FontSize', 14)
+  legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
+    'AutoUpdate','off', 'FontSize', 12)
+  guiSelectOnTimeSeries(fh);
 elseif exist('visFlag', 'file')
-  visFlag(tot, filt_interp, [], [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], []);
-  title('Check filter event interpolation')
-  legend('Total', 'Filtered interpolated', 'Filtered median')
+  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], []);
+  title('Check filter event interpolation, press q to continue', 'FontSize', 14)
+  legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
+    'AutoUpdate','off', 'FontSize', 12)
+  guiSelectOnTimeSeries(fh);
 end
-  
 
-% Set output table
-p = table(tot.dt, 'VariableNames', {'dt'});
+% % Set output table
+% p = table(tot.dt, 'VariableNames', {'dt'});
 
 % Code use in Boss et al. 2018
 % % % % Capture change in laser reference between filtered and total periods
@@ -123,47 +140,150 @@ p = table(tot.dt, 'VariableNames', {'dt'});
 % % %               .* zsc_laser_reference ./ (tot.laser_reference(i).*ones(1,32)); % standard deviation (same units)
 % % % end
 
+p = compute_product(tot, filt_interp, param, phi, path_length);
+
+% % Code updated on Jan 16, 2019
+% %   dcal is independent of zsc so removed zsc from code and normalize directly to FSW
+% % Capture change in laser reference
+% r = filt_interp.laser_transmission ./ filt_interp.laser_reference;
+% tau = tot.laser_transmission ./ tot.laser_reference ./ r;
+% % Compute Beam C
+% p.cp = -log(tau) / path_length;
+% % Estimate particulate scattering in counts
+% p.betap = tot.beta / 10 ./ tau - filt_interp.beta / 10;
+% p.betap_sd = sqrt((tot.beta_avg_sd/10./tau).^2 + (filt_interp.beta_avg_sd/10).^2);
+% % Correct for laser power in TSW relative to FSW
+% p.betap = p.betap .* tot.laser_reference ./ filt_interp.laser_reference;
+% % Correct particulate scattering for detector area and responsivness
+% p.betap = (ones(size(p,1),1) * param.dcal) .* p.betap;
+% p.betap_sd = (ones(size(p,1),1) * param.dcal) .* p.betap_sd;
+% 
+% % DCal correction for ring 30 in low gain
+% % Interpolate betap at ring 30
+% betap_interp_30 = interp1(param.theta([1:29 31:32])', p.betap(:,[1:29 31:32])', param.theta(30))';
+% % Select all betap from ring 30 that are more than 15% away from interpolated value
+% sel_LOW_GAIN = (betap_interp_30 - p.betap(:,30)) ./ ((betap_interp_30 + p.betap(:,30)) / 2) > 0.15;
+% % Replace bad value by interpolated values as can't do inversion without values
+% p.betap(sel_LOW_GAIN,30) = betap_interp_30(sel_LOW_GAIN);
+% 
+% % Compute Volume Distribution using spherical|non-spherical inversion model
+% % Spherical parameter for inversion
+% %    0 -> spherical
+% %   ~0 -> non-spherical
+% p.invert = NaN(size(p.betap));
+% p.VD = NaN(size(p.betap));
+% for i=1:size(p,1)
+%   % Use factory zsc taken at the same time as the VCC for the inversion.
+%   % Need betap in counts (NOT Scientific Units)
+%   p.VD(i,:) = invert_2014b(p.betap(i,:),2,0,param.non_spherical,0,0,0) ./ param.vcc ...
+%               .* filt_interp.laser_reference(i) ./ (tot.laser_reference(i).*ones(1,32)); % unit of microl/l, or 10^-6 micron^3/micron^3
+%   p.VD_sd(i,:) = invert_2014b(p.betap_sd(i,:),2,0,param.non_spherical,0,0,0) ./ param.vcc ...
+%               .* filt_interp.laser_reference(i) ./ (tot.laser_reference(i).*ones(1,32)); % standard deviation (same units)
+% end
+% 
+% % Convert betap from counts to scientific units (1/m)
+% p.betap =  p.betap ./ (ones(height(p),1) .* (pi * phi * path_length * (param.ds(2:end).^2 - param.ds(1:end-1).^2)));
+% 
+% % Get bin size specific to inversion model and instrument type
+% % Diameter in microns
+% %   Constant specific to type B LISST and spherical inversion
+% % ds=1.25*1.18.^(0:1:32);
+% %   Constant specific to type B LISST and non-spherical inversion
+% % ds=1*1.18.^(0:1:32);
+% % Compute bin width
+% bin_size = param.ds(2:end) - param.ds(1:end-1);
+% bs = bin_size .* ones(size(p,1),1);
+% % Compute diameters (deprecated now taken as argument)
+% % diameter = sqrt(param.ds(1:end-1).*param.ds(2:end));
+% % d = diameter .* ones(size(p,1),1);
+% % Load diameters
+% d = param.diameters .* ones(size(p,1),1);
+% 
+% % Convert to number distribution
+% p.PSD = (p.VD ./ (pi*d.^3/6) ./ bs) * 10^6; % units: # / \mum^3 / m
+% p.VSD = (p.VD ./ bs) * 10^6;                % units: ppm / m 
+% 
+% % Perform simple QC
+% p(any(p.PSD < 0,2),:) = [];
+
+if nargout > 2 && ~isempty(di)
+  switch di_method
+    case 'interpolate'
+      % Interpolate DI on Filtered
+      %     + recommende if sensor drift with time
+      di_pp = table(filt_avg.dt, 'VariableNames', {'dt'});
+      di_pp.beta = interp1(di.dt, di.beta, di_pp.dt);
+      di_pp.beta_avg_sd = interp1(di.dt, di.beta_avg_sd, di_pp.dt);
+    case 'constant'
+      % Average all given DI samples
+      %     + recommended if no drift are observed with sensor
+      di_pp = table(NaN, 'VariableNames', {'dt'});
+      % Get not NaN DI values
+      di_beta_sel = di.beta(all(~isnan(di.beta),2));
+      di_beta_avg_sd_sel = di.beta_avg_sd(all(~isnan(di.beta),2));
+      % Select only DI values within 5th and 75th percentile
+      foo = prctile(di_beta_sel,[5, 75],1);
+      avg_pl(1,:) = foo(1,:); % low percentile
+      avg_ph(1,:) = foo(2,:); % high percentile
+      avg_sel = any(avg_pl(1,:) <= di_beta_sel & di_beta_sel <= avg_ph(1,:),2);
+      % Average values
+      di_pp.beta = mean(di_beta_sel(avg_sel,:));
+      di_pp.beta_avg_sd = mean(di_beta_avg_sd_sel(avg_sel,:));
+    otherwise
+      error('Method not supported.');
+  end
+  g = compute_product(filt_avg, di_pp, param, phi, path_length);
+else
+  g = table();
+end
+end
+
+
+function prod = compute_product(tot, filt_interp, param, phi, path_length)
+% Set output table
+prod = table(tot.dt, 'VariableNames', {'dt'});
+
 % Code updated on Jan 16, 2019
 %   dcal is independent of zsc so removed zsc from code and normalize directly to FSW
 % Capture change in laser reference
 r = filt_interp.laser_transmission ./ filt_interp.laser_reference;
 tau = tot.laser_transmission ./ tot.laser_reference ./ r;
 % Compute Beam C
-p.cp = -log(tau) / path_length;
+prod.cp = -log(tau) / path_length;
 % Estimate particulate scattering in counts
-p.betap = tot.beta / 10 ./ tau - filt_interp.beta / 10;
-p.betap_sd = sqrt((tot.beta_avg_sd/10./tau).^2 + (filt_interp.beta_avg_sd/10).^2);
-% Correct for laser power in TSW relative to FSW
-p.betap = p.betap .* tot.laser_reference ./ filt_interp.laser_reference;
+prod.betap = tot.beta / 10 ./ tau - filt_interp.beta / 10;
+prod.betap_sd = sqrt((tot.beta_avg_sd/10./tau).^2 + (filt_interp.beta_avg_sd/10).^2);
+% Correct for laser power in TSW relative to FSW or FSW relative to DIW 
+prod.betap = prod.betap .* tot.laser_reference ./ filt_interp.laser_reference;
 % Correct particulate scattering for detector area and responsivness
-p.betap = (ones(size(p,1),1) * param.dcal) .* p.betap;
-p.betap_sd = (ones(size(p,1),1) * param.dcal) .* p.betap_sd;
+prod.betap = (ones(size(p,1),1) * param.dcal) .* prod.betap;
+prod.betap_sd = (ones(size(p,1),1) * param.dcal) .* prod.betap_sd;
 
 % DCal correction for ring 30 in low gain
 % Interpolate betap at ring 30
-betap_interp_30 = interp1(param.theta([1:29 31:32])', p.betap(:,[1:29 31:32])', param.theta(30))';
+betap_interp_30 = interp1(param.theta([1:29 31:32])', prod.betap(:,[1:29 31:32])', param.theta(30))';
 % Select all betap from ring 30 that are more than 15% away from interpolated value
-sel_LOW_GAIN = (betap_interp_30 - p.betap(:,30)) ./ ((betap_interp_30 + p.betap(:,30)) / 2) > 0.15;
+sel_LOW_GAIN = (betap_interp_30 - prod.betap(:,30)) ./ ((betap_interp_30 + prod.betap(:,30)) / 2) > 0.15;
 % Replace bad value by interpolated values as can't do inversion without values
-p.betap(sel_LOW_GAIN,30) = betap_interp_30(sel_LOW_GAIN);
+prod.betap(sel_LOW_GAIN,30) = betap_interp_30(sel_LOW_GAIN);
 
 % Compute Volume Distribution using spherical|non-spherical inversion model
 % Spherical parameter for inversion
 %    0 -> spherical
 %   ~0 -> non-spherical
-p.invert = NaN(size(p.betap));
-p.VD = NaN(size(p.betap));
+prod.invert = NaN(size(prod.betap));
+prod.VD = NaN(size(prod.betap));
 for i=1:size(p,1)
   % Use factory zsc taken at the same time as the VCC for the inversion.
   % Need betap in counts (NOT Scientific Units)
-  p.VD(i,:) = invert_2014b(p.betap(i,:),2,0,param.non_spherical,0,0,0) ./ param.vcc ...
+  prod.VD(i,:) = invert_2014b(prod.betap(i,:),2,0,param.non_spherical,0,0,0) ./ param.vcc ...
               .* filt_interp.laser_reference(i) ./ (tot.laser_reference(i).*ones(1,32)); % unit of microl/l, or 10^-6 micron^3/micron^3
-  p.VD_sd(i,:) = invert_2014b(p.betap_sd(i,:),2,0,param.non_spherical,0,0,0) ./ param.vcc ...
+  prod.VD_sd(i,:) = invert_2014b(prod.betap_sd(i,:),2,0,param.non_spherical,0,0,0) ./ param.vcc ...
               .* filt_interp.laser_reference(i) ./ (tot.laser_reference(i).*ones(1,32)); % standard deviation (same units)
 end
 
 % Convert betap from counts to scientific units (1/m)
-p.betap =  p.betap ./ (ones(height(p),1) .* (pi * phi * path_length * (param.ds(2:end).^2 - param.ds(1:end-1).^2)));
+prod.betap =  prod.betap ./ (ones(height(p),1) .* (pi * phi * path_length * (param.ds(2:end).^2 - param.ds(1:end-1).^2)));
 
 % Get bin size specific to inversion model and instrument type
 % Diameter in microns
@@ -181,10 +301,10 @@ bs = bin_size .* ones(size(p,1),1);
 d = param.diameters .* ones(size(p,1),1);
 
 % Convert to number distribution
-p.PSD = (p.VD ./ (pi*d.^3/6) ./ bs) * 10^6; % units: # / \mum^3 / m
-p.VSD = (p.VD ./ bs) * 10^6;                % units: ppm / m 
+prod.PSD = (prod.VD ./ (pi*d.^3/6) ./ bs) * 10^6; % units: # / \mum^3 / m
+prod.VSD = (prod.VD ./ bs) * 10^6;                % units: ppm / m 
 
 % Perform simple QC
-p(any(p.PSD < 0,2),:) = [];
-
+prod(any(prod.PSD < 0,2),:) = [];
 end
+

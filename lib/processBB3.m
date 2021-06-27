@@ -43,12 +43,18 @@ if exist('fth', 'var')
         sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
         if sum(sel_filt) > 0
           foo = filt(sel_filt,:);
-          foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-          foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-          % compute average of all values smaller than 25th percentile for each filter event
-          filt_avg.beta(i,:) = mean(foo.beta, 1, 'omitnan');
-          filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 1, 'omitnan');
-          filt_avg.beta_avg_n(i) = sum(foo.beta_avg_n(any(~isnan(foo.beta), 2)), 'omitnan');
+          if sum(sel_filt) == 1
+            filt_avg.beta(i,:) = foo.beta;
+            filt_avg.beta_avg_sd(i,:) = foo.beta_avg_sd;
+            filt_avg.beta_avg_n(i,:) = foo.beta_avg_n;
+          else
+            foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+            foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+            % compute average of all values smaller than 25th percentile for each filter event
+            filt_avg.beta(i,:) = mean(foo.beta, 1, 'omitnan');
+            filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 1, 'omitnan');
+            filt_avg.beta_avg_n(i) = sum(foo.beta_avg_n(any(~isnan(foo.beta), 2)), 'omitnan');
+          end
         end
       end
     case 'exponential_fit' % CURRENTLY NOT WORKING

@@ -32,8 +32,8 @@ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','SPCD'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
-ila.cfg.qcref.view = 'SPCD';
+ila.cfg.instruments2run = {'FLOW','HBB','TSG'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
+ila.cfg.qcref.view = 'HBB';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = true;
 
@@ -65,6 +65,19 @@ ila.CheckDataStatus();
 %% 2.1. Diagnostic Plot
 % check raw spectrums AC or BB sensors
 ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
+
+%% 2.2. Run QC directly on spectra at any level
+% ila.DiagnosticPlot inputs:
+% 1) 'AC or BB'
+% 2) 'level':  'raw' | 'bin' | 'qc' | 'prod'
+% 3) save plot option: boolean
+% 4) table and variable to QC as shown in examples below
+% Examples:
+%     - to QC 'a' of 'tsw' table of 'qc' level of ACs: ila.DiagnosticPlot('AC',{'qc'}, false, {'tsw','a'})
+%     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'p','cp'})
+%     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.DiagnosticPlot('BB',{'bin'}, false, {'fsw','beta'})
+%     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
+ila.DiagnosticPlot('BB',{'raw'}, false, {'diw','all'});
 
 %% Load processed data from mat files: 'data' = Raw | 'bin' = Bin | 'qc' = QCed | 'prod' = product
 % ila.Read('data');

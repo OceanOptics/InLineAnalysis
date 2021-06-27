@@ -134,17 +134,26 @@ switch interpolation_method
     for i=1:size(sel_start, 1)
       sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
       foo = filt(sel_filt,:);
-      foo.a_avg_sd(foo.a > prctile(foo.a, 25, 1)) = NaN;
-      foo.c_avg_sd(foo.c > prctile(foo.c, 25, 1)) = NaN;
-      foo.a(foo.a > prctile(foo.a, 25, 1)) = NaN;
-      foo.c(foo.c > prctile(foo.c, 25, 1)) = NaN;
-      % compute average of all values smaller than 25th percentile for each filter event
-      filt_avg.a(i,:) = mean(foo.a, 1, 'omitnan');
-      filt_avg.c(i,:) = mean(foo.c, 1, 'omitnan');
-      filt_avg.a_avg_sd(i,:) = mean(foo.a_avg_sd, 1, 'omitnan');
-      filt_avg.c_avg_sd(i,:) = mean(foo.c_avg_sd, 1, 'omitnan');
-      filt_avg.a_avg_n(i) = sum(foo.a_avg_n(any(~isnan(foo.a), 2)), 'omitnan');
-      filt_avg.c_avg_n(i) = sum(foo.c_avg_n(any(~isnan(foo.c), 2)), 'omitnan');
+      if sum(sel_filt) == 1
+        filt_avg.a(i,:) = foo.a;
+        filt_avg.c(i,:) = foo.c;
+        filt_avg.a_avg_sd(i,:) = foo.a_avg_sd;
+        filt_avg.c_avg_sd(i,:) = foo.c_avg_sd;
+        filt_avg.a_avg_n(i) = foo.a_avg_n;
+        filt_avg.c_avg_n(i) = foo.c_avg_n;
+      else
+        foo.a_avg_sd(foo.a > prctile(foo.a, 25, 1)) = NaN;
+        foo.c_avg_sd(foo.c > prctile(foo.c, 25, 1)) = NaN;
+        foo.a(foo.a > prctile(foo.a, 25, 1)) = NaN;
+        foo.c(foo.c > prctile(foo.c, 25, 1)) = NaN;
+        % compute average of all values smaller than 25th percentile for each filter event
+        filt_avg.a(i,:) = mean(foo.a, 1, 'omitnan');
+        filt_avg.c(i,:) = mean(foo.c, 1, 'omitnan');
+        filt_avg.a_avg_sd(i,:) = mean(foo.a_avg_sd, 1, 'omitnan');
+        filt_avg.c_avg_sd(i,:) = mean(foo.c_avg_sd, 1, 'omitnan');
+        filt_avg.a_avg_n(i) = sum(foo.a_avg_n(any(~isnan(foo.a), 2)), 'omitnan');
+        filt_avg.c_avg_n(i) = sum(foo.c_avg_n(any(~isnan(foo.c), 2)), 'omitnan');
+      end
     end
     filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2), :) = [];
     % Interpolate filtered on total linearly

@@ -989,10 +989,11 @@ classdef InLineAnalysis < handle
         obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw(abs(shift_flow)+1:end, :); repmat(linetoadd, abs(shift_flow), 1)];
       end
       obj.instrument.FLOW.qc.tsw.dt = datenum(datetime(obj.instrument.FLOW.qc.tsw.dt, 'ConvertFrom', 'datenum') + minutes(shift_flow));
-      % create filter event duplicate when long period without filter event 
-      fh = visFlag([], [], obj.instrument.(obj.cfg.qcref.view).qc.tsw, [], ...
-        obj.instrument.(obj.cfg.qcref.view).qc.fsw, [], obj.instrument.(obj.cfg.qcref.view).view.varname, ...
-        obj.instrument.(obj.cfg.qcref.view).view.varcol, [], obj.instrument.FLOW.qc.tsw);
+      % create filter event duplicate when long period without filter event
+      fh = visFlag(obj.instrument.(obj.cfg.qcref.view).raw.tsw, obj.instrument.(obj.cfg.qcref.view).raw.fsw, ...
+        obj.instrument.(obj.cfg.qcref.view).qc.tsw, [], obj.instrument.(obj.cfg.qcref.view).qc.fsw, [], ...
+        obj.instrument.(obj.cfg.qcref.view).view.varname, obj.instrument.(obj.cfg.qcref.view).view.varcol, ...
+        obj.instrument.(obj.cfg.qcref.view).raw.bad, obj.instrument.FLOW.qc.tsw);
       plot(obj.instrument.FLOW.qc.tsw.dt, obj.instrument.FLOW.qc.tsw.swt, '-k')
       title(['Select filter event to duplicate (press f)' newline 'Select new time slot for filter event duplicated (press s)' newline 'Change switch position (press t)'], ...
         'FontSize', 14)
@@ -1036,11 +1037,13 @@ classdef InLineAnalysis < handle
             new_flow.spd_avg_n = NaN(remaining_idx,1);
             obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw; new_flow];
           end
-
-          flow_swt_off = table(datenum(datetime(new_filt.dt(end), 'ConvertFrom', 'datenum') + ...
+          flow_swt_offst = table(datenum(datetime(new_filt.dt(1), 'ConvertFrom', 'datenum') - ...
             minutes(1)'), 0, 0, NaN, NaN, NaN, NaN, 'VariableNames', ...
             obj.instrument.FLOW.qc.tsw.Properties.VariableNames);
-          obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw; flow_swt_off];
+          flow_swt_offend = table(datenum(datetime(new_filt.dt(end), 'ConvertFrom', 'datenum') + ...
+            minutes(1)'), 0, 0, NaN, NaN, NaN, NaN, 'VariableNames', ...
+            obj.instrument.FLOW.qc.tsw.Properties.VariableNames);
+          obj.instrument.FLOW.qc.tsw = [flow_swt_offst; obj.instrument.FLOW.qc.tsw; flow_swt_offend];
            % sort by date
           [~,b] = sort(obj.instrument.FLOW.qc.tsw.dt);
           obj.instrument.FLOW.qc.tsw = obj.instrument.FLOW.qc.tsw(b,:);
@@ -1135,6 +1138,10 @@ classdef InLineAnalysis < handle
                                            obj.cfg.calibrate.(i).filt_method)
             case 'CD'
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved)
+            case 'LISST'
+              obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
+                                           obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
+                                           obj.cfg.calibrate.(i).di_method)
             otherwise
               obj.instrument.(i).Calibrate()
           end
