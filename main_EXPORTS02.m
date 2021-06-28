@@ -28,7 +28,7 @@ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
 
-%% SeapointCD
+%% SPCD
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
  
 %% LISST
@@ -124,7 +124,7 @@ ila.cfg.qc.RawAutoQCLim.total.c = 4;
 ila.cfg.qc.RawAutoQCLim.filtered.bb = 3;
 ila.cfg.qc.RawAutoQCLim.total.bb = 3;
 % remove saturated periods in BB
-ila.cfg.qc.Saturation_Threshold_bb = 4000; % saturate above 4000 counts
+ila.cfg.qc.Saturation_Threshold_bb = 4100; % saturate above 4000 counts
 ila.RawAutoQC(ila.cfg.qc.RawAutoQCLim, ila.cfg.qc.Saturation_Threshold_bb, 'raw');
 ila.CheckDataStatus();
 
@@ -177,12 +177,18 @@ ila.Read('prod');
 ila.Flag() % Now deprecated will just copy data to next level
 ila.CheckDataStatus();
 
-%% 8. QC
-% Interactive or Loading previous qc selection
-ila.cfg.qc.mode = 'ui';  % load or ui
+%% 8. QC Interactive or Loading previous qc selection
+%%%%% Settings %%%%%
+ila.cfg.qc.mode='ui';  % load or ui
 ila.cfg.qc.qc_once_for_AandC = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
-ila.cfg.qc.specific.run = ila.cfg.instruments2run(~contains(ila.cfg.instruments2run, 'FLOW')); % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
-% QCmap(ila.cfg.days2run); % SST & latlon QC
+% Global
+ila.cfg.qc.global.view = ila.cfg.instruments2run{~contains(ila.cfg.instruments2run, 'FLOW')};
+ila.cfg.qc.global.active = false;
+% Specific
+ila.cfg.qc.specific.run = ila.cfg.instruments2run(~contains(ila.cfg.instruments2run, 'FLOW'));
+%%%%%%%%%%%%%%%%%%%
+
+% Run QC function
 ila.QC();
 ila.CheckDataStatus();
 
@@ -275,8 +281,7 @@ ila.Write('prod')
 % notif_sound = load('gong'); sound(notif_sound.y, notif_sound.Fs); % handel
 % return
 
-
-%% re-write last version of 'qc' and 'bin'
+%% re-write final version of 'qc' and 'bin'
 ila.Write('bin')
 ila.Write('qc')
 

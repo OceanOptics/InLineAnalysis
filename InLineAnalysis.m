@@ -759,23 +759,23 @@ classdef InLineAnalysis < handle
                       file_pick_selection.(sel_picktoload{j}) = datenum(file_pick_selection.(sel_picktoload{j})(:, 1));
                     end
                   end
+                  channel = strsplit(sel_picktoload{j}, 'bad_');
+                  foo = strsplit(channel{end}, '_');
+                  if size(foo, 2) == 1
+                    level = 'qc';
+                    channel = 'all';
+                  elseif size(foo, 2) == 2
+                    level = 'qc';
+                    channel = foo;
+                  elseif size(foo, 2) == 3
+                    level = foo{1};
+                    channel = foo(2:3);
+                  end
                   if contains(i, 'AC')
-                    channel = strsplit(sel_picktoload{j}, 'bad_');
-                    foo = strsplit(channel{end}, '_');
-                    if size(foo, 2) == 1
-                      level = 'qc';
-                      channel = channel(end);
-                    elseif size(foo, 2) == 2
-                      level = 'qc';
-                      channel = foo;
-                    elseif size(foo, 2) == 3
-                      level = foo{1};
-                      channel = foo(2:3);
-                    end
                     obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), ...
                       level, channel);
                   else
-                    obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}));
+                    obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), level);
                   end
                 end
               else
@@ -1037,30 +1037,40 @@ classdef InLineAnalysis < handle
           [~,b] = sort(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt);
           obj.instrument.(obj.cfg.qcref.view).qc.fsw = obj.instrument.(obj.cfg.qcref.view).qc.fsw(b,:);
           idx_flow_newfilt = obj.instrument.FLOW.qc.tsw.dt >= new_filt.dt(1) & obj.instrument.FLOW.qc.tsw.dt <= new_filt.dt(end);
-          if sum(idx_flow_newfilt) > 0
-            obj.instrument.FLOW.qc.tsw.swt(idx_flow_newfilt) = 1;
-            obj.instrument.FLOW.qc.tsw.swt_avg_sd(idx_flow_newfilt) = 1;
-          end
-          remaining_idx = size(new_filt,1) - sum(idx_flow_newfilt);
-          if remaining_idx > 0
-            % create flow table
-            new_flow = table();
-            new_flow.dt = new_filt.dt(end-remaining_idx+1:end);
-            new_flow.swt = ones(remaining_idx,1);
-            new_flow.swt_avg_sd = zeros(remaining_idx,1);
-            new_flow.swt_avg_n = NaN(remaining_idx,1);
-            new_flow.spd = NaN(remaining_idx,1);
-            new_flow.spd_avg_sd = NaN(remaining_idx,1);
-            new_flow.spd_avg_n = NaN(remaining_idx,1);
-            obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw; new_flow];
-          end
+          obj.instrument.FLOW.qc.tsw(idx_flow_newfilt,:) = [];
+%           if any(idx_flow_newfilt)
+%             obj.instrument.FLOW.qc.tsw.swt(idx_flow_newfilt) = 1;
+%             obj.instrument.FLOW.qc.tsw.swt_avg_sd(idx_flow_newfilt) = 1;
+%           end
+%           remaining_idx = size(new_filt,1) - sum(idx_flow_newfilt);
+%           if remaining_idx > 0
+%             % create flow table
+%             new_flow = table();
+%             new_flow.dt = new_filt.dt(end-remaining_idx+1:end);
+%             new_flow.swt = ones(remaining_idx,1);
+%             new_flow.swt_avg_sd = zeros(remaining_idx,1);
+%             new_flow.swt_avg_n = NaN(remaining_idx,1);
+%             new_flow.spd = NaN(remaining_idx,1);
+%             new_flow.spd_avg_sd = NaN(remaining_idx,1);
+%             new_flow.spd_avg_n = NaN(remaining_idx,1);
+%             obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw; new_flow];
+%           end
+          % create flow table
+          new_flow = table();
+          new_flow.dt = new_filt.dt;
+          new_flow.swt = ones(size(new_filt,1),1);
+          new_flow.swt_avg_sd = zeros(size(new_filt,1),1);
+          new_flow.swt_avg_n = NaN(size(new_filt,1),1);
+          new_flow.spd = NaN(size(new_filt,1),1);
+          new_flow.spd_avg_sd = NaN(size(new_filt,1),1);
+          new_flow.spd_avg_n = NaN(size(new_filt,1),1);
           flow_swt_offst = table(datenum(datetime(new_filt.dt(1), 'ConvertFrom', 'datenum') - ...
             minutes(1)'), 0, 0, NaN, NaN, NaN, NaN, 'VariableNames', ...
             obj.instrument.FLOW.qc.tsw.Properties.VariableNames);
           flow_swt_offend = table(datenum(datetime(new_filt.dt(end), 'ConvertFrom', 'datenum') + ...
             minutes(1)'), 0, 0, NaN, NaN, NaN, NaN, 'VariableNames', ...
             obj.instrument.FLOW.qc.tsw.Properties.VariableNames);
-          obj.instrument.FLOW.qc.tsw = [flow_swt_offst; obj.instrument.FLOW.qc.tsw; flow_swt_offend];
+          obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw; flow_swt_offst; new_flow; flow_swt_offend];
            % sort by date
           [~,b] = sort(obj.instrument.FLOW.qc.tsw.dt);
           obj.instrument.FLOW.qc.tsw = obj.instrument.FLOW.qc.tsw(b,:);

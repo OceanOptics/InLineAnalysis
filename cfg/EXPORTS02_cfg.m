@@ -197,11 +197,11 @@ cfg.process.di.bin = struct('bin_size', 30);
 cfg.process.sync = struct();
 cfg.process.sync.delay = struct();
 cfg.process.sync.delay.FLOW = 0;
-cfg.process.sync.delay.ACS91 = 66;
+cfg.process.sync.delay.ACS91 = 0;
 cfg.process.sync.delay.BB3 = 0;
 cfg.process.sync.delay.HBB = 0;
 cfg.process.sync.delay.LISST = 1;
-cfg.process.sync.delay.SPCD = 5;
+cfg.process.sync.delay.SPCD = 40;
 cfg.process.sync.skip = {'TSG'};
 
 %%% QC Reference (Flow Control/FLOW) %%%
@@ -266,7 +266,7 @@ cfg.process.qc.RawAutoQCLim.dissolved.c = 3;
 cfg.process.qc.RawAutoQCLim.filtered.bb = 3;
 cfg.process.qc.RawAutoQCLim.total.bb = 3;
 cfg.process.qc.RawAutoQCLim.dissolved.bb = 3;
-cfg.process.qc.Saturation_Threshold_bb = 4000; % (counts)
+cfg.process.qc.Saturation_Threshold_bb = 4100; % (counts)
   
 %%% Manually QC %%%
 cfg.process.qc.mode = 'ui';
@@ -306,7 +306,7 @@ cfg.process.calibrate.HBB = struct('compute_dissolved', true, ...
 cfg.process.calibrate.LISST = struct('compute_dissolved', false, ...
                                   'FLOW_source', 'FLOW', ...
                                   'di_method', 'interpolate'); % interpolate constant
-cfg.process.calibrate.skip = {'FLOW', 'TSG', 'SPCD'};
+cfg.process.calibrate.skip = {'FLOW', 'TSG'};
 
 %%% Write %%%
 cfg.process.write = struct();

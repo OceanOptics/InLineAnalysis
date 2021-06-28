@@ -50,7 +50,10 @@ end
 
 user_selection = [];
 for j = 1:length(level)
+  % get fieldname of data.level structure
   tabletoplot = fieldnames(data.(level{j}));
+  % remove fieldname of empty table
+  tabletoplot = tabletoplot(~structfun(@isempty, data.(level{j})));
   tabletoplot(strcmp(tabletoplot, 'bad')) = [];
   sztoplot = table(0.4, 8, 'VariableNames', {'AC', 'BB'});
   switch level{j}

@@ -261,6 +261,7 @@ classdef (Abstract) Instrument < handle
             if ~isempty(obj.(level).(j))
               for i=1:size(user_selection, 1)
                 obj.(level).(j)(obj.(level).(j).dt == user_selection(i,1), :) = [];
+%                 obj.(level).(j)(abs(obj.(level).(j).dt - user_selection(i,1)) < 0.01, :) = [];
               end
             end
           end
