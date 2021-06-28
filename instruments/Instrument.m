@@ -259,23 +259,25 @@ classdef (Abstract) Instrument < handle
           fieldn = fieldnames(obj.(level))';
           for j = fieldn; j = j{1};
             if ~isempty(obj.(level).(j))
-              for i=1:size(user_selection, 1)
-                obj.(level).(j)(obj.(level).(j).dt == user_selection(i,1), :) = [];
-%                 obj.(level).(j)(abs(obj.(level).(j).dt - user_selection(i,1)) < 0.01, :) = [];
-              end
+              obj.(level).(j)(ismember(obj.(level).(j).dt, user_selection), :) = [];
+%               for i=progress(1:size(user_selection, 1))
+%                 obj.(level).(j)(obj.(level).(j).dt == user_selection(i,1), :) = [];
+%               end
             end
           end
         elseif any(strcmp(chan{2}, 'all'))
           if ~isempty(obj.(level).(chan{1}))
-            for i=1:size(user_selection, 1)
-              obj.(level).(chan{1})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = [];
-            end
+            obj.(level).(chan{1})(ismember(obj.(level).(chan{1}).dt, user_selection), :) = [];
+%             for i=progress(1:size(user_selection, 1))
+%               obj.(level).(chan{1})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = [];
+%             end
           end
         else
           if ~isempty(obj.(level).(chan{1}))
-            for i=1:size(user_selection, 1)
-              obj.(level).(chan{1}).(chan{2})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = NaN;
-            end
+            obj.(level).(chan{1}).(chan{2})(ismember(obj.(level).(chan{1}).dt, user_selection), :) = NaN;
+%             for i=progress(1:size(user_selection, 1))
+%               obj.(level).(chan{1}).(chan{2})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = NaN;
+%             end
           end
         end
       end

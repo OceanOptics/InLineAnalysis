@@ -349,26 +349,17 @@ classdef InLineAnalysis < handle
           % Apply user selection
           if ~isempty(user_selection)
             if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
-            if contains(i, 'AC')
-%               obj.instrument.(i).DeleteUserSelection(user_selection, toClean{2}(1));
-              obj.instrument.(i).DeleteUserSelection(user_selection, level{:}, toClean);
-              % Save user selection
-              if strcmp(toClean{1}, 'diw')
-                filename = [obj.instrument.(i).path.ui i '_QCDIpickSpecific_UserSelection.json'];
-              else
-                filename = [obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'];
-              end
-              obj.updatejson_userselection_bad(filename, user_selection, level{:}, toClean);
-            else
-              obj.instrument.(i).DeleteUserSelection(user_selection, level{:}, toClean);
-              % Save user selection
-              if strcmp(toClean{1}, 'diw')
-                filename = [obj.instrument.(i).path.ui i '_QCDIpickSpecific_UserSelection.json'];
-              else
-                filename = [obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'];
-              end
-              obj.updatejson_userselection_bad(filename, user_selection, level{:}, toClean);
+            obj.instrument.(i).DeleteUserSelection(user_selection, level{:}, toClean);
+            if strcmp(level{:}, 'prod')
+              obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', {'tsw', strrep(toClean{2}, 'p', '')});
             end
+            % Save user selection
+            if strcmp(toClean{1}, 'diw')
+              filename = [obj.instrument.(i).path.ui i '_QCDIpickSpecific_UserSelection.json'];
+            else
+              filename = [obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'];
+            end
+            obj.updatejson_userselection_bad(filename, user_selection, level{:}, toClean);
           end
         end
       end
@@ -724,23 +715,28 @@ classdef InLineAnalysis < handle
                         datenum(file_selection.(sel_toload{j})(:, 2))];
                     end
                   end
-                  if contains(i, 'AC')
-                    channel = strsplit(sel_toload{j}, 'bad_');
-                    foo = strsplit(channel{end}, '_');
-                    if size(foo, 2) == 1
-                      level = 'qc';
-                      channel = channel(end);
-                    elseif size(foo, 2) == 2
-                      level = 'qc';
-                      channel = foo;
-                    elseif size(foo, 2) == 3
-                      level = foo{1};
-                      channel = foo(2:3);
+                  % Keep only selection of the day2run
+                  file_selection.(sel_toload{j})(~any(min(obj.cfg.days2run) < file_selection.(sel_toload{j}) & ...
+                    file_selection.(sel_toload{j}) < max(obj.cfg.days2run), 2)) = [];
+                  if ~isempty(file_selection.(sel_toload{j}))
+                    if contains(i, 'AC')
+                      channel = strsplit(sel_toload{j}, 'bad_');
+                      foo = strsplit(channel{end}, '_');
+                      if size(foo, 2) == 1
+                        level = 'qc';
+                        channel = channel(end);
+                      elseif size(foo, 2) == 2
+                        level = 'qc';
+                        channel = foo;
+                      elseif size(foo, 2) == 3
+                        level = foo{1};
+                        channel = foo(2:3);
+                      end
+                      obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}), ...
+                        level, channel);
+                    else
+                      obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}));
                     end
-                    obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}), ...
-                      level, channel);
-                  else
-                    obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}));
                   end
                 end
               else
@@ -749,7 +745,7 @@ classdef InLineAnalysis < handle
               if isfile([obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'])
                 file_pick_selection = loadjson([obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json']);
                 sel_picktoload = fieldnames(file_pick_selection);
-                for j = 1:size(sel_picktoload, 1)
+                for j = progress(1:size(sel_picktoload, 1))
                   % load hand picked bad values
                   if ~isempty(file_pick_selection.(sel_picktoload{j}))
                     if iscell(file_pick_selection.(sel_picktoload{j}){1})
@@ -759,23 +755,35 @@ classdef InLineAnalysis < handle
                       file_pick_selection.(sel_picktoload{j}) = datenum(file_pick_selection.(sel_picktoload{j})(:, 1));
                     end
                   end
-                  channel = strsplit(sel_picktoload{j}, 'bad_');
-                  foo = strsplit(channel{end}, '_');
-                  if size(foo, 2) == 1
-                    level = 'qc';
-                    channel = 'all';
-                  elseif size(foo, 2) == 2
-                    level = 'qc';
-                    channel = foo;
-                  elseif size(foo, 2) == 3
-                    level = foo{1};
-                    channel = foo(2:3);
-                  end
-                  if contains(i, 'AC')
-                    obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), ...
-                      level, channel);
-                  else
-                    obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), level);
+                  % Keep only selection of the day2run
+                  file_pick_selection.(sel_picktoload{j})(~any(min(obj.cfg.days2run) < file_pick_selection.(sel_picktoload{j}) & ...
+                    file_pick_selection.(sel_picktoload{j}) < max(obj.cfg.days2run), 2)) = [];
+                  if ~isempty(file_pick_selection.(sel_picktoload{j}))
+                    channel = strsplit(sel_picktoload{j}, 'bad_');
+                    foo = strsplit(channel{end}, '_');
+                    if size(foo, 2) == 1
+                      level = 'qc';
+                      channel = 'all';
+                    elseif size(foo, 2) == 2
+                      level = 'qc';
+                      channel = foo;
+                    elseif size(foo, 2) == 3
+                      level = foo{1};
+                      channel = foo(2:3);
+                    end
+                    if contains(i, 'AC')
+                      obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), ...
+                        level, channel);
+                      if strcmp(level, 'prod')
+                        obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), ...
+                          'qc', {'tsw', strrep(channel{2}, 'p', '')});
+                      end
+                    else
+                      obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), level);
+                      if strcmp(level, 'prod')
+                        obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), 'qc');
+                      end
+                    end
                   end
                 end
               else
@@ -868,23 +876,28 @@ classdef InLineAnalysis < handle
                       datenum(file_selection.(sel_toload{j})(:, 2))];
                   end
                 end
-                if contains(i, 'AC')
-                  channel = strsplit(sel_toload{j}, 'bad_');
-                  foo = strsplit(channel{end}, '_');
-                  if size(foo, 2) == 1
-                    level = 'qc';
-                    channel = channel(end);
-                  elseif size(foo, 2) == 2
-                    level = 'qc';
-                    channel = foo;
-                  elseif size(foo, 2) == 3
-                    level = foo{1};
-                    channel = foo(2:3);
+                % Keep only selection of the day2run
+                file_selection.(sel_toload{j})(~any(min(obj.cfg.days2run) < file_selection.(sel_toload{j}) & ...
+                  file_selection.(sel_toload{j}) < max(obj.cfg.days2run), 2)) = [];
+                if ~isempty(file_selection.(sel_toload{j}))
+                  if contains(i, 'AC')
+                    channel = strsplit(sel_toload{j}, 'bad_');
+                    foo = strsplit(channel{end}, '_');
+                    if size(foo, 2) == 1
+                      level = 'qc';
+                      channel = channel(end);
+                    elseif size(foo, 2) == 2
+                      level = 'qc';
+                      channel = foo;
+                    elseif size(foo, 2) == 3
+                      level = foo{1};
+                      channel = foo(2:3);
+                    end
+                    obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}), ...
+                      level, channel);
+                  else
+                    obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}));
                   end
-                  obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}), ...
-                    level, channel);
-                else
-                  obj.instrument.(i).DeleteUserSelection(file_selection.(sel_toload{j}));
                 end
               end
             else
@@ -902,7 +915,10 @@ classdef InLineAnalysis < handle
                     file_pick_selection.(sel_picktoload{j}) = datenum(file_pick_selection.(sel_picktoload{j})(:, 1));
                   end
                 end
-                if contains(i, 'AC')
+                % Keep only selection of the day2run
+                file_pick_selection.(sel_picktoload{j})(~any(min(obj.cfg.days2run) < file_pick_selection.(sel_picktoload{j}) & ...
+                  file_pick_selection.(sel_picktoload{j}) < max(obj.cfg.days2run), 2)) = [];
+                if ~isempty(file_pick_selection.(sel_picktoload{j}))
                   channel = strsplit(file_pick_selection{j}, 'bad_');
                   foo = strsplit(channel{end}, '_');
                   if size(foo, 2) == 1
@@ -915,10 +931,16 @@ classdef InLineAnalysis < handle
                     level = foo{1};
                     channel = foo(2:3);
                   end
-                  obj.instrument.(i).DeleteUserSelection(file_pick_selection.(file_pick_selection{j}), ...
-                    level, channel);
-                else
-                  obj.instrument.(i).DeleteUserSelection(file_pick_selection.(file_pick_selection{j}));
+                  if contains(i, 'AC')
+                    obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), ...
+                      level, channel);
+                    if strcmp(level, 'prod')
+                      obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), ...
+                        'qc', {'fsw', strrep(channel{2}, 'g', '')});
+                    end
+                  else
+                    obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}));
+                  end
                 end
               end
             else
