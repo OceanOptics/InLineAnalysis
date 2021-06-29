@@ -180,9 +180,9 @@ elseif exist('visFlag', 'file')
   guiSelectOnTimeSeries(fh);
 end
 
-% Remove lines of NaNs
-sel2rm = any(isnan(tot.a),2) | any(isnan(tot.c),2) |...
-         any(isnan(filt_interp.a),2) | any(isnan(filt_interp.c),2);
+% Remove lines full of NaNs
+sel2rm = all(isnan(tot.a),2) | all(isnan(tot.c),2) |...
+         all(isnan(filt_interp.a),2) | all(isnan(filt_interp.c),2);
 tot(sel2rm,:) = [];
 filt_interp(sel2rm,:) = [];
 
@@ -191,7 +191,7 @@ p = table(tot.dt, 'VariableNames', {'dt'});
 p.ap = tot.a - filt_interp.a;
 p.cp = tot.c - filt_interp.c;
 
-if size(lambda.a, 2) > 50 % perform too separate correction for ap and cp only for ACS data, not AC9
+if size(lambda.a, 2) > 50 % perform two separate corrections for ap and cp only for ACS data, not AC9
   % Interpolate wavelengths for Scattering & Residual temperature correction
   ap_for_cpresiduals_corr = interp1(lambda.a', p.ap', lambda.c', 'linear', 'extrap')';
   cp_for_apresiduals_corr = interp1(lambda.c', p.cp', lambda.a', 'linear', 'extrap')';
@@ -217,31 +217,53 @@ p.cp_sd = sqrt(tot.c_avg_sd .* filt_interp.c_avg_sd);
 p.ap_n = tot.a_avg_n;
 p.cp_n = tot.c_avg_n;
 
-% delete ap spectrum full of NaNs
-p(all(isnan(p.ap),2),:) = [];
-p(all(isnan(p.cp),2),:) = [];
+% % delete ap spectrum full of NaNs
+% p(all(isnan(p.ap),2),:) = [];
+% p(all(isnan(p.cp),2),:) = [];
 
 % Unsmoothing ACS spectrum
 % Ron Zaneveld, WET Labs, Inc., 2005
 if size(lambda.a, 2) > 50 % unsmooth only ACS, not AC9
   p = unsmoothACS(p, lambda);
-%   p_unsmooth = unsmoothACS(p, lambda);
 end
 
-% QC using ap spectrum
+% Auto QC on product spectra
 wla_430 = lambda.a(find(lambda.a <= 430, 1,'last')); % find lower and closest to 430nm wavelength
 wla_700 = lambda.a(find(lambda.a >= 700, 1,'first')); % find higher and closest to 700nm wavelength
 
-% delete absorption values < -0.0015
+% replace values at each end of the spectra when < -0.0015
 p.ap_sd(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
 p.ap_sd(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
 p.ap(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
 p.ap(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
-todelete = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700 | ...
-  p.cp < -0.0015 | p.cp > 10, 2);
-fprintf('%.2f%% (%i) spectrum failed auto-QC step 1: ap 430-700 | cp < -0.0015 | p.cp > 10\n', ...
-  sum(todelete) / size(p, 1) * 100, sum(todelete))
-bad = [p(todelete, :) table(repmat({'ap 430-700  | cp < -0.0015 | p.cp > 10'}, ...
+
+% delete ap spectra when ap430-700 < -0.0015
+todelete = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
+if sum(todelete) > 0
+  fprintf('%.2f%% (%i) spectrum failed auto-QC: ap 430-700 < -0.0015\n', ...
+    sum(todelete) / size(p, 1) * 100, sum(todelete))
+end
+bad = [p(todelete, :) table(repmat({'ap 430-700 < -0.0015'}, ...
+  sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+p.ap(todelete, :) = NaN;
+
+% delete cp spectra when any cp < -0.0015
+todelete = any(p.cp < -0.0015, 2);
+if sum(todelete) > 0
+  fprintf('%.2f%% (%i) spectrum failed auto-QC: cp < -0.0015\n', ...
+    sum(todelete) / size(p, 1) * 100, sum(todelete))
+end
+bad = [bad; p(todelete, :) table(repmat({'cp < -0.0015'}, ...
+  sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+p.cp(todelete, :) = NaN;
+
+% delete attenuation spectra when cp > 10
+todelete = any(p.cp > 10, 2);
+if sum(todelete) > 0
+  fprintf('%.2f%% (%i) spectrum failed auto-QC: p.cp > 10\n', ...
+    sum(todelete) / size(p, 1) * 100, sum(todelete))
+end
+bad = [bad; p(todelete, :) table(repmat({'p.cp > 10'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 p(todelete, :) = [];
 
@@ -289,14 +311,16 @@ if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
   fudge_factor = fudge_list(find(abs(diff(ndel_spec)) == min(abs(diff(ndel_spec))) & ...
     ndel_spec(2:end) < 0.05 * max(ndel_spec), 1,  'first')); % threshold on first derivative of number of spectrum deleted
   above_median_d600_ap450 = ratiod600_ap450 > fudge_factor * median(ratiod600_ap450);
-  fprintf('%.2f%% (%i) spectrum failed auto-QC step 2: sum(abs(d(ap)/d(lambda(600-650)))) / ap450nm\n', ...
-    sum(above_median_d600_ap450) / size(p, 1) * 100, sum(above_median_d600_ap450))
+  if sum(above_median_d600_ap450) > 0
+    fprintf('%.2f%% (%i) spectrum failed auto-QC: sum(abs(d(ap)/d(lambda(600-650)))) / ap450nm\n', ...
+      sum(above_median_d600_ap450) / size(p, 1) * 100, sum(above_median_d600_ap450))
+  end
 
 %   delete bad spectrum
   bad = [bad; p(above_median_d600_ap450, :) ...
     table(repmat({'sum(abs(d(ap)/d(lambda(600-650)))) / ap_{450nm}'}, sum(above_median_d600_ap450), 1), ...
     'VariableNames', {'QC_failed'})];
-  p(above_median_d600_ap450, :) = [];
+  p.ap(above_median_d600_ap450, :) = NaN;
 end
 
 % Auto QC when a positive first derivatives of ap over
@@ -307,13 +331,15 @@ ap_450 = p.ap(:, find(lambda.a >= 450, 1,'first'));
 d460_640 = diff(p.ap(:, lambda.a > 460 & lambda.a <= 640),[],2);
 % delete bad spectrum
 todelete = any(d460_640 > 0.4 * ap_450,2) | any(abs(diff(d460_640,[],2)) > 0.05, 2);
-fprintf('%.2f%% (%i) spectrum failed auto-QC step 3: d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)\n', ...
-  sum(todelete) / size(p, 1) * 100, sum(todelete))
+if sum(todelete)
+  fprintf('%.2f%% (%i) spectrum failed auto-QC: d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)\n', ...
+    sum(todelete) / size(p, 1) * 100, sum(todelete))
+end
 bad = [bad; p(todelete, :) table(repmat({'d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-p(todelete, :) = [];
+p.ap(todelete, :) = NaN;
 
-% Auto QC when spectrum contains 3 consecutive positive first derivatives of ap over
+% Auto QC when ap spectrum contains 3 consecutive positive first derivatives of ap over
 % wavelentght between 485 and 570 nm
 d485_570 = diff(p.ap(:, lambda.a > 485 & lambda.a <= 570),[],2);
 pos_d485_570 = d485_570 > 0;
@@ -325,12 +351,35 @@ for i = 1:size(todelete,1)
     todelete(i) = true;
   end
 end
-fprintf('%.2f%% (%i) spectrum failed auto-QC step 4: 3 consecutive d(ap)/d(lambda485-570) > 0\n', ...
-  sum(todelete) / size(p, 1) * 100, sum(todelete))
+if sum(todelete)
+  fprintf('%.2f%% (%i) spectrum failed auto-QC: 3 consecutive d(ap)/d(lambda485-570) > 0\n', ...
+    sum(todelete) / size(p, 1) * 100, sum(todelete))
+end
 bad = [bad; p(todelete, :) table(repmat({'3 consecutive d(ap)/d(lambda485-570) > 0'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 bad = sortrows(bad, 'dt');
-p(todelete, :) = [];
+p.ap(todelete, :) = NaN;
+
+% Auto QC when ap spectrum contains 3 consecutive positive first derivatives of cp over
+% wavelentght between 485 and 570 nm
+d485_570 = diff(p.cp(:, lambda.c > 485 & lambda.c <= 570),[],2);
+pos_d485_570 = d485_570 > 0;
+todelete = false(size(pos_d485_570, 1), 1);
+N = 3; % Required number of consecutive numbers following a first one
+for i = 1:size(todelete,1)
+  t = [false pos_d485_570(i,:) false];
+  if any(find(diff(t)==-1)-find(diff(t)==1)>=N) % First t followed by >=N consecutive numbers
+    todelete(i) = true;
+  end
+end
+if sum(todelete)
+  fprintf('%.2f%% (%i) spectrum failed auto-QC: 3 consecutive d(cp)/d(lambda485-570) > 0\n', ...
+    sum(todelete) / size(p, 1) * 100, sum(todelete))
+end
+bad = [bad; p(todelete, :) table(repmat({'3 consecutive d(cp)/d(lambda485-570) > 0'}, ...
+  sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+bad = sortrows(bad, 'dt');
+p.cp(todelete, :) = NaN;
 
 % run gaussian decomposition
 agaus = GaussDecomp(p, lambda.a, compute_ad_aphi);
@@ -411,8 +460,8 @@ if ~isempty(di)
     end
   end
   
-  % remove NaNs
-  filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2),:) = [];
+  % remove when a and c are full of NaNs
+  filt_avg(all(isnan(filt_avg.a), 2) & all(isnan(filt_avg.c), 2),:) = [];
   
   % Interpolate filtered on Total
   di_interp = table(filt_avg.dt, 'VariableNames', {'dt'});
@@ -677,9 +726,9 @@ for i = todo
   wavelength = .1:.1:799; % Thus index of 1 nm = 10; 356 nm= 3560;
   SIG1 = (-9.845*10^-8.*lambda.(i{:}(1)).^3 + 1.639*10^-4*lambda.(i{:}(1)).^2 - 7.849*10^-2*lambda.(i{:}(1)) + 25.24)/2.3547 ;
   for j = 1:max(size(lambda.(i{:}(1))))
-      for jkl = 1:max(size(wavelength))
-          filtfunc(jkl,j) = (1/(sqrt(2*pi)*SIG1(j)))*exp(-0.5*((wavelength(jkl)-lambda.(i{:}(1))(j))/SIG1(j)).^2); % First term normalizes area under the curve to 1.
-      end
+    for jkl = 1:max(size(wavelength))
+      filtfunc(jkl,j) = (1/(sqrt(2*pi)*SIG1(j)))*exp(-0.5*((wavelength(jkl)-lambda.(i{:}(1))(j))/SIG1(j)).^2); % First term normalizes area under the curve to 1.
+    end
   end
 
   % Convolve the measurement with the fiter factors add the difference to
@@ -698,8 +747,8 @@ for i = todo
 
   meassignal6 = NaN(size(aspecprime, 2), size(lambda.(i{:}(1)), 2));
   parfor j = 1:size(aspecprime, 2)        
-      measur2 = aspecprime(:,j) .* filtfunc; % the measured signal for every filter factor.
-      meassignal6(j,:) = 0.1 * sum(measur2); % The measured spectrum at a wavelength i is the sum of what a filter measured at
+    measur2 = aspecprime(:,j) .* filtfunc; % the measured signal for every filter factor.
+    meassignal6(j,:) = 0.1 * sum(measur2); % The measured spectrum at a wavelength i is the sum of what a filter measured at
   end
   acs_unsmoothed.(i{:}) = acs_data.(i{:}) - meassignal6 + acs_data.(i{:});
   fprintf('Done\n')
@@ -722,9 +771,13 @@ function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
 % Chase, A., et al., Decomposition of in situ particulate absorption
 % spectra. Methods in Oceanography (2014), http://dx.doi.org/10.1016/j.mio.2014.02.022
 
-%% delete row and columns full of nans
+%% identify lines full of NaNs to reconstruct table of same size
+idnan = all(isnan(p.ap),2);
+% delete row full of NaN
+p(idnan, :) = [];
+
+% delete row and columns full of nans
 lambda(all(isnan(p.ap),1)) = [];
-%   data(all(isnan(p.ap),2),:) = [];
 p.ap_sd(:, all(isnan(p.ap),1)) = [];
 p.ap(:, all(isnan(p.ap),1)) = [];
 
@@ -749,7 +802,6 @@ acorr2onenm = interp1(lambda, ap_filled', onenm, 'spline');
 %   acorr2onenm', false, 'Wavelength', false, 72);
 % zlabel('a_p (m^{-1})'); xlabel('{\lambda} (nm)'); ylabel('Time');
 
-
 % define the matrix of component Gaussian functions using the peaks
 % and widths (sigma) above
 coef2 = exp(-0.5 .* (((onenm .* ones(size(peak_loc,2),1))' - peak_loc .* ...
@@ -768,7 +820,6 @@ amps = NaN(size(p,1), size(coef2,2));
 sumspec_temp = NaN(size(coef2,1), size(p,1));
 % compspec_temp = NaN(size(coef2,1), size(coef2,2), size(p,1));
 
-
 % visProd3D(peak_loc, p.dt, ...
 %   popo(:, 2:end), false, 'Wavelength', false, 73);
 % zlabel('a_p (m^{-1})'); xlabel('{\lambda} (nm)'); ylabel('Time');
@@ -776,8 +827,6 @@ sumspec_temp = NaN(size(coef2,1), size(p,1));
 % visProd3D(peak_loc, p.dt, ...
 %   amps(:, 2:end), false, 'Wavelength', false, 74);
 % zlabel('a_p (m^{-1})'); xlabel('{\lambda} (nm)'); ylabel('Time');
-
-
 
 parfor i = 1:size(acorr2onenm_new,2)
   
@@ -798,8 +847,11 @@ sumspec = interp1(onenm, sumspec_temp, lambda, 'spline')';
 uncertainty = sum(abs(p.ap(:, lambda > 440 & lambda < 705) - ...
   sumspec(:, lambda > 440 & lambda < 705)), 2, 'omitnan') / ...
     size(lambda(lambda > 440 & lambda < 705),2);
-
-agaus = array2table([amps uncertainty], 'VariableNames', ...
+  
+% reconstruct matrix with NaN in the same place
+agaus = NaN(size(idnan,1), 14);
+agaus(~idnan,:) = [amps uncertainty];
+agaus = array2table(agaus, 'VariableNames', ...
     [{'ad_model400'} cellfun(@(x) ['agaus' x], cellstr(num2str(peak_loc'))', 'un', 0) {'agaus-mae'}]);
 
 if compute_ad_aphi
@@ -820,16 +872,20 @@ if compute_ad_aphi
 %   [agaus.ad_ZS13, agaus.aphi_ZS13] = partition_ap_vec(ap_ZS13, qwl', 50);  % Must be in colum direction
   
   % Run partition_ap
-  ad_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
-  aphi_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
+  ad_ZS13 = NaN(size(ap_ZS13, 2), size(qwl, 2));
+  aphi_ZS13 = NaN(size(ap_ZS13, 2), size(qwl, 2));
 %   parfor i = 1:300 %size(ap_ZS13, 2)
-  for i = progress(1:300) %size(ap_ZS13, 2)
+  for i = progress(1:size(ap_ZS13, 2))
     [ad_ZS13(i,:), aphi_ZS13(i,:)] = partition_ap(ap_ZS13(:, i), qwl', 50);
-    [agaus.ad_ZS13(i, :), agaus.aphi_ZS13(i, :)] = partition_ap(ap_ZS13(:, i), qwl', 50);  % Must be in colum direction
   end
 %   figure; hold on
 %   plot(qwl, ad)
 %   plot(qwl, aphi_ZS13)
+
+  agaus.ad_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
+  agaus.aphi_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
+  agaus.ad_ZS13(~idnan,:) = ad_ZS13;
+  agaus.aphi_ZS13(~idnan,:) = aphi_ZS13;
   agaus.Properties.VariableUnits = repmat({'1/m'}, 1, size(agaus, 2));
 end
 fprintf('Done\n')
