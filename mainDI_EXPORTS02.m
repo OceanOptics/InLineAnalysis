@@ -22,7 +22,7 @@ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
 
-%% SeapointCD
+%% SPCD
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
  
 %% LISST
@@ -32,8 +32,8 @@ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','HBB','TSG'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
-ila.cfg.qcref.view = 'HBB';
+ila.cfg.instruments2run = {'FLOW','SPCD'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
+ila.cfg.qcref.view = 'SPCD';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = true;
 
@@ -129,18 +129,16 @@ ila.CheckDataStatus();
 
 %% 8. Calibrate
 ila.cfg.calibrate.BB3.filt_method = '25percentil'; % 25percentil exponential_fit
+ila.cfg.calibrate.HBB.filt_method = 'exponential_fit'; % 25percentil exponential_fit
 ila.cfg.calibrate.skip = {'FLOW', 'TSG'};
 ila.Calibrate();
 ila.CheckDataStatus();
 
 %% 8.1. Normal and DI prod QC plots
-% save_figures = true;
+save_figures = false;
 
-%%% ACS 3D %%%
-ila.DiagnosticPlot('BB',{'prod'}); % AC or BB
-
-%%% BB 3D %%%
-% ila.DiagnosticPlot('BB',{'prod'}); % AC or BB
+%%% AC or BB 3D plots %%%
+ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
 
 %%% ACS BB3 TSG PAR WSCD final product visualisation %%%
 ila.visProd_timeseries()

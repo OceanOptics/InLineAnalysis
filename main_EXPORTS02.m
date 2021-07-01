@@ -2,7 +2,6 @@
 % author: Guillaume Bourdin
 % created: Jan 05, 2021
 clear
-close all
 if feature('IsDebugMode'); dbquit all; end
 
 % cd('/Users/emmanuel.boss/Desktop/InLine analysis/InLineAnalysis-master/')
@@ -24,9 +23,9 @@ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
 % ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
 
 %% BB3
- ila.cfg.days2run =datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
-% ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
-% ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
+%  ila.cfg.days2run =datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
+ila.cfg.days2run = datenum(2021,5,8,0,0,0):datenum(2021,5,20,0,0,0);
+% ila.cfg.days2run = datenum(2021,5,21,0,0,0):datenum(2021,6,5,0,0,0);
 
 %% SPCD
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
@@ -38,8 +37,8 @@ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','LISST'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
-ila.cfg.qcref.view = 'LISST';
+ila.cfg.instruments2run = {'FLOW','BB3'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
+ila.cfg.qcref.view = 'BB3';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 
@@ -143,12 +142,16 @@ ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.DiagnosticPlot('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
-ila.DiagnosticPlot('BB',{'raw'}, false, {'fsw','all'});
+ila.DiagnosticPlot('BB',{'raw'}, false, {'tsw','all'});
 
 %% 5.3. Loading previous qc pick selection at raw level
 ila.cfg.qc.mode='load';  % load or ui
 ila.cfg.qc.specific.run = ila.cfg.instruments2run(~contains(ila.cfg.instruments2run, 'FLOW')); % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
 ila.QC();
+
+%% 5.4. Write raw
+ila.Write('raw')
+ila.CheckDataStatus();
 
 %% 6. Bin
 % % Set settings directly in configuration file (no tunning at this step)
@@ -167,11 +170,11 @@ ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
 ila.Write('bin')
 ila.CheckDataStatus();
 
-%% Load processed data from mat files: 'data' = Raw | 'bin' = Bin | 'qc' = QCed | 'prod' = product
-% ila.Read('data');
+%% Load processed data from mat files
+% ila.Read('raw');
 % ila.Read('bin');
-ila.Read('qc');
-ila.Read('prod');
+% ila.Read('qc');
+% ila.Read('prod');
 
 %% 7. Flag
 ila.Flag() % Now deprecated will just copy data to next level
@@ -221,6 +224,8 @@ ila.Write('qc')
 ila.CheckDataStatus();
 
 %% 10. Calibrate and compute products
+ila.cfg.calibrate.BB3.filt_method = 'exponential_fit'; % 25percentil exponential_fit
+ila.cfg.calibrate.HBB.filt_method = 'exponential_fit'; % 25percentil exponential_fit
 ila.cfg.calibrate.skip = {'FLOW', 'TSG'};
 ila.Calibrate();
 ila.CheckDataStatus();
@@ -247,11 +252,8 @@ ila.CheckDataStatus();
 %% 10.1 Product visualisation plots with option to save
 save_figures = false;
 
-%%% ACS 3D %%%
+%%% AC or BB 3D plots %%%
 ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
-
-%%% BB 3D %%%
-% ila.DiagnosticPlot('BB',{'prod'}, save_figures); % AC or BB
 
 %%% ACS BB3 TSG PAR WSCD final product visualisation %%%
 ila.visProd_timeseries()

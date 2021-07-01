@@ -48,7 +48,7 @@ end
 data.Properties.VariableUnits = unit;
 
 % Remove last line if it's past midnight (Bug in Inlinino)
-if ~isempty(data)
+if ~isempty(data) && size(data,1) > 1
   if data.dt(end-1) > data.dt(end)
     data(end,:) = [];
   end

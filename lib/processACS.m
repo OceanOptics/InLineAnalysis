@@ -180,9 +180,9 @@ elseif exist('visFlag', 'file')
   guiSelectOnTimeSeries(fh);
 end
 
-% Remove lines full of NaNs
-sel2rm = all(isnan(tot.a),2) | all(isnan(tot.c),2) |...
-         all(isnan(filt_interp.a),2) | all(isnan(filt_interp.c),2);
+% Remove lines full of NaNs or with inf data
+sel2rm = any(~isfinite(tot.a),2) | any(~isfinite(tot.c),2)| all(isnan(tot.a),2) | ...
+         all(isnan(tot.c),2) | all(isnan(filt_interp.a),2) | all(isnan(filt_interp.c),2);
 tot(sel2rm,:) = [];
 filt_interp(sel2rm,:) = [];
 
@@ -257,15 +257,15 @@ bad = [bad; p(todelete, :) table(repmat({'cp < -0.0015'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 p.cp(todelete, :) = NaN;
 
-% delete attenuation spectra when cp > 10
-todelete = any(p.cp > 10, 2);
-if sum(todelete) > 0
-  fprintf('%.2f%% (%i) spectrum failed auto-QC: p.cp > 10\n', ...
-    sum(todelete) / size(p, 1) * 100, sum(todelete))
-end
-bad = [bad; p(todelete, :) table(repmat({'p.cp > 10'}, ...
-  sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-p(todelete, :) = [];
+% % delete attenuation spectra when cp > 10
+% todelete = any(p.cp > 10, 2);
+% if sum(todelete) > 0
+%   fprintf('%.2f%% (%i) spectrum failed auto-QC: p.cp > 10\n', ...
+%     sum(todelete) / size(p, 1) * 100, sum(todelete))
+% end
+% bad = [bad; p(todelete, :) table(repmat({'p.cp > 10'}, ...
+%   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+% p(todelete, :) = [];
 
 % find wavelength below and above which ap and cp are unrealistic and replace by NaNs
 if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
@@ -392,33 +392,39 @@ fprintf('Calculating Chl line height, POC & gamma ... ')
 % Gardner, W.D., Mishonov, A., Richardson, M.J., 2006. Global POC concentrations from in-situ and satellite data. Deep Sea Res. II 53, 718?740.
 cp660 = interp1(lambda.c, p.cp',660,'linear')';
 p.poc = cp660.*380;
+p.poc(p.poc < 0) = NaN;
 
 % Derive Chl (Line heigh at 676 compared to 650 and 715)
 % 	Chlorophyll a (chl) is computed using the particulate absorption line height at 676 nm and the global relationship from Tara Ocean (Boss et al. 2013)
 % REFERENCES:
 % Emmanuel Boss, Marc Picheral, Thomas Leeuw, Alison Chase, Eric Karsenti, Gabriel Gorsky, Lisa Taylor, Wayne Slade, Josephine Ras, Herve Claustre, 2013.The characteristics of particulate absorption, scattering and attenuation coefficients in the surface ocean; Contribution of the Tara Oceans expedition, Methods in Oceanography.
 ap_a = interp1(lambda.a, p.ap',[650 676 715],'linear')';
-p(ap_a(:,1) > ap_a(:,2), :) = []; % deleted unrealistic spectrum
-ap_a(ap_a(:,1) > ap_a(:,2), :) = []; % deleted unrealistic spectrum
+p.ap(ap_a(:,1) > ap_a(:,2), :) = NaN; % deleted unrealistic spectra
+ap_a(ap_a(:,1) > ap_a(:,2), :) = NaN; % deleted unrealistic spectra
 p.ap676_lh = ap_a(:,2)-(39/65*ap_a(:,1)+26/65*ap_a(:,3));
 p.chl_ap676lh = 157*p.ap676_lh.^1.22;
 p.chl_ap676lh(real(p.chl_ap676lh) ~= p.chl_ap676lh) = NaN;
+p.chl_ap676lh(p.chl_ap676lh < 0) = NaN;
 
 % 3.3 Derive Gamma (does not support NaN values) (Boss et al. 2001)
 % REFERENCES:
 % Boss, E., W.S. Pegau, W.D. Gardner, J.R.V. Zaneveld, A.H. Barnard., M.S. Twardowski, G.C. Chang, and T.D. Dickey, 2001. Spectral particulate attenuation and particle size distribution in the bottom boundary layer of a continental shelf. Journal of Geophysical Research, 106, 9509-9516.
 % [~,p.gamma] = FitSpectra_HM2(lambda.ref(:,1:end-2),p.cp(:,1:end-2));
 % Correct bu on March 5, 2018, FitSpectra_HM2 does not accept NaNs in cp
-p(all(isnan(p.cp),2),:) = [];
-sel = ~any(isnan(p.cp));
-[~,p.gamma] = FitSpectra_HM2(lambda.c(:,sel), p.cp(:,sel));
+p.gamma = NaN(size(p, 1), 1);
+cp_temp_gam = p.cp(~all(isnan(p.cp),2), :);
+sel = ~any(isnan(cp_temp_gam));
+[~,temp_gam] = FitSpectra_HM2(lambda.c(:,sel), cp_temp_gam(:,sel));
+p.gamma(~all(isnan(p.cp),2)) = temp_gam;
+p.gamma(p.gamma < 0) = NaN;
 fprintf('Done\n')
 
 fprintf('Calculating chlorophyll from cp (H_alh) ... ')
 % Chlorophyll absorption (alh) and phytoplankton size eigenvectors (P) inferred from cp
 % Houskeeper, H.F., Draper, D., Kudela, R.M., Boss, E., 2020. Chlorophyll absorption and phytoplankton size information inferred from hyperspectral particulate beam attenuation. Appl. Opt. 59, 6765. https://doi.org/10.1364/AO.396832
 % First compute hskpr P parameters (put link to github of hkpr do not include in github).
-[p.Halh, Pr] = houskeeperetal2020(lambda.c, p.cp);
+[p.Halh, Pr] = houskeeperetal2020(lambda.c, p.cp, false);
+p.Halh(p.Halh < 0) = NaN;
 p.chl_Halh = 157*p.Halh.^1.22;
 fprintf('Done\n')
 
@@ -428,6 +434,8 @@ fprintf('Estimating G50 and mphi (slope of PSD) ... ')
 % (in abundance) (mphi):
 p.HH_G50 = modelG50.predictFcn(Pr');
 p.HH_mphi = modelmphi.predictFcn(Pr');
+p.HH_mphi(p.HH_mphi < 0) = NaN;
+p.HH_G50(p.HH_G50 < 0) = NaN;
 fprintf('Done\n')
 
 %% ag & cg

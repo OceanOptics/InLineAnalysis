@@ -159,7 +159,7 @@ switch instrument
     scatter(data.dt, data.(toplot), 10, C, 'filled');
     ylabel([toplot ' ' unit]);
     leg = cellfun(@(c) [toplot '_{' c 'nm}'], cellstr(num2str(lambda')), 'un', 0);
-    if contains(instrument, 'HBB') && any(contains(data.Properties.VariableNames, 'gamma_bbp'))
+    if any(contains(data.Properties.VariableNames, 'gamma_bbp'))
       yyaxis('right')
       hold on
       scatter(data.dt, data.gamma_bbp, 50, ...
@@ -167,7 +167,7 @@ switch instrument
       ylabel('Gamma bbp (unitless)');
       leg = [leg; {'gamma bbp'}];
       xlim([min(data.dt) max(data.dt)]);
-    elseif contains(instrument, 'HBB') && any(contains(data.Properties.VariableNames, 'gamma_bbg'))
+    elseif any(contains(data.Properties.VariableNames, 'gamma_bbg'))
       yyaxis('right')
       scatter(data.dt, data.gamma_bbg, 50, ...
         'k', 'filled', 'Marker', 'v');

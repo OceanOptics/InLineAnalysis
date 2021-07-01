@@ -192,7 +192,7 @@ classdef InLineAnalysis < handle
                 bb_threshold);
             end
             if any(contains(i,'AC'))
-              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s filtered %s data\n',...
+              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectra deleted from %s filtered %s data\n',...
                 Nbad.a, Nbad.c, i, level);
             elseif any(contains(i,'BB'))
               fprintf('\n')
@@ -244,7 +244,7 @@ classdef InLineAnalysis < handle
                 bb_threshold);
             end
             if any(contains(i,'AC'))
-              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s total %s data\n',...
+              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectra deleted from %s total %s data\n',...
                 Nbad.a, Nbad.c, i, level);
             elseif any(contains(i,'BB'))
               fprintf('\n')
@@ -291,7 +291,7 @@ classdef InLineAnalysis < handle
                 bb_threshold, true);
             end
             if any(contains(i,'AC'))
-              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectrum deleted from %s dissolved %s data\n',...
+              fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectra deleted from %s dissolved %s data\n',...
                 Nbad.a, Nbad.c, i, level);
             elseif any(contains(i,'BB'))
               fprintf('\n')
@@ -339,7 +339,7 @@ classdef InLineAnalysis < handle
         error('Too many input argument')
       end
       if size(toClean,2) < 2 || ~iscell(toClean)
-        error("Indicate the table and variable names in cell array, e.g. {'p', 'ap'} to clean ACS product visualising ap spectrum")
+        error("Indicate the table and variable names in cell array, e.g. {'p', 'ap'} to clean ACS product visualising ap spectra")
       end
       for i=obj.cfg.instruments2run; i = i{1};
         if any(contains(i,instru))
@@ -479,40 +479,44 @@ classdef InLineAnalysis < handle
         case 'load'
           fprintf('QCRef LOAD: %s\n', obj.cfg.qcref.reference);
           % Load previous QC and apply it
-          file_selection = loadjson([obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json']);
-          % Convert datestr to datenum and change from cell to array format
-          if ~isempty(file_selection.total)
-            if iscell(file_selection.total{1})
-              file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
-                  datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
+          if isfile([obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json'])
+            file_selection = loadjson([obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json']);
+            % Convert datestr to datenum and change from cell to array format
+            if ~isempty(file_selection.total)
+              if iscell(file_selection.total{1})
+                file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
+                    datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
+              else
+                file_selection.total = [datenum(file_selection.total{1}) datenum(file_selection.total{2})];
+              end
             else
-              file_selection.total = [datenum(file_selection.total{1}) datenum(file_selection.total{2})];
+              file_selection.total = [];
             end
-          else
-            file_selection.total = [];
-          end
-          if ~isempty(file_selection.filtered)
-            if iscell(file_selection.filtered{1})
-              file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
-                  datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
+            if ~isempty(file_selection.filtered)
+              if iscell(file_selection.filtered{1})
+                file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
+                    datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
+              else
+                file_selection.filtered = [datenum(file_selection.filtered{1}) datenum(file_selection.filtered{2})];
+              end
             else
-              file_selection.filtered = [datenum(file_selection.filtered{1}) datenum(file_selection.filtered{2})];
+              file_selection.filtered = [];
             end
+            % Remove selection from days before & after days2run
+            if ~isempty(file_selection.total)
+              sel = file_selection.total(:,2) < min(obj.cfg.days2run) | max(obj.cfg.days2run) + 1 < file_selection.total(:,1);
+              file_selection.total(sel,:) = [];
+            end
+            if ~isempty(file_selection.filtered)
+              sel = file_selection.filtered(:,2) < min(obj.cfg.days2run) | max(obj.cfg.days2run) + 1 < file_selection.filtered(:,1);
+              file_selection.filtered(sel,:) = [];
+            end
+            % Apply selection
+            obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.total, 'total');
+            obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.filtered, 'filtered');
           else
-            file_selection.filtered = [];
+            fprintf(['Warning: ' obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json not found\n'])
           end
-          % Remove selection from days before & after days2run
-          if ~isempty(file_selection.total)
-            sel = file_selection.total(:,2) < min(obj.cfg.days2run) | max(obj.cfg.days2run) + 1 < file_selection.total(:,1);
-            file_selection.total(sel,:) = [];
-          end
-          if ~isempty(file_selection.filtered)
-            sel = file_selection.filtered(:,2) < min(obj.cfg.days2run) | max(obj.cfg.days2run) + 1 < file_selection.filtered(:,1);
-            file_selection.filtered(sel,:) = [];
-          end
-          % Apply selection
-          obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.total, 'total');
-          obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.filtered, 'filtered');
         case 'skip'
           fprintf('WARNING: Reference is not QC.\n');
         otherwise
@@ -687,13 +691,17 @@ classdef InLineAnalysis < handle
             for i=obj.cfg.qc.global.apply; i = i{1};
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               fprintf('QC LOAD Global: %s\n', i);
-              file_selection = loadjson([fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.json']);
-              % Convert datestr to datenum for newer format
-              if ~isempty(file_selection.bad)
-                  file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)),...
-                      datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))];
+              if isfile([fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.json'])
+                file_selection = loadjson([fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.json']);
+                % Convert datestr to datenum for newer format
+                if ~isempty(file_selection.bad)
+                    file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)),...
+                        datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))];
+                end
+                obj.instrument.(i).DeleteUserSelection(file_selection.bad);
+              else
+                fprintf(['Warning: ' fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.json not found\n'])
               end
-              obj.instrument.(i).DeleteUserSelection(file_selection.bad);
             end
           end
           if obj.cfg.qc.specific.active
@@ -1231,13 +1239,12 @@ classdef InLineAnalysis < handle
       for i=obj.cfg.instruments2run; i = i{1};
         fprintf('%s %s flushed\n', i, level);
         switch level
-          case 'data'
-            obj.instrument.(i).(level) = table();
-          case 'bin'
+          case 'raw'
             obj.instrument.(i).(level).tsw = table();
             obj.instrument.(i).(level).fsw = table();
+            obj.instrument.(i).(level).bad = table();
             obj.instrument.(i).(level).diw = table();
-          case 'qc'
+          case {'bin', 'qc'}
             obj.instrument.(i).(level).tsw = table();
             obj.instrument.(i).(level).fsw = table();
             obj.instrument.(i).(level).diw = table();
