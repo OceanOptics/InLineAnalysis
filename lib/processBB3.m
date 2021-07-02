@@ -1,4 +1,4 @@
-function [p, g] = processBB3(param, tot, filt_qc, filt_raw, filt_bad, di, tsg, di_method, filt_method, fth, fth_constants)
+function [p, g, FiltStat] = processBB3(param, tot, filt_qc, filt_raw, filt_bad, di, tsg, di_method, filt_method, fth, fth_constants)
 % Note DI is not interpolated as it's assume to be stable in time
 % BB3 parameters is a structure
 %   param.lambda <1x3 double> wavelength (nm)
@@ -64,34 +64,32 @@ if exist('fth', 'var')
           end
         end
       end
-    case 'exponential_fit' % work in progress
+    case 'exponential_fit'
+      % Method from Dall'Olmo et al. 2017
       fprintf('Fitting exponential to filter events ... ')
-      filt_avg = FiltExpFit(filt_avg, filt_raw, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
+      [filt_avg, FiltStat] = FiltExpFit(filt_avg, filt_raw, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
       fprintf('Done\n')
       % run 25 percentile method on failed exponential fits
-      for i=1:size(sel_start, 1)
-        sel_filt = fth_interp.dt(sel_start(i)) <= filt_qc.dt & filt_qc.dt <= fth_interp.dt(sel_end(i));
-        if sum(sel_filt) > 0
-          bad_idx = abs(filt_avg.delt_filt_asymp(i,:)) > 40;
-          foo = filt_qc(sel_filt,:);
-          if sum(sel_filt) == 1
-            if any(bad_idx)
-              filt_avg.beta(i,bad_idx) = foo.beta(:,bad_idx);
+      if any(FiltStat.exitflag(:))
+        for i=1:size(sel_start, 1)
+          if any(~FiltStat.exitflag(i,:))
+            sel_filt = fth_interp.dt(sel_start(i)) <= filt_qc.dt & filt_qc.dt <= fth_interp.dt(sel_end(i));
+            if sum(sel_filt) > 0
+              foo = filt_qc(sel_filt,:);
+              if sum(sel_filt) == 1
+                filt_avg.beta(i,~FiltStat.exitflag(i,:)) = foo.beta(:,~FiltStat.exitflag(i,:));
+              else
+                foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+                foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+                % compute average of all values smaller than 25th percentile for each filter event
+                filt_avg.beta(i,~FiltStat.exitflag(i,:)) = mean(foo.beta(:,~FiltStat.exitflag(i,:)), 1, 'omitnan');
+                filt_avg.beta_avg_sd(i,~FiltStat.exitflag(i,:)) = mean(foo.beta_avg_sd(:,~FiltStat.exitflag(i,:)), 1, 'omitnan');
+                filt_avg.beta_avg_n(i) = sum(foo.beta_avg_n(any(~isnan(foo.beta(:,~FiltStat.exitflag(i,:))), 2)), 'omitnan');
+              end
+            else
+              filt_avg.beta(i,:) = NaN;
             end
-            filt_avg.beta_avg_sd(i,:) = foo.beta_avg_sd;
-            filt_avg.beta_avg_n(i) = foo.beta_avg_n;
-          else
-            foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-            if any(bad_idx)
-              foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-              % compute average of all values smaller than 25th percentile for each filter event
-              filt_avg.beta(i,bad_idx) = mean(foo.beta(:,bad_idx), 1, 'omitnan');
-            end
-            filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 1, 'omitnan');
-            filt_avg.beta_avg_n(i) = sum(foo.beta_avg_n(any(~isnan(foo.beta_avg_sd), 2)), 'omitnan');
           end
-        else
-          filt_avg.beta(i,:) = NaN;
         end
       end
     otherwise
@@ -243,78 +241,6 @@ if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering'))
   fprintf('Done\n')
 else
   g = table();
-end
-end
-
-function filt_avg = FiltExpFit(filt_avg, filt, filt_st, filt_end)
-% Author: Guillaume bourdin
-% Date: June 25, 2021
-%
-% Exponential fit to filter event
-%%
-% dt = filt_avg.dt(:)';
-[nspect, nlamda] = size(filt_avg.beta);
-
-filt_avg.delt_filt_asymp = NaN(size(filt_avg.beta));
-filt_avg.RMSE_asymp = NaN(size(filt_avg.beta));
-
-%setting options for fmisearch
-opts = optimset('fminsearch');
-opts = optimset(opts, 'MaxIter', 500000);
-opts = optimset(opts, 'MaxFunEvals', 100000);   % usually 100*number of params
-opts = optimset(opts, 'TolFun', 1e-9);
-
-% compute exp fit at each wavelength and each filter event
-for i = progress(1:nspect)
-  % select filter event
-  sel_filt = filt_st(i) <= filt.dt & filt.dt <= filt_end(i);
-  if sum(sel_filt) > 300
-    foo = filt(sel_filt,:);
-    avg_beta = median(foo.beta,2,'omitnan');
-    foo(foo.dt < max(foo.dt(avg_beta == max(avg_beta))),:) = [];
-    % remove short peaks and smooth signal
-%     foo.beta([diff(foo.beta); zeros(1, size(foo.beta, 2))] < -5 & ...
-%       [zeros(1, size(foo.beta, 2)); diff(foo.beta)] > 5) = NaN;
-    foo.beta([diff(foo.beta); zeros(1, size(foo.beta, 2))] < -10 | ...
-      [zeros(1, size(foo.beta, 2)); diff(foo.beta)] > 10) = NaN;
-    foo.beta = fillmissing(foo.beta,'linear','SamplePoints', foo.dt);
-%     foo([diff(foo.beta); 0] > 10^-3, :) = [];
-    for j = 1:nlamda
-      if all(isfinite(foo.beta(:,j))) && all(~isnan(foo.beta(:,j)))
-        % define exponential function
-        expfun = @(p, xd) p(1) * exp(p(2) * (xd - min(foo.dt))) + p(3);
-        % define x0
-        x0 = [foo.beta(1,j) -1/180 0];
-%         % define weight
-%         weig = 1 - 0.5 * (1:size(foo, 1))' / size(foo, 1);
-        % define error function: sum_err/std
-%         errfun = @(p) sum(abs(expfun(p, foo.dt) - foo.beta(:,j)) .* weig);
-        errfun = @(p) sum((expfun(p, foo.dt) - foo.beta(:,j)) .^2);
-        % run the minimizer
-        pfit = fminsearch(errfun, x0, opts);
-%         
-%         figure(j);  hold on;
-%         plot(foo.dt, foo.beta)
-%         vline(filt_st(i), '-b')
-%         vline(filt_end(i), '-r')
-% %         plot(foo.dt, foo.beta(:,j), 'b.');
-%         plot(foo.dt, expfun(pfit, foo.dt), 'r-');
-        
-        % evaluate goodness
-        SSE = sum((expfun(pfit, foo.dt) - foo.beta(:,j)) .^2);
-        MSE = SSE / (size(foo, 1) - size(x0, 2));
-        filt_avg.RMSE_asymp(i,j) = sqrt(MSE);
-        filt_avg.beta(i,j) = pfit(3);
-      end
-    end
-    if size(foo,1) > 10
-      filt_avg.delt_filt_asymp(i,:) = mean(foo.beta(end-10:end,:), 'omitnan') - filt_avg.beta(i,:);
-    else
-      filt_avg.delt_filt_asymp(i,:) = foo.beta(end,:) - filt_avg.beta(i,:);
-    end
-%     filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 'omitnan');
-%     filt_avg.beta_avg_n(i,:) = sum(foo.beta_avg_n);
-  end
 end
 end
 

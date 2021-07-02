@@ -371,7 +371,8 @@ classdef InLineAnalysis < handle
           fprintf('%s products time series plots\n', i);
           ifieldn = fieldnames(obj.instrument.(i).prod);
           for j=1:size(ifieldn,1)
-            if ~strcmp(ifieldn{j}, 'QCfailed') && ~isempty(obj.instrument.(i).prod.(ifieldn{j}))
+            if ~strcmp(ifieldn{j}, 'FiltStat') && ~strcmp(ifieldn{j}, 'QCfailed') && ...
+                ~isempty(obj.instrument.(i).prod.(ifieldn{j}))
               if contains(i, {'BB'})
                 visProd_timeseries(obj.instrument.(i).prod.(ifieldn{j}), i, ...
                   obj.instrument.(i).lambda);

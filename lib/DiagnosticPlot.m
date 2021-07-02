@@ -55,6 +55,7 @@ for j = 1:length(level)
   % remove fieldname of empty table
   tabletoplot = tabletoplot(~structfun(@isempty, data.(level{j})));
   tabletoplot(strcmp(tabletoplot, 'bad')) = [];
+  tabletoplot(strcmp(tabletoplot, 'FiltStat')) = [];
   sztoplot = table(0.4, 8, 'VariableNames', {'AC', 'BB'});
   switch level{j}
     case 'raw'

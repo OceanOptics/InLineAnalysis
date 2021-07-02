@@ -93,11 +93,24 @@ classdef HBB < Instrument
 %       param = struct('lambda', obj.lambda, 'theta', obj.theta, 'muFactors', obj.muFactors);
       % linear interpolation only, CDOM interpolation is not yet available
       if compute_dissolved
-        [obj.prod.p, obj.prod.g] = processHBB(param, obj.qc.tsw, obj.qc.fsw, ...
-          obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT.qc.tsw, SWT_constants);
+        switch filt_method
+          case '25percentil'
+            [obj.prod.p, obj.prod.g] = processHBB(param, obj.qc.tsw, obj.qc.fsw, [], [], ...
+              obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT.qc.tsw, SWT_constants);
+          case 'exponential_fit'
+            [obj.prod.p, obj.prod.g, obj.prod.filt_stat] = processHBB(param, obj.qc.tsw, ...
+              obj.qc.fsw, obj.raw.fsw, obj.raw.bad, obj.bin.diw, TSG.qc.tsw, ...
+              di_method, filt_method, SWT.raw.tsw, SWT_constants);
+        end
       else
-        [obj.prod.p] = processHBB(param, obj.qc.tsw, obj.qc.fsw, [], [], [], ...
-          filt_method, SWT.qc.tsw, SWT_constants);
+        switch filt_method
+          case '25percentil'
+            obj.prod.p = processHBB(param, obj.qc.tsw, obj.qc.fsw, [], [], [], [], [], ...
+              filt_method, SWT.qc.tsw, SWT_constants);
+          case 'exponential_fit'
+            [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processHBB(param, obj.qc.tsw, obj.qc.fsw, ...
+              obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT.raw.tsw, SWT_constants);
+        end
       end
     end
   end

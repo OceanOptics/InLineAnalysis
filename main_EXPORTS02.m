@@ -224,8 +224,6 @@ ila.Write('qc')
 ila.CheckDataStatus();
 
 %% 10. Calibrate and compute products
-ila.cfg.calibrate.BB3.filt_method = 'exponential_fit'; % 25percentil exponential_fit
-ila.cfg.calibrate.HBB.filt_method = 'exponential_fit'; % 25percentil exponential_fit
 ila.cfg.calibrate.skip = {'FLOW', 'TSG'};
 ila.Calibrate();
 ila.CheckDataStatus();
