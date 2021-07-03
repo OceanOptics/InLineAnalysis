@@ -22,7 +22,7 @@ classdef ALFA < Instrument
     function ReadRaw(obj, days2run, force_import, write)
       switch obj.logger
         case 'ALFA_LabView_m'
-          obj.data = iRead(@importALFAm, obj.path.raw, obj.path.wk, ['ALFA' obj.sn '_'],...
+          obj.data = iRead(@importALFAm, obj.path.raw, obj.path.wk, 'ALFA_',...
                          days2run, 'ALFA_LabView_m', force_import, ~write, true);
         otherwise
           error('ALFA: Unknown logger.');
@@ -40,7 +40,7 @@ classdef ALFA < Instrument
       end
       switch obj.logger
         case 'ALFA_LabView_m'
-          obj.raw.diw = iRead(@importALFATeraTerm, obj.path.di, obj.path.wk, ['ALFA' obj.sn '_'],...
+          obj.raw.diw = iRead(@importALFATeraTerm, obj.path.di, obj.path.wk, 'ALFA_',...
                          days2run, 'ALFA_LabView_m', force_import, ~write, true, false, obj.di_cfg.postfix);
         otherwise
           error('ALFA: Unknown logger.');
@@ -48,7 +48,8 @@ classdef ALFA < Instrument
     end
 
     function Calibrate(obj)
-      fprintf('Not Implemented');
+      obj.prod.pd = obj.qc.tsw;
+      fprintf('Not Implemented, copy data to prod\n');
     end
 
   end

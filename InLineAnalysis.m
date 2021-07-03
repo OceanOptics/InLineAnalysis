@@ -177,7 +177,7 @@ classdef InLineAnalysis < handle
       end
       instru = fieldnames(obj.instrument);
       for i=obj.cfg.instruments2run; i = i{1};
-        if any(contains(i,{'AC','BB','PAR'}))
+        if any(contains(i,{'AC','BB','PAR','ALFA'}))
           if ~isempty(obj.instrument.(i).(level).fsw)
 %             fprintf('Deleting bad values from %s filtered data ...\n', i);
             if any(contains(i,'AC'))
@@ -234,9 +234,32 @@ classdef InLineAnalysis < handle
               foo = obj.instrument.(i).(level).tsw.par./obj.instrument.PAR.scale > 4500 ...
                 | obj.instrument.(i).(level).tsw.par./obj.instrument.PAR.scale < 0;
               obj.instrument.(i).(level).tsw(foo,:) = [];
-              foo = obj.instrument.(i).data.par./obj.instrument.PAR.scale > 4500 ...
-                | obj.instrument.(i).data.par./obj.instrument.PAR.scale < 0;
-              obj.instrument.(i).data(foo,:) = [];
+              % get percentage of data deleted
+              foo = sum(foo) / size(obj.instrument.(i).(level).tsw, 1) * 100;
+            elseif any(contains(i,'ALFA'))
+              alf_ar = table2array(obj.instrument.(i).(level).tsw);
+              toqc = repmat(~contains(obj.instrument.(i).(level).tsw.Properties.VariableNames, ...
+                {'dt', 'WL'}), size(alf_ar,1),1);
+              % clean with derivative
+              clean_cycles = 50;
+              foo = 0;
+              for ii = progress(1:clean_cycles)
+                alfa_deriv = [zeros(1, size(alf_ar, 2)); diff(alf_ar, [], 1)];
+                prc_deriv = repmat(prctile(alfa_deriv, 95), size(alf_ar,1),1);
+                toclean = toqc & alfa_deriv > 1.5*prc_deriv & alfa_deriv(:,1) < 0.6;
+                alf_ar(toclean) = NaN;
+                foo = foo + sum(toclean(:));
+              end
+              % clean with absolute values
+              alfa_prc = repmat(prctile(alf_ar, 95), size(alf_ar,1),1);
+              toclean = toqc & alfa_deriv > 1.5*alfa_prc;
+              alf_ar(toclean) = NaN;
+              foo = foo + sum(toclean(:));
+              % rebuild table
+              obj.instrument.(i).(level).tsw = array2table(alf_ar, 'VariableNames', ...
+                obj.instrument.(i).(level).tsw.Properties.VariableNames);
+              % get percentage of data deleted
+              foo = foo / sum(toqc(:));
             end
             if any(contains(i,{'AC','BB'}))
               [obj.instrument.(i).(level).tsw, Nbad]= RawAutoQC(i, obj.instrument.(i).(level).tsw,...
@@ -267,12 +290,8 @@ classdef InLineAnalysis < handle
               fprintf(head, lambda.bb)
               fprintf(lin);
               fprintf(dat, Nbad.bb)
-%               for ii = 1:size(Nbad.bb,2)
-%                 fprintf('%4.2f%% of beta%i deleted from %s total data\n',...
-%                   Nbad.bb(ii), lambda.bb(ii), i);
-%               end
-            elseif any(contains(i,'PAR'))
-              fprintf('%i %s %s values deleted\n', sum(foo), level, i);
+            elseif any(contains(i,{'PAR', 'ALFA'}))
+              fprintf('%.3f%% of %s %s values deleted\n', foo, level, i);
             end
           else
             fprintf('No total data loaded: Skip\n');
@@ -314,10 +333,6 @@ classdef InLineAnalysis < handle
               fprintf(head, lambda.bb)
               fprintf(lin);
               fprintf(dat, Nbad.bb)
-%               for ii = 1:size(Nbad.bb,2)
-%                 fprintf('%4.2f%% of beta%i deleted from %s dissolved data\n',...
-%                   Nbad.bb(ii), lambda.bb(ii), i);
-%               end
             end
           end
           fprintf('RawAutoQC [Done]\n')
@@ -644,7 +659,7 @@ classdef InLineAnalysis < handle
                 fooflow = obj.instrument.FLOW.qc.tsw;
               end
               if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
-              if contains(i, 'AC') && ~obj.cfg.qc.qc_once_for_AandC  
+              if contains(i, 'AC') && ~obj.cfg.qc.qc_once_for_all
                 channel = {'a', 'c'};
                 for j = channel
                   fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
@@ -660,6 +675,29 @@ classdef InLineAnalysis < handle
                   filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json'];
                   obj.updatejson_userselection_bad(filename, user_selection, 'qc', ['tsw' j]);
                   obj.updatejson_userselection_bad(filename, user_selection, 'qc', ['fsw' j]);
+                  clf(52)
+                end
+              elseif contains(i, 'ALFA') && ~obj.cfg.qc.qc_once_for_all
+                channel = foo.qc.tsw.Properties.VariableNames;
+                channel(contains(channel, {'dt', '_avg_sd', '_avg_n'})) = [];
+                for j = channel
+                  % delete crazy values
+                  if contains(j{:}, 'WL')
+                    foo.qc.tsw.(j{:})(foo.qc.tsw.(j{:}) > 1000 | foo.qc.tsw.(j{:}) < 540) = NaN;
+                  else
+                    foo.qc.tsw.(j{:})(foo.qc.tsw.(j{:}) > 100) = NaN;
+                  end
+                  fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
+                             foo.qc.fsw, foo.suspect.fsw, j{:}, foo.view.varcol,...
+                             foo.raw.bad, fooflow);
+                  title([i ' QC of "' j{:} '" only' newline 'Trash section pressing t (q to save)']);
+                  % Get user selection
+                  user_selection = guiSelectOnTimeSeries(fh);
+                  % Apply user selection
+                  obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', ['tsw' j]);
+                  % Save user selection
+                  filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json'];
+                  obj.updatejson_userselection_bad(filename, user_selection, 'qc', ['tsw' j]);
                   clf(52)
                 end
               else
@@ -833,7 +871,7 @@ classdef InLineAnalysis < handle
             if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
             ColorSet = lines(2);
             fh = fig(52); hold('on');
-            if contains(i, 'AC') && ~obj.cfg.di.qc.qc_once_for_AandC  
+            if contains(i, 'AC') && ~obj.cfg.di.qc.qc_once_for_all  
               channel = {'a', 'c'};
               for j = 1:size(channel,2)
                 plot(foo.qc.diw.dt, foo.qc.diw.(channel{j})(:,foo.view.varcol), '.', 'Color', ColorSet(j,:));

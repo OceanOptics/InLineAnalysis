@@ -183,7 +183,7 @@ ila.CheckDataStatus();
 %% 8. QC Interactive or Loading previous qc selection
 %%%%% Settings %%%%%
 ila.cfg.qc.mode='ui';  % load or ui
-ila.cfg.qc.qc_once_for_AandC = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
+ila.cfg.qc.qc_once_for_all = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
 % Global
 ila.cfg.qc.global.view = ila.cfg.instruments2run{~contains(ila.cfg.instruments2run, 'FLOW')};
 ila.cfg.qc.global.active = false;
@@ -195,12 +195,15 @@ ila.cfg.qc.specific.run = ila.cfg.instruments2run(~contains(ila.cfg.instruments2
 ila.QC();
 ila.CheckDataStatus();
 
-%% 8.1. Diagnostic Plot
+%% 8.1. Auto QC at level 'qc': run until it stabilize to 0
+ila.RawAutoQC(ila.cfg.qc.RawAutoQCLim, ila.cfg.qc.Saturation_Threshold_bb, 'qc');
+
+%% 8.2. Diagnostic Plot
 % check QCed spectrums AC or BB sensors
 % {'raw','bin','qc','prod'}
 ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
 
-%% 8.2. Run QC directly on spectra at any level
+%% 8.3. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:
 % 1) 'AC or BB'
 % 2) 'level':  'raw' | 'bin' | 'qc' | 'prod'
@@ -213,6 +216,7 @@ ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
 ila.DiagnosticPlot('BB',{'qc'}, false, {'fsw','a'});
 ila.DiagnosticPlot('BB',{'qc'}, false, {'fsw','all'});
+
 
 %% 9. QC Switch position
 % QC switch position to make sure each filter event is separated by a

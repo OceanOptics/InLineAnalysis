@@ -87,7 +87,7 @@ ila.Read('qc');
 
 %% 3. QC DI
 ila.cfg.di.qc.mode = 'ui';
-ila.cfg.di.qc.qc_once_for_AandC = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
+ila.cfg.di.qc.qc_once_for_all = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
 ila.QCDI();
 
 %% 4. Second auto QC DI

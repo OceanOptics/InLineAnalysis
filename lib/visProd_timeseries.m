@@ -206,6 +206,41 @@ switch instrument
     scatter(data.dt, data.fdom, 6, 'filled');
     ylabel('FDOM ppb');
     xlim([min(data.dt) max(data.dt)]);
+  case 'ALFA'
+    fig(96);
+    clf
+    subplot(4, 1, 1);
+    yyaxis('left'); hold on
+    scatter(data.dt, data.Chlb, 6, 'filled');
+    scatter(data.dt, data.Chlg, 6, 'filled');
+    ylabel('Chl (m^{-1}??)');
+    yyaxis('right'); hold on
+    scatter(data.dt, data.CDOMRb, 6, 'filled');
+    ylabel('CDOMRb (ppb??)');
+    xlim([min(data.dt) max(data.dt)]);
+    legend('Chlb', 'Chlg', 'CDOMRb')
+    subplot(4, 1, 2); hold on
+    scatter(data.dt, data.R613Rb, 6, 'filled');
+    scatter(data.dt, data.R625Rb, 6, 'filled');
+    scatter(data.dt, data.R642Rb, 6, 'filled');
+    scatter(data.dt, data.R662Rb, 6, 'filled');
+    scatter(data.dt, data.R642Rg, 6, 'filled');
+    scatter(data.dt, data.R662Rg, 6, 'filled');
+    ylabel('R...Rb & R...Rg (m^{-1}??)');
+    xlim([min(data.dt) max(data.dt)]);
+    legend('R613Rb', 'R625Rb', 'R642Rb', 'R662Rb', 'R642Rg', 'R662Rg')
+    subplot(4, 1, 3); hold on
+    scatter(data.dt, data.PE1Rg, 6, 'filled');
+    scatter(data.dt, data.PE2Rg, 6, 'filled');
+    scatter(data.dt, data.PE3Rg, 6, 'filled');
+    scatter(data.dt, data.PE1CFg, 6, 'filled');
+    scatter(data.dt, data.PE2CFg, 6, 'filled');
+    scatter(data.dt, data.PE3CFg, 6, 'filled');
+    scatter(data.dt, data.PE12Rg, 6, 'filled');
+    scatter(data.dt, data.PE12CFg, 6, 'filled');
+    ylabel('Phycoerythryn?? (m^{-1}??)');
+    xlim([min(data.dt) max(data.dt)]);
+    legend('PE1Rg', 'PE2Rg', 'PE3Rg', 'PE1CFg', 'PE2CFg', 'PE3CFg', 'PE12Rg', 'PE12CFg')
 %   case 'LISST'
   otherwise
     warning('%s not supported for product visualisation', instrument)

@@ -7,10 +7,7 @@ function [data] = importALFAm(filename, verbose)
 % verbose = true;
 
 % if nargin < 2; verbose = false; end
-if verbose
-  foo = strsplit(filename, '/');
-  fprintf('Importing %s ... ', foo{end});
-end
+foo = strsplit(filename, '/');
 
 % Init parser
 n_column = 38;
@@ -24,12 +21,21 @@ if fid==-1
   error('Unable to open file: %s', filename);
 end
 
-% Skip header lines
+% Skip header line
 fgetl(fid);
+
 % Read data
 t = textscan(fid, parser, 'delimiter','\t');
 % Close file
 fclose(fid);
+
+if verbose && isempty(t{1})
+  fprintf('Cannot load %s ... ignored\n', foo{end})
+  data = table();
+  return
+elseif verbose
+  fprintf('Importing %s ... ', foo{end});
+end
 
 % Build table
 data = table(datenum(cell2mat(horzcat(t{27:28})), 'yyyy-mm-ddHH:MM:SS'),...

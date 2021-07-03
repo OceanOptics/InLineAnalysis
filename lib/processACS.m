@@ -339,12 +339,12 @@ bad = [bad; p(todelete, :) table(repmat({'d(ap)/d(lambda460-640) > 0.4 * ap_{450
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 p.ap(todelete, :) = NaN;
 
-% Auto QC when ap spectrum contains 3 consecutive positive first derivatives of ap over
+% Auto QC when ap spectrum contains 4 consecutive positive first derivatives of ap over
 % wavelentght between 485 and 570 nm
 d485_570 = diff(p.ap(:, lambda.a > 485 & lambda.a <= 570),[],2);
 pos_d485_570 = d485_570 > 0;
 todelete = false(size(pos_d485_570, 1), 1);
-N = 3; % Required number of consecutive numbers following a first one
+N = 4; % Required number of consecutive numbers following a first one
 for i = 1:size(todelete,1)
   t = [false pos_d485_570(i,:) false];
   if any(find(diff(t)==-1)-find(diff(t)==1)>=N) % First t followed by >=N consecutive numbers
@@ -352,20 +352,20 @@ for i = 1:size(todelete,1)
   end
 end
 if sum(todelete)
-  fprintf('%.2f%% (%i) spectrum failed auto-QC: 3 consecutive d(ap)/d(lambda485-570) > 0\n', ...
+  fprintf('%.2f%% (%i) spectrum failed auto-QC: 4 consecutive d(ap)/d(lambda485-570) > 0\n', ...
     sum(todelete) / size(p, 1) * 100, sum(todelete))
 end
-bad = [bad; p(todelete, :) table(repmat({'3 consecutive d(ap)/d(lambda485-570) > 0'}, ...
+bad = [bad; p(todelete, :) table(repmat({'4 consecutive d(ap)/d(lambda485-570) > 0'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 bad = sortrows(bad, 'dt');
 p.ap(todelete, :) = NaN;
 
-% Auto QC when ap spectrum contains 3 consecutive positive first derivatives of cp over
+% Auto QC when ap spectrum contains 5 consecutive positive first derivatives of cp over
 % wavelentght between 485 and 570 nm
 d485_570 = diff(p.cp(:, lambda.c > 485 & lambda.c <= 570),[],2);
 pos_d485_570 = d485_570 > 0;
 todelete = false(size(pos_d485_570, 1), 1);
-N = 3; % Required number of consecutive numbers following a first one
+N = 5; % Required number of consecutive numbers following a first one
 for i = 1:size(todelete,1)
   t = [false pos_d485_570(i,:) false];
   if any(find(diff(t)==-1)-find(diff(t)==1)>=N) % First t followed by >=N consecutive numbers
@@ -373,10 +373,10 @@ for i = 1:size(todelete,1)
   end
 end
 if sum(todelete)
-  fprintf('%.2f%% (%i) spectrum failed auto-QC: 3 consecutive d(cp)/d(lambda485-570) > 0\n', ...
+  fprintf('%.2f%% (%i) spectrum failed auto-QC: 5 consecutive d(cp)/d(lambda485-570) > 0\n', ...
     sum(todelete) / size(p, 1) * 100, sum(todelete))
 end
-bad = [bad; p(todelete, :) table(repmat({'3 consecutive d(cp)/d(lambda485-570) > 0'}, ...
+bad = [bad; p(todelete, :) table(repmat({'5 consecutive d(cp)/d(lambda485-570) > 0'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 bad = sortrows(bad, 'dt');
 p.cp(todelete, :) = NaN;

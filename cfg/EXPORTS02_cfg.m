@@ -270,7 +270,7 @@ cfg.process.qc.Saturation_Threshold_bb = 4100; % (counts)
   
 %%% Manually QC %%%
 cfg.process.qc.mode = 'ui';
-ila.process.qc.qc_once_for_AandC = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
+ila.process.qc.qc_once_for_all = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
 cfg.process.qc.global.view = 'ACS91';
