@@ -28,18 +28,16 @@ classdef BB < ECO
     function Calibrate(obj, compute_dissolved, TSG, SWT, di_method, filt_method)
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       param = struct('lambda', obj.lambda, 'theta', obj.theta, 'slope', obj.slope, 'dark', obj.dark);
-      
       % linear interpolation only, CDOM interpolation is not yet available
       if compute_dissolved
         switch filt_method
           case '25percentil'
-%             [obj.prod.p, obj.prod.g] = processBB3(param, obj.qc.tsw, obj.qc.fsw, ...
-%               obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT.qc.tsw, SWT_constants);
             [obj.prod.p, obj.prod.g] = processBB3(param, obj.qc.tsw, obj.qc.fsw, [], [], ...
               obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT.qc.tsw, SWT_constants);
           case 'exponential_fit'
-            [obj.prod.p, obj.prod.g, obj.prod.filt_stat] = processBB3(param, obj.qc.tsw, obj.qc.fsw, obj.raw.fsw, obj.raw.bad, ...
-              obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT.raw.tsw, SWT_constants);
+            [obj.prod.p, obj.prod.g, obj.prod.filt_stat] = processBB3(param, obj.qc.tsw, ...
+              obj.qc.fsw, obj.raw.fsw, obj.raw.bad, obj.bin.diw, TSG.qc.tsw, di_method, ...
+              filt_method, SWT.raw.tsw, SWT_constants);
         end
       else
         switch filt_method
@@ -47,8 +45,9 @@ classdef BB < ECO
             obj.prod.p = processBB3(param, obj.qc.tsw, obj.qc.fsw, [], [], [], [], [], ...
               filt_method, SWT.qc.tsw, SWT_constants);
           case 'exponential_fit'
-            [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processBB3(param, obj.qc.tsw, obj.qc.fsw, obj.raw.fsw, obj.raw.bad, ...
-              [], [], [], filt_method, SWT.raw.tsw, SWT_constants);
+            [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processBB3(param, obj.qc.tsw, ...
+              obj.qc.fsw, obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT.raw.tsw, ...
+              SWT_constants);
         end
       end
     end

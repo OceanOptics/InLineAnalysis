@@ -20,13 +20,24 @@ if exist('fth', 'var')
   % sort filt_qc data
   filt_qc = sortrows(filt_qc, 'dt');
   fth.swt(fth.swt > 0) = 1;
+  % delete duplicats
+  [~, L, ~] = unique(fth.dt,'first');
+  indexToDump = not(ismember(1:numel(fth.dt),L));
+  fth(indexToDump, :) = [];
   
   % merge and sort filt_raw filt_bad data
-  filt_raw = sortrows([filt_raw; filt_bad], 'dt');
+  if any(~isempty(filt_raw) | ~isempty(filt_bad))
+    filt_raw_merged = sortrows([filt_raw; filt_bad], 'dt');
+  end
   
   % interpolate fth.swt onto binned data to fill missing flow data
   fth_interp = table([tot.dt; fth.dt; filt_qc.dt], 'VariableNames', {'dt'});
-  [~,b] = sort(fth_interp.dt); % sort dates
+  % delete duplicats
+  [~, L, ~] = unique(fth_interp.dt,'first');
+  indexToDump = not(ismember(1:numel(fth_interp.dt),L));
+  fth_interp(indexToDump, :) = [];
+  % sort dates
+  [~,b] = sort(fth_interp.dt);
   fth_interp.dt = fth_interp.dt(b,:);
   fth_interp.swt = interp1(fth.dt, fth.swt, fth_interp.dt, 'previous');
   fth_interp.swt = fth_interp.swt > 0;
@@ -66,30 +77,28 @@ if exist('fth', 'var')
       end
     case 'exponential_fit'
       % Method from Dall'Olmo et al. 2017
-      fprintf('Fitting exponential to filter events ... ')
-      [filt_avg, FiltStat] = FiltExpFit(filt_avg, filt_raw, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
+      fprintf('Fitting exponential to filter events ... \n')
+      [filt_avg, FiltStat] = FiltExpFit(filt_avg, filt_raw_merged, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
       fprintf('Done\n')
       % run 25 percentile method on failed exponential fits
-      if any(FiltStat.exitflag(:))
-        for i=1:size(sel_start, 1)
+      for i=1:size(sel_start, 1)
+        sel_filt = fth_interp.dt(sel_start(i)) <= filt_qc.dt & filt_qc.dt <= fth_interp.dt(sel_end(i));
+        if sum(sel_filt) > 0
           if any(~FiltStat.exitflag(i,:))
-            sel_filt = fth_interp.dt(sel_start(i)) <= filt_qc.dt & filt_qc.dt <= fth_interp.dt(sel_end(i));
-            if sum(sel_filt) > 0
-              foo = filt_qc(sel_filt,:);
-              if sum(sel_filt) == 1
-                filt_avg.beta(i,~FiltStat.exitflag(i,:)) = foo.beta(:,~FiltStat.exitflag(i,:));
-              else
-                foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-                foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-                % compute average of all values smaller than 25th percentile for each filter event
-                filt_avg.beta(i,~FiltStat.exitflag(i,:)) = mean(foo.beta(:,~FiltStat.exitflag(i,:)), 1, 'omitnan');
-                filt_avg.beta_avg_sd(i,~FiltStat.exitflag(i,:)) = mean(foo.beta_avg_sd(:,~FiltStat.exitflag(i,:)), 1, 'omitnan');
-                filt_avg.beta_avg_n(i) = sum(foo.beta_avg_n(any(~isnan(foo.beta(:,~FiltStat.exitflag(i,:))), 2)), 'omitnan');
-              end
+            foo = filt_qc(sel_filt,:);
+            if sum(sel_filt) == 1
+              filt_avg.beta(i,~FiltStat.exitflag(i,:)) = foo.beta(:,~FiltStat.exitflag(i,:));
             else
-              filt_avg.beta(i,:) = NaN;
+              foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+              foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+              % compute average of all values smaller than 25th percentile for each filter event
+              filt_avg.beta(i,~FiltStat.exitflag(i,:)) = mean(foo.beta(:,~FiltStat.exitflag(i,:)), 1, 'omitnan');
+              filt_avg.beta_avg_sd(i,~FiltStat.exitflag(i,:)) = mean(foo.beta_avg_sd(:,~FiltStat.exitflag(i,:)), 1, 'omitnan');
+              filt_avg.beta_avg_n(i) = sum(foo.beta_avg_n(any(~isnan(foo.beta(:,~FiltStat.exitflag(i,:))), 2)), 'omitnan');
             end
           end
+        else
+          filt_avg.beta(i,:) = NaN;
         end
       end
     otherwise
