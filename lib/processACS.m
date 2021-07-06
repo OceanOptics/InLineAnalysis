@@ -733,8 +733,8 @@ for i = todo
   % wavelength at centwavel (i.e. at the data wavelengths)
   wavelength = .1:.1:799; % Thus index of 1 nm = 10; 356 nm= 3560;
   SIG1 = (-9.845*10^-8.*lambda.(i{:}(1)).^3 + 1.639*10^-4*lambda.(i{:}(1)).^2 - 7.849*10^-2*lambda.(i{:}(1)) + 25.24)/2.3547 ;
-  for j = 1:max(size(lambda.(i{:}(1))))
-    for jkl = 1:max(size(wavelength))
+  for j = 1:size(lambda.(i{:}(1)),2)
+    for jkl = 1:size(wavelength,2)
       filtfunc(jkl,j) = (1/(sqrt(2*pi)*SIG1(j)))*exp(-0.5*((wavelength(jkl)-lambda.(i{:}(1))(j))/SIG1(j)).^2); % First term normalizes area under the curve to 1.
     end
   end
@@ -882,7 +882,7 @@ if compute_ad_aphi
   % Run partition_ap
   ad_ZS13 = NaN(size(ap_ZS13, 2), size(qwl, 2));
   aphi_ZS13 = NaN(size(ap_ZS13, 2), size(qwl, 2));
-%   parfor i = 1:300 %size(ap_ZS13, 2)
+%   parfor i = 1:size(ap_ZS13, 2)
   for i = progress(1:size(ap_ZS13, 2))
     [ad_ZS13(i,:), aphi_ZS13(i,:)] = partition_ap(ap_ZS13(:, i), qwl', 50);
   end

@@ -209,7 +209,17 @@ function [Ad, Sd] = solver4s_ap(ap,lam,x1,y1)
         Sd = NaN;  % no solutions found, if there is no sign change in fres
         Ad = NaN;
     else
+      if size(idx, 2) == 2
+        if abs(idx(1) - idx(2)) == 1
+          Sd = NaN;  % no solutions found, if there is no sign change in fres
+          Ad = NaN;
+        else
+          Sd = interp1([fres(idx) fres(idx+1)], [ss(idx) ss(idx+1)], 0); % interpolation between the two points to find where fres=0
+          Ad = ( ap(2) - x1*ap(1) ) / ( exp(-lam(2)*Sd) - x1*exp(-lam(1)*Sd) ); % calculate Ad from Sd
+        end
+      else
         Sd = interp1([fres(idx) fres(idx+1)], [ss(idx) ss(idx+1)], 0); % interpolation between the two points to find where fres=0
         Ad = ( ap(2) - x1*ap(1) ) / ( exp(-lam(2)*Sd) - x1*exp(-lam(1)*Sd) ); % calculate Ad from Sd
+      end
     end
 end
