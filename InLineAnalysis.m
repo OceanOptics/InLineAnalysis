@@ -451,7 +451,7 @@ classdef InLineAnalysis < handle
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection.total, 'total');
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection.filtered, 'filtered');
           filename = [obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.mat'];
-          if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+          if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
             file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
             save(filename, 'file_selection')
           end
@@ -482,7 +482,7 @@ classdef InLineAnalysis < handle
           fprintf('QCRef LOAD: %s\n', obj.cfg.qcref.reference);
           % Load previous QC and apply it
           filename = [obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.mat'];
-          if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+          if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
             file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
             save(filename, 'file_selection')
           end
@@ -701,7 +701,7 @@ classdef InLineAnalysis < handle
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               fprintf('QC LOAD Global: %s\n', i);
               filename = [fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.mat'];
-              if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+              if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
                 file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
                 save(filename, 'file_selection')
               end
@@ -718,7 +718,7 @@ classdef InLineAnalysis < handle
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               fprintf('QC LOAD Specific: %s\n', i);
               filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
-              if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+              if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
                 file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
                 save(filename, 'file_selection')
               end
@@ -1389,6 +1389,10 @@ classdef InLineAnalysis < handle
       end
       if isfile(filename)
         % Load file
+        if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
+          file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
+          save(filename, 'file_selection')
+        end
         load(filename, 'file_selection');
         if isfield(file_selection, ['bad' channel]) && ~isempty(file_selection.(['bad' channel]))
 %           % Remove old (days2run) selections REMOVED TO KEEP ALL HISTORY OF USER SELECTION
