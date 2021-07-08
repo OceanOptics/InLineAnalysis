@@ -164,15 +164,19 @@ classdef InLineAnalysis < handle
       fprintf('Done\n');
     end
     
-    function RawAutoQC (obj, fudge_factor, bb_threshold, level)
-      if nargin < 2
+    function RawAutoQC (obj, level)
+      fudge_factor = obj.cfg.qc.RawAutoQCLim;
+      bb_threshold = obj.cfg.qc.Saturation_Threshold_bb;
+      if isempty(fudge_factor)
+        fudge_factor.dissolved.a = 3;
+        fudge_factor.dissolved.c = 3;
         fudge_factor.filtered.a = 3;
         fudge_factor.filtered.c = 3;
         fudge_factor.total.a = 3;
         fudge_factor.total.c = 3;
-      elseif nargin < 3
+      elseif isempty(bb_threshold)
         bb_threshold = 4000;
-      elseif nargin < 4
+      elseif nargin < 2
         level = 'raw';
       end
       instru = fieldnames(obj.instrument);
@@ -370,11 +374,11 @@ classdef InLineAnalysis < handle
             end
             % Save user selection
             if strcmp(toClean{1}, 'diw')
-              filename = [obj.instrument.(i).path.ui i '_QCDIpickSpecific_UserSelection.json'];
+              filename = [obj.instrument.(i).path.ui i '_QCDIpickSpecific_UserSelection.mat'];
             else
-              filename = [obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'];
+              filename = [obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.mat'];
             end
-            obj.updatejson_userselection_bad(filename, user_selection, level{:}, toClean);
+            obj.update_userselection_bad(filename, user_selection, level{:}, toClean);
           end
         end
       end
@@ -415,6 +419,14 @@ classdef InLineAnalysis < handle
     function QCRef(obj)
       switch obj.cfg.qcref.mode
         case 'ui'
+          %% create new FTH data for missing data
+          % round date time to second
+          obj.instrument.FLOW.data.dt = datenum(floor(datevec(obj.instrument.FLOW.data.dt)));
+          % delete duplicates (bug in flowcontrol software)
+          [~, L, ~] = unique(obj.instrument.FLOW.data.dt,'first');
+          indexToDump = not(ismember(1:numel(obj.instrument.FLOW.data.dt),L));
+          obj.instrument.FLOW.data(indexToDump, :) = [];
+          obj.instrument.FLOW.data(~isfinite(obj.instrument.FLOW.data.dt),:) = [];
           % Fresh selection does not take into account previous QC
           % TOTAL and FILTERED Sections
           fh = fig(31);
@@ -433,38 +445,16 @@ classdef InLineAnalysis < handle
             ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname ' ' ...
                 num2str(round(obj.instrument.(obj.cfg.qcref.view).('lambda')(obj.instrument.(obj.cfg.qcref.view).view.varcol),0)) 'nm'])
           else
-              ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname obj.instrument.(obj.cfg.qcref.view).view.varcol]);
+            ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname obj.instrument.(obj.cfg.qcref.view).view.varcol]);
           end
-          [user_selection_total, user_selection_filtered] = guiSelectOnTimeSeries(fh);
-          obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection_total, 'total');
-          obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection_filtered, 'filtered');
+          [user_selection.total, user_selection.filtered] = guiSelectOnTimeSeries(fh);
+          obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection.total, 'total');
+          obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection.filtered, 'filtered');
           
-          filename = [obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json'];
-          if exist(filename, 'file')
+          filename = [obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.mat'];
+          if isfile(filename)
             % Load file
-            file_selection = loadjson(filename);
-            % Convert datestr to datenum and change from cell to array format
-            if ~isempty(file_selection.total)
-              if iscell(file_selection.total{1})
-                file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
-                    datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
-              else
-                file_selection.total = [datenum(file_selection.total{1}) datenum(file_selection.total{2})];
-              end
-            else
-              file_selection.total = [];
-            end
-            if ~isempty(file_selection.filtered)
-              if iscell(file_selection.filtered{1})
-                file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
-                    datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
-              else
-                file_selection.filtered = [datenum(file_selection.filtered{1}) datenum(file_selection.filtered{2})];
-              end
-            else
-              file_selection.filtered = [];
-            end
-%             end
+            load(filename, 'file_selection');
 %             % Remove old (days2run) selections REMOVED TO KEEP ALL HISTORY OF USER SELECTION
 %             if ~isempty(file_selection.total)
 %               sel = min(obj.cfg.days2run) <= file_selection.total(:,1) & file_selection.total(:,1) < max(obj.cfg.days2run) + 1;
@@ -475,49 +465,22 @@ classdef InLineAnalysis < handle
 %               file_selection.filtered(sel,:) = [];
 %             end
             % Add new user selection
-            file_selection.total = [file_selection.total; user_selection_total];
-            file_selection.filtered = [file_selection.filtered; user_selection_filtered];
+            file_selection.total = [file_selection.total; user_selection.total];
+            file_selection.filtered = [file_selection.filtered; user_selection.filtered];
           else
-            file_selection = struct('total', user_selection_total, 'filtered', user_selection_filtered);
-          end
-          % Convert datenum to datestr for newer format
-          if ~isempty(file_selection.total)
-            file_selection.total = {datestr(file_selection.total(:,1)), datestr(file_selection.total(:,2))};
-          end
-          if ~isempty(file_selection.filtered)
-            file_selection.filtered = {datestr(file_selection.filtered(:,1)), datestr(file_selection.filtered(:,2))};
+            file_selection = user_selection;
           end
           % Save user selection
           if ~isfolder(obj.instrument.(obj.cfg.qcref.reference).path.ui)
             mkdir(obj.instrument.(obj.cfg.qcref.reference).path.ui);
           end
-          savejson('',file_selection,filename);  
+          save(filename, 'file_selection');  
         case 'load'
           fprintf('QCRef LOAD: %s\n', obj.cfg.qcref.reference);
           % Load previous QC and apply it
-          if isfile([obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json'])
-            file_selection = loadjson([obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json']);
-            % Convert datestr to datenum and change from cell to array format
-            if ~isempty(file_selection.total)
-              if iscell(file_selection.total{1})
-                file_selection.total = [datenum(cellfun(@(x) char(x), file_selection.total{1}', 'un', 0)),...
-                    datenum(cellfun(@(x) char(x), file_selection.total{2}', 'un', 0))];
-              else
-                file_selection.total = [datenum(file_selection.total{1}) datenum(file_selection.total{2})];
-              end
-            else
-              file_selection.total = [];
-            end
-            if ~isempty(file_selection.filtered)
-              if iscell(file_selection.filtered{1})
-                file_selection.filtered = [datenum(cellfun(@(x) char(x), file_selection.filtered{1}', 'un', 0)),...
-                    datenum(cellfun(@(x) char(x), file_selection.filtered{2}', 'un', 0))];
-              else
-                file_selection.filtered = [datenum(file_selection.filtered{1}) datenum(file_selection.filtered{2})];
-              end
-            else
-              file_selection.filtered = [];
-            end
+          filename = [obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.mat'];
+          if isfile(filename)
+            load(filename, 'file_selection');
             % Remove selection from days before & after days2run
             if ~isempty(file_selection.total)
               sel = file_selection.total(:,2) < min(obj.cfg.days2run) | max(obj.cfg.days2run) + 1 < file_selection.total(:,1);
@@ -531,7 +494,7 @@ classdef InLineAnalysis < handle
             obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.total, 'total');
             obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.filtered, 'filtered');
           else
-            fprintf(['Warning: ' obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.json not found\n'])
+            fprintf(['Warning: ' filename ' not found\n'])
           end
         case 'skip'
           fprintf('WARNING: Reference is not QC.\n');
@@ -635,11 +598,11 @@ classdef InLineAnalysis < handle
               % Apply user selection
               obj.instrument.(i).DeleteUserSelection(user_selection);
               % Save user selection
-              filename = [fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.json'];
+              filename = [fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.mat'];
               if ~isfolder(fileparts(fileparts(obj.instrument.(i).path.ui)))
                 mkdir(fileparts(fileparts(obj.instrument.(i).path.ui)));
               end
-              obj.updatejson_userselection_bad(filename, user_selection);
+              obj.update_userselection_bad(filename, user_selection);
             end
           end
           if obj.cfg.qc.specific.active
@@ -672,9 +635,9 @@ classdef InLineAnalysis < handle
                   obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', ['tsw' j]);
                   obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', ['fsw' j]);
                   % Save user selection
-                  filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json'];
-                  obj.updatejson_userselection_bad(filename, user_selection, 'qc', ['tsw' j]);
-                  obj.updatejson_userselection_bad(filename, user_selection, 'qc', ['fsw' j]);
+                  filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
+                  obj.update_userselection_bad(filename, user_selection, 'qc', ['tsw' j]);
+                  obj.update_userselection_bad(filename, user_selection, 'qc', ['fsw' j]);
                   clf(52)
                 end
               elseif contains(i, 'ALFA') && ~obj.cfg.qc.qc_once_for_all
@@ -696,8 +659,8 @@ classdef InLineAnalysis < handle
                   % Apply user selection
                   obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', ['tsw' j]);
                   % Save user selection
-                  filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json'];
-                  obj.updatejson_userselection_bad(filename, user_selection, 'qc', ['tsw' j]);
+                  filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
+                  obj.update_userselection_bad(filename, user_selection, 'qc', ['tsw' j]);
                   clf(52)
                 end
               else
@@ -716,8 +679,8 @@ classdef InLineAnalysis < handle
                 % Apply user selection
                 obj.instrument.(i).DeleteUserSelection(user_selection);
                 % Save user selection
-                filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json'];
-                obj.updatejson_userselection_bad(filename, user_selection);
+                filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
+                obj.update_userselection_bad(filename, user_selection);
               end
             end
           end
@@ -730,16 +693,12 @@ classdef InLineAnalysis < handle
             for i=obj.cfg.qc.global.apply; i = i{1};
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               fprintf('QC LOAD Global: %s\n', i);
-              if isfile([fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.json'])
-                file_selection = loadjson([fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.json']);
-                % Convert datestr to datenum for newer format
-                if ~isempty(file_selection.bad)
-                    file_selection.bad = [datenum(cellfun(@(x) char(x), file_selection.bad{1}', 'UniformOutput', false)),...
-                        datenum(cellfun(@(x) char(x), file_selection.bad{2}', 'UniformOutput', false))];
-                end
+              filename = [fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.mat'];
+              if isfile(filename)
+                load(filename, 'file_selection');
                 obj.instrument.(i).DeleteUserSelection(file_selection.bad);
               else
-                fprintf(['Warning: ' fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.json not found\n'])
+                fprintf(['Warning: ' filename ' not found\n'])
               end
             end
           end
@@ -747,21 +706,11 @@ classdef InLineAnalysis < handle
             for i=obj.cfg.qc.specific.run; i = i{1};
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               fprintf('QC LOAD Specific: %s\n', i);
-              if isfile([obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json'])
-                file_selection = loadjson([obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json']);
+              filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
+              if isfile(filename)
+                load(filename, 'file_selection');
                 sel_toload = fieldnames(file_selection);
-                % Convert datestr to datenum for newer format
                 for j = 1:size(sel_toload, 1)
-                  if ~isempty(file_selection.(sel_toload{j}))
-                    if iscell(file_selection.(sel_toload{j}){1}) && iscell(file_selection.(sel_toload{j}){1})
-                      file_selection.(sel_toload{j}) = [datenum(cellfun(@(x) char(x), ...
-                        file_selection.(sel_toload{j}){1}, 'UniformOutput', false)),...
-                        datenum(cellfun(@(x) char(x), file_selection.(sel_toload{j}){2}, 'UniformOutput', false))];
-                    else
-                      file_selection.(sel_toload{j}) = [datenum(file_selection.(sel_toload{j})(:, 1)),...
-                        datenum(file_selection.(sel_toload{j})(:, 2))];
-                    end
-                  end
                   % Keep only selection of the day2run
                   file_selection.(sel_toload{j})(~any(min(obj.cfg.days2run) < file_selection.(sel_toload{j}) & ...
                     file_selection.(sel_toload{j}) < max(obj.cfg.days2run), 2)) = [];
@@ -787,25 +736,18 @@ classdef InLineAnalysis < handle
                   end
                 end
               else
-                fprintf(['Warning: ' obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.json not found\n'])
+                fprintf(['Warning: ' filename ' not found\n'])
               end
-              if isfile([obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json'])
-                file_pick_selection = loadjson([obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json']);
-                sel_picktoload = fieldnames(file_pick_selection);
+              filename = [obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.mat'];
+              if isfile(filename)
+                % load hand picked bad values
+                load(filename, 'file_selection');
+                sel_picktoload = fieldnames(file_selection);
                 for j = progress(1:size(sel_picktoload, 1))
-                  % load hand picked bad values
-                  if ~isempty(file_pick_selection.(sel_picktoload{j}))
-                    if iscell(file_pick_selection.(sel_picktoload{j}){1})
-                      file_pick_selection.(sel_picktoload{j}) = datenum(cellfun(@(x) char(x), ...
-                        file_pick_selection.(sel_picktoload{j}){1}, 'UniformOutput', false));
-                    else
-                      file_pick_selection.(sel_picktoload{j}) = datenum(file_pick_selection.(sel_picktoload{j})(:, 1));
-                    end
-                  end
                   % Keep only selection of the day2run
-                  file_pick_selection.(sel_picktoload{j})(~any(min(obj.cfg.days2run) < file_pick_selection.(sel_picktoload{j}) & ...
-                    file_pick_selection.(sel_picktoload{j}) < max(obj.cfg.days2run), 2)) = [];
-                  if ~isempty(file_pick_selection.(sel_picktoload{j}))
+                  file_selection.(sel_picktoload{j})(~any(min(obj.cfg.days2run) < file_selection.(sel_picktoload{j}) & ...
+                    file_selection.(sel_picktoload{j}) < max(obj.cfg.days2run), 2)) = [];
+                  if ~isempty(file_selection.(sel_picktoload{j}))
                     channel = strsplit(sel_picktoload{j}, 'bad_');
                     foo = strsplit(channel{end}, '_');
                     if size(foo, 2) == 1
@@ -819,22 +761,22 @@ classdef InLineAnalysis < handle
                       channel = foo(2:3);
                     end
                     if contains(i, 'AC')
-                      obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), ...
+                      obj.instrument.(i).DeleteUserSelection(file_selection.(sel_picktoload{j}), ...
                         level, channel);
                       if strcmp(level, 'prod')
-                        obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), ...
+                        obj.instrument.(i).DeleteUserSelection(file_selection.(sel_picktoload{j}), ...
                           'qc', {'tsw', strrep(channel{2}, 'p', '')});
                       end
                     else
-                      obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), level);
+                      obj.instrument.(i).DeleteUserSelection(file_selection.(sel_picktoload{j}), level);
                       if strcmp(level, 'prod')
-                        obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), 'qc');
+                        obj.instrument.(i).DeleteUserSelection(file_selection.(sel_picktoload{j}), 'qc');
                       end
                     end
                   end
                 end
               else
-                fprintf(['Warning: ' obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.json not found\n'])
+                fprintf(['Warning: ' filename ' not found\n'])
               end
             end
           end
@@ -868,6 +810,7 @@ classdef InLineAnalysis < handle
               error('Empty qc diw \n');
             end
             % create folder for user input
+            filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.mat'];
             if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
             ColorSet = lines(2);
             fh = fig(52); hold('on');
@@ -884,8 +827,7 @@ classdef InLineAnalysis < handle
                 % Apply user selection
                 obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', ['diw' channel(j)]);
                 % Save user selection
-                filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.json'];
-                obj.updatejson_userselection_bad(filename, user_selection, 'qc', ['diw' channel(j)]);
+                obj.update_userselection_bad(filename, user_selection, 'qc', ['diw' channel(j)]);
                 clf(52)
               end
             else
@@ -899,8 +841,7 @@ classdef InLineAnalysis < handle
               % Apply user selection
               obj.instrument.(i).DeleteUserSelection(user_selection);
               % Save user selection
-              filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.json'];
-              obj.updatejson_userselection_bad(filename, user_selection);
+              obj.update_userselection_bad(filename, user_selection);
             end
           end
         case 'load'
@@ -908,21 +849,12 @@ classdef InLineAnalysis < handle
           for i=obj.cfg.instruments2run; i = i{1};
             if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
             fprintf('QC DI LOAD: %s\n', i);
-            if isfile([obj.instrument.(i).path.ui i '_QCDI_UserSelection.json'])
-              file_selection = loadjson([obj.instrument.(i).path.ui i '_QCDI_UserSelection.json']);
+            filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.mat'];
+            if isfile(filename)
+              % load bad DI values
+              load(filename, 'file_selection');
               sel_toload = fieldnames(file_selection);
-              % Convert datestr to datenum for newer format
               for j = 1:size(sel_toload, 1)
-                if ~isempty(file_selection.(sel_toload{j}))
-                  if iscell(file_selection.(sel_toload{j}){1}) && iscell(file_selection.(sel_toload{j}){1})
-                    file_selection.(sel_toload{j}) = [datenum(cellfun(@(x) char(x), ...
-                      file_selection.(sel_toload{j}){1}, 'UniformOutput', false)),...
-                      datenum(cellfun(@(x) char(x), file_selection.(sel_toload{j}){2}, 'UniformOutput', false))];
-                  else
-                    file_selection.(sel_toload{j}) = [datenum(file_selection.(sel_toload{j})(:, 1)),...
-                      datenum(file_selection.(sel_toload{j})(:, 2))];
-                  end
-                end
                 % Keep only selection of the day2run
                 file_selection.(sel_toload{j})(~any(min(obj.cfg.days2run) < file_selection.(sel_toload{j}) & ...
                   file_selection.(sel_toload{j}) < max(obj.cfg.days2run), 2)) = [];
@@ -948,25 +880,19 @@ classdef InLineAnalysis < handle
                 end
               end
             else
-              fprintf(['Warning: ' obj.instrument.(i).path.ui i '_QCDI_UserSelection.json not found\n'])
+              fprintf(['Warning: ' filename ' not found\n'])
             end
-            if isfile([obj.instrument.(i).path.ui i '_QCDI_pickSpecific_UserSelection.json'])
-              file_pick_selection = loadjson([obj.instrument.(i).path.ui i '_QCDI_pickSpecific_UserSelection.json']);
-              sel_picktoload = fieldnames(file_pick_selection);
+            filename = [obj.instrument.(i).path.ui i '_QCDI_pickSpecific_UserSelection.mat'];
+            if isfile(filename)
+              % load hand picked bad DI values
+              load(filename, 'file_selection');
+              sel_picktoload = fieldnames(file_selection);
               for j = 1:size(sel_picktoload, 1)
-                % load hand picked bad values
-                if ~isempty(file_pick_selection.(sel_picktoload{j}))
-                  if iscell(file_pick_selection.(sel_picktoload{j}){1}) && iscell(file_pick_selection.(sel_picktoload{j}){1})
-                    file_pick_selection.(sel_picktoload{j}) = datenum(cellfun(@(x) char(x), file_pick_selection.(sel_picktoload{j}){1}, 'UniformOutput', false));
-                  else
-                    file_pick_selection.(sel_picktoload{j}) = datenum(file_pick_selection.(sel_picktoload{j})(:, 1));
-                  end
-                end
                 % Keep only selection of the day2run
-                file_pick_selection.(sel_picktoload{j})(~any(min(obj.cfg.days2run) < file_pick_selection.(sel_picktoload{j}) & ...
-                  file_pick_selection.(sel_picktoload{j}) < max(obj.cfg.days2run), 2)) = [];
-                if ~isempty(file_pick_selection.(sel_picktoload{j}))
-                  channel = strsplit(file_pick_selection{j}, 'bad_');
+                file_selection.(sel_picktoload{j})(~any(min(obj.cfg.days2run) < file_selection.(sel_picktoload{j}) & ...
+                  file_selection.(sel_picktoload{j}) < max(obj.cfg.days2run), 2)) = [];
+                if ~isempty(file_selection.(sel_picktoload{j}))
+                  channel = strsplit(file_selection{j}, 'bad_');
                   foo = strsplit(channel{end}, '_');
                   if size(foo, 2) == 1
                     level = 'qc';
@@ -979,19 +905,19 @@ classdef InLineAnalysis < handle
                     channel = foo(2:3);
                   end
                   if contains(i, 'AC')
-                    obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), ...
+                    obj.instrument.(i).DeleteUserSelection(file_selection.(sel_picktoload{j}), ...
                       level, channel);
                     if strcmp(level, 'prod')
-                      obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}), ...
+                      obj.instrument.(i).DeleteUserSelection(file_selection.(sel_picktoload{j}), ...
                         'qc', {'fsw', strrep(channel{2}, 'g', '')});
                     end
                   else
-                    obj.instrument.(i).DeleteUserSelection(file_pick_selection.(sel_picktoload{j}));
+                    obj.instrument.(i).DeleteUserSelection(file_selection.(sel_picktoload{j}));
                   end
                 end
               end
             else
-              fprintf(['Warning: ' obj.instrument.(i).path.ui i '_QCDI_pickSpecific_UserSelection.json not found\n'])
+              fprintf(['Warning: ' filename ' not found\n'])
             end
           end
         case 'skip'
@@ -1371,8 +1297,6 @@ classdef InLineAnalysis < handle
     
   end
   
-  
-  
   methods (Static)
     % Load configuration file
     function cfg = ReadCfgJSON(cfg_file_name)
@@ -1423,7 +1347,7 @@ classdef InLineAnalysis < handle
   end
   
   methods (Access=private)
-    function updatejson_userselection_bad(~, filename, user_selection, level, channel) % obj, 
+    function update_userselection_bad(~, filename, user_selection, level, channel) % obj, 
       if nargin < 4
         level = 'qc';
         channel = '';
@@ -1432,37 +1356,9 @@ classdef InLineAnalysis < handle
       else
         channel = join(['_' level '_' strjoin(channel, '_')],'');
       end
-      if exist(filename, 'file')
+      if isfile(filename)
         % Load file
-        file_selection = loadjson(filename);
-        fiedna = fieldnames(file_selection);
-        for i = 1:size(fiedna,1)
-          if ~isempty(file_selection.(fiedna{i}))
-            % Convert datestr to datenum for newer format
-            if iscell(file_selection.(fiedna{i}){1})
-              if size(file_selection.(fiedna{i}), 2) == 2
-                file_selection.(fiedna{i}) = [datenum(cellfun(@(x) char(x), ...
-                  file_selection.(fiedna{i}){1}', 'UniformOutput', false)),...
-                  datenum(cellfun(@(x) char(x), file_selection.(fiedna{i}){2}', ...
-                  'UniformOutput', false))];
-              elseif size(file_selection.(fiedna{i}), 2) == 1
-                file_selection.(fiedna{i}) = datenum(cellfun(@(x) char(x), ...
-                  file_selection.(fiedna{i}){1}', 'UniformOutput', false));
-              else
-                error('Date/time size in .json file not supported, check %\n', filename)
-              end
-            else
-              if size(file_selection.(fiedna{i}), 2) == 2
-                file_selection.(fiedna{i}) = [datenum(file_selection.(fiedna{i})(1)), ...
-                  datenum(file_selection.(fiedna{i})(2))];
-              elseif size(file_selection.(fiedna{i}), 2) == 1
-                file_selection.(fiedna{i}) = datenum(file_selection.(fiedna{i})(1)');
-              else
-                error('Date/time size in .json file not supported, check %\n', filename)
-              end
-            end
-          end
-        end
+        load(filename, 'file_selection');
         if isfield(file_selection, ['bad' channel]) && ~isempty(file_selection.(['bad' channel]))
 %           % Remove old (days2run) selections REMOVED TO KEEP ALL HISTORY OF USER SELECTION
 %           sel = min(obj.cfg.days2run) <= file_selection.(['bad' channel])(:,1) & ...
@@ -1472,25 +1368,12 @@ classdef InLineAnalysis < handle
           file_selection.(['bad' channel]) = [file_selection.(['bad' channel]); user_selection];
         else
           file_selection.(['bad' channel]) = user_selection;
-          fiedna = fieldnames(file_selection);
         end
       else
         file_selection = struct(['bad' channel], user_selection);
-        fiedna = fieldnames(file_selection);
-      end
-      % Convert datenum to datestr for newer format
-      for i = 1:size(fiedna,1)
-        if ~isempty(file_selection.(fiedna{i}))
-          if size(file_selection.(fiedna{i}), 2) == 2
-            file_selection.(fiedna{i}) = {datestr(file_selection.(fiedna{i})(:,1), 'dd-mmm-yyyy HH:MM:SS.FFF'), ...
-              datestr(file_selection.(fiedna{i})(:,2), 'dd-mmm-yyyy HH:MM:SS.FFF')};
-          elseif size(file_selection.(fiedna{i}), 2) == 1
-            file_selection.(fiedna{i}) = {datestr(file_selection.(fiedna{i}), 'dd-mmm-yyyy HH:MM:SS.FFF')};
-          end
-        end
       end
       % Save user selection
-      savejson('',file_selection,filename); 
+      save(filename, 'file_selection'); 
     end
   end
 end

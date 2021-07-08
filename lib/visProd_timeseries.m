@@ -213,7 +213,7 @@ switch instrument
     yyaxis('left'); hold on
     scatter(data.dt, data.Chlb, 6, 'filled');
     scatter(data.dt, data.Chlg, 6, 'filled');
-    ylabel('Chl (m^{-1}??)');
+    ylabel('Chl (mg.m^{-1}??)');
     yyaxis('right'); hold on
     scatter(data.dt, data.CDOMRb, 6, 'filled');
     ylabel('CDOMRb (ppb??)');
@@ -226,7 +226,7 @@ switch instrument
     scatter(data.dt, data.R662Rb, 6, 'filled');
     scatter(data.dt, data.R642Rg, 6, 'filled');
     scatter(data.dt, data.R662Rg, 6, 'filled');
-    ylabel('R...Rb & R...Rg (m^{-1}??)');
+    ylabel('R...Rb & R...Rg (mg.m^{-1}??)');
     xlim([min(data.dt) max(data.dt)]);
     legend('R613Rb', 'R625Rb', 'R642Rb', 'R662Rb', 'R642Rg', 'R662Rg')
     subplot(4, 1, 3); hold on
@@ -238,10 +238,20 @@ switch instrument
     scatter(data.dt, data.PE3CFg, 6, 'filled');
     scatter(data.dt, data.PE12Rg, 6, 'filled');
     scatter(data.dt, data.PE12CFg, 6, 'filled');
-    ylabel('Phycoerythryn?? (m^{-1}??)');
+    ylabel('Phycoerythryn?? (mg.m^{-1}??)');
     xlim([min(data.dt) max(data.dt)]);
     legend('PE1Rg', 'PE2Rg', 'PE3Rg', 'PE1CFg', 'PE2CFg', 'PE3CFg', 'PE12Rg', 'PE12CFg')
-%   case 'LISST'
+  case 'LISST'
+    fig(100);
+    clf
+    scatter(data.dt, data.cp, 6, 'filled');
+    ylabel('cp m^{-1}');
+    xlim([min(data.dt) max(data.dt)]);
+    visProd3D(data.Properties.UserData.diameters, data.dt, data.PSD, false, 'Intensity', false, 101);
+    set(gca, 'ZScale', 'log', 'XScale', 'log');
+    zlabel(['PSD (' data.Properties.VariableUnits{strcmp(data.Properties.VariableNames, 'PSD')} ')']);
+    xlabel('Diameters \mum');
+    ylabel('time');
   otherwise
     warning('%s not supported for product visualisation', instrument)
 end

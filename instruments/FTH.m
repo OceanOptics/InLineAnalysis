@@ -53,19 +53,19 @@ classdef FTH < Instrument
         
         % delete data with duplicats timestamp
         if ~ isempty(obj.data.dt)
-          [~, I] = unique(obj.data.dt, 'first');
+          % round data time vector to the second
+          obj.data.dt = datenum(floor(datevec(obj.data.dt)));
+          % delete duplicates
+          [~, L, ~] = unique(obj.data.dt,'first');
+          indexToDump = not(ismember(1:numel(obj.data.dt),L));
+          obj.data(indexToDump, :) = [];
         else
           error('Raw data not loaded')
         end
-        x = 1:length(obj.data.dt);
-        x(I) = [];
-        obj.data(x,:) = [];
-        % round data time vector to the second
-        obj.data.dt = datenum(floor(datevec(obj.data.dt)));
         % interpolate flow rate data over continuous time vector   
-        interp_spd = interp1(obj.data.dt, obj.data.spd, dt, 'linear', 'extrap'); % extrap needed for first minute of data
+        interp_spd = interp1(obj.data.dt, obj.data.spd, dt, 'linear');
         % delete interpolated data to keep only 'true' data
-        ism = ~ismember(dt,obj.data.dt);
+        ism = ~ismember(dt, obj.data.dt);
         interp_spd (ism) = NaN;
 
         % Remove existing data from fth
@@ -80,7 +80,7 @@ classdef FTH < Instrument
             error('Unknown mode.');
         end
       end
-      obj.data = sortrows(obj.data);
+      obj.data = sortrows(obj.data, 'dt');
       fprintf('Done\n');
     end
   end

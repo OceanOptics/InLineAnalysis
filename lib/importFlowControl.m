@@ -45,11 +45,11 @@ end
 % Read data
 try
   t = textscan(fid, parser, 'delimiter','\t');
+  fclose(fid);
   spd_col = find(cell2mat(cellfun(@(x) any(x>0), t(end-1:end), 'un', 0)));
   if isempty(spd_col); spd_col = 1; end
-  data = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{spd_col+5},...
+  dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{spd_col+5},...
            'VariableNames', {'dt', 'swt', 'spd'}); % Build table
-  fclose(fid); % Close file
 catch
   parser = '%s%d%d%s%s%s%s'; % french format decimal number with comma ',''
   fid=fopen(filename);
@@ -57,15 +57,25 @@ catch
     error('Unable to open file: %s', filename);
   end
   t = textscan(fid, parser, 'delimiter','\t');
+  fclose(fid);
   t{1,4} = str2double(strrep(t{1,4}, ',', '.'));
   t{1,5} = str2double(strrep(t{1,5}, ',', '.'));
   t{1,6} = str2double(strrep(t{1,6}, ',', '.'));
   t{1,7} = str2double(strrep(t{1,7}, ',', '.'));
   spd_col = find(cell2mat(cellfun(@(x) any(x>0), t(end-1:end), 'un', 0)));
   if isempty(spd_col); spd_col = 1; end
-  data = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{spd_col+5},...
+  dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{spd_col+5},...
            'VariableNames', {'dt', 'swt', 'spd'}); % Build table
-  fclose(fid); % Close file
+end
+
+% average over duplicates (bug in FlowControl software)
+unidt = unique(dat.dt,'first');
+% [~, L, ~] = unique(dat.dt,'first');
+% indexToDump = not(ismember(1:numel(dat.dt),L));
+data = table(unidt, 'VariableNames', {'dt'});
+for i = 1:size(unidt)
+  data.swt(i) = mean(dat.swt(unidt(i) == dat.dt), 'omitnan');
+  data.spd(i) = mean(dat.spd(unidt(i) == dat.dt), 'omitnan');
 end
 
 

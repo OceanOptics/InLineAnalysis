@@ -200,8 +200,8 @@ cfg.process.sync.delay.FLOW = 0;
 cfg.process.sync.delay.ACS91 = 0;
 cfg.process.sync.delay.BB3 = 0;
 cfg.process.sync.delay.HBB = 0;
-cfg.process.sync.delay.LISST = 1;
-cfg.process.sync.delay.SPCD = 40;
+cfg.process.sync.delay.LISST = 0;
+cfg.process.sync.delay.SPCD = 0;
 cfg.process.sync.skip = {'TSG'};
 
 %%% QC Reference (Flow Control/FLOW) %%%
@@ -226,7 +226,7 @@ cfg.process.split.skip = {'FLOW', 'TSG'};
 %%% Binning %%%
 cfg.process.bin = struct('bin_size', struct());
 cfg.process.bin.prctile_detection = [2.5, 97.5];
-% if RawAutoQC with ACS: prctile_average = [2.5, 97.5]; otherwise prctile_average = [5, 75];
+% if RawAutoQC with ACS or BB: prctile_average = [2.5, 97.5]; otherwise prctile_average = [5, 75];
 cfg.process.bin.prctile_average = [2.5, 97.5];
 % Bin mode does not affect the outcome of the data but just the way the data is presented to the computer
 % cfg.process.bin.mode = 'OneShot'; % Faster for small dataset fiting in the memory of the computer
