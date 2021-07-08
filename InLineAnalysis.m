@@ -754,7 +754,7 @@ classdef InLineAnalysis < handle
                 fprintf(['Warning: ' filename ' not found\n'])
               end
               filename = [obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.mat'];
-              if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+              if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
                 file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
                 save(filename, 'file_selection')
               end
@@ -830,7 +830,7 @@ classdef InLineAnalysis < handle
             end
             % create folder for user input
             filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.mat'];
-            if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+            if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
               file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
               save(filename, 'file_selection')
             end
@@ -873,7 +873,7 @@ classdef InLineAnalysis < handle
             if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
             fprintf('QC DI LOAD: %s\n', i);
             filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.mat'];
-            if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+            if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
               file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
               save(filename, 'file_selection')
             end
@@ -910,7 +910,7 @@ classdef InLineAnalysis < handle
               fprintf(['Warning: ' filename ' not found\n'])
             end
             filename = [obj.instrument.(i).path.ui i '_QCDI_pickSpecific_UserSelection.mat'];
-            if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+            if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
               file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
               save(filename, 'file_selection')
             end

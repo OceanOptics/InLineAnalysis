@@ -40,6 +40,7 @@ if exist('fth', 'var')
   indexToDump = not(ismember(1:numel(fth_interp.dt),L));
   fth_interp(indexToDump, :) = [];
   % sort dates
+  [~,b] = sort(fth_interp.dt);
   fth_interp.dt = fth_interp.dt(b,:);
   fth_interp.swt = interp1(fth.dt, fth.swt, fth_interp.dt, 'previous');%, 'linear', 'extrap');
   fth_interp.swt = fth_interp.swt > 0;
@@ -166,7 +167,7 @@ fprintf('Done\n')
 % QC
 p(any(p.bbp < 0,2),:) = [];
 
-if nargout > 1 && nargin > 4
+if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering'))
   if isempty(tsg)
     error('T/S data required:, no TSG data loaded')
   end
