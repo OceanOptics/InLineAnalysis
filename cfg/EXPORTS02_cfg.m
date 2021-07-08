@@ -190,7 +190,7 @@ cfg.process.parallel = Inf; % 0: disable parallel or Inf: as many thread availab
 cfg.process.di = struct();
 cfg.process.di.skip = {'FLOW', 'TSG'};
 cfg.process.di.qc = struct('mode', 'ui');
-ila.process.di.qc.qc_once_for_AandC = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
+ila.process.di.qc.qc_once_for_all = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
 cfg.process.di.bin = struct('bin_size', 30);
 
 %%% Synchronization %%%
@@ -266,7 +266,7 @@ cfg.process.qc.RawAutoQCLim.dissolved.c = 3;
 cfg.process.qc.RawAutoQCLim.filtered.bb = 3;
 cfg.process.qc.RawAutoQCLim.total.bb = 3;
 cfg.process.qc.RawAutoQCLim.dissolved.bb = 3;
-cfg.process.qc.Saturation_Threshold_bb = 4100; % (counts)
+cfg.process.qc.Saturation_Threshold_bb = 4100; % (counts) max being 4130
   
 %%% Manually QC %%%
 cfg.process.qc.mode = 'ui';

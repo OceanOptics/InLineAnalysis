@@ -1,6 +1,6 @@
 % Main InLine Analysis Script
 % author: Guillaume Bourdin
-% created: Jan 05, 2021
+% created: May 05, 2021
 % clear
 % close all
 % if feature('IsDebugMode'); dbquit all; end
@@ -57,9 +57,7 @@ ila.cfg.qc.RawAutoQCLim.dissolved.c = 3;
 % fudge factor for auto QC BB.
 % 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
 ila.cfg.qc.RawAutoQCLim.dissolved.bb = 3;
-% remove saturated periods in BB
-ila.cfg.qc.Saturation_Threshold_bb = 4000; % saturate above 4000 counts
-ila.RawAutoQC(ila.cfg.qc.RawAutoQCLim, ila.cfg.qc.Saturation_Threshold_bb, 'raw');
+ila.RawAutoQC('raw');
 ila.CheckDataStatus();
 
 %% 2.1. Diagnostic Plot
@@ -91,7 +89,7 @@ ila.cfg.di.qc.qc_once_for_all = false;  % true = QC 'a' and 'c' together | false
 ila.QCDI();
 
 %% 4. Second auto QC DI
-ila.RawAutoQC(ila.cfg.qc.RawAutoQCLim, ila.cfg.qc.Saturation_Threshold_bb, 'qc');
+ila.RawAutoQC('qc');
 
 %% 4.1. Diagnostic Plot
 % check QCed spectrums AC or BB sensors
@@ -128,8 +126,6 @@ ila.Write('bin')
 ila.CheckDataStatus();
 
 %% 8. Calibrate
-ila.cfg.calibrate.BB3.filt_method = '25percentil'; % 25percentil exponential_fit
-ila.cfg.calibrate.HBB.filt_method = 'exponential_fit'; % 25percentil exponential_fit
 ila.cfg.calibrate.skip = {'FLOW', 'TSG'};
 ila.Calibrate();
 ila.CheckDataStatus();
@@ -158,7 +154,7 @@ ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'});
 
 %% 9.1. Load previous qc pick selection at prod level
 ila.cfg.qc.mode='load';  % load or ui
-ila.cfg.qc.specific.run = ila.cfg.instruments2run(~contains(ila.cfg.instruments2run, 'FLOW')); % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
+ila.cfg.qc.specific.run = {ila.cfg.qcref.view}; % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
 ila.QC();
 
 %% 10. Save products

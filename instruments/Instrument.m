@@ -267,20 +267,24 @@ classdef (Abstract) Instrument < handle
             end
           end
         elseif any(strcmp(chan{2}, 'all'))
-          if ~isempty(obj.(level).(chan{1}))
-            obj.(level).(chan{1})(ismember(round(obj.(level).(chan{1}).dt, 9), ...
-              round(user_selection, 9)), :) = [];
-%             for i=progress(1:size(user_selection, 1))
-%               obj.(level).(chan{1})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = [];
-%             end
+          if isfield(obj.(level), chan{1})
+            if ~isempty(obj.(level).(chan{1}))
+              obj.(level).(chan{1})(ismember(round(obj.(level).(chan{1}).dt, 9), ...
+                round(user_selection, 9)), :) = [];
+%               for i=progress(1:size(user_selection, 1))
+%                 obj.(level).(chan{1})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = [];
+%               end
+            end
           end
         else
-          if ~isempty(obj.(level).(chan{1}))
-            obj.(level).(chan{1}).(chan{2})(ismember(round(obj.(level).(chan{1}).dt, 9), ...
-              round(user_selection, 9)), :) = NaN;
-%             for i=progress(1:size(user_selection, 1))
-%               obj.(level).(chan{1}).(chan{2})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = NaN;
-%             end
+          if isfield(obj.(level), chan{1})
+            if ~isempty(obj.(level).(chan{1}))
+              obj.(level).(chan{1}).(chan{2})(ismember(round(obj.(level).(chan{1}).dt, 9), ...
+                round(user_selection, 9)), :) = NaN;
+%               for i=progress(1:size(user_selection, 1))
+%                 obj.(level).(chan{1}).(chan{2})(obj.(level).(chan{1}).dt == user_selection(i,1), :) = NaN;
+%               end
+            end
           end
         end
       end

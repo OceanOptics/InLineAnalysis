@@ -450,8 +450,11 @@ classdef InLineAnalysis < handle
           [user_selection.total, user_selection.filtered] = guiSelectOnTimeSeries(fh);
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection.total, 'total');
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection.filtered, 'filtered');
-          
           filename = [obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.mat'];
+          if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+            file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
+            save(filename, 'file_selection')
+          end
           if isfile(filename)
             % Load file
             load(filename, 'file_selection');
@@ -479,6 +482,10 @@ classdef InLineAnalysis < handle
           fprintf('QCRef LOAD: %s\n', obj.cfg.qcref.reference);
           % Load previous QC and apply it
           filename = [obj.instrument.(obj.cfg.qcref.reference).path.ui, 'QCRef_UserSelection.mat'];
+          if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+            file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
+            save(filename, 'file_selection')
+          end
           if isfile(filename)
             load(filename, 'file_selection');
             % Remove selection from days before & after days2run
@@ -694,6 +701,10 @@ classdef InLineAnalysis < handle
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               fprintf('QC LOAD Global: %s\n', i);
               filename = [fileparts(fileparts(obj.instrument.(i).path.ui)) filesep 'QCGlobal_UserSelection.mat'];
+              if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+                file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
+                save(filename, 'file_selection')
+              end
               if isfile(filename)
                 load(filename, 'file_selection');
                 obj.instrument.(i).DeleteUserSelection(file_selection.bad);
@@ -707,6 +718,10 @@ classdef InLineAnalysis < handle
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               fprintf('QC LOAD Specific: %s\n', i);
               filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
+              if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+                file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
+                save(filename, 'file_selection')
+              end
               if isfile(filename)
                 load(filename, 'file_selection');
                 sel_toload = fieldnames(file_selection);
@@ -739,6 +754,10 @@ classdef InLineAnalysis < handle
                 fprintf(['Warning: ' filename ' not found\n'])
               end
               filename = [obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.mat'];
+              if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+                file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
+                save(filename, 'file_selection')
+              end
               if isfile(filename)
                 % load hand picked bad values
                 load(filename, 'file_selection');
@@ -811,6 +830,10 @@ classdef InLineAnalysis < handle
             end
             % create folder for user input
             filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.mat'];
+            if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+              file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
+              save(filename, 'file_selection')
+            end
             if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
             ColorSet = lines(2);
             fh = fig(52); hold('on');
@@ -850,6 +873,10 @@ classdef InLineAnalysis < handle
             if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
             fprintf('QC DI LOAD: %s\n', i);
             filename = [obj.instrument.(i).path.ui i '_QCDI_UserSelection.mat'];
+            if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+              file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
+              save(filename, 'file_selection')
+            end
             if isfile(filename)
               % load bad DI values
               load(filename, 'file_selection');
@@ -883,6 +910,10 @@ classdef InLineAnalysis < handle
               fprintf(['Warning: ' filename ' not found\n'])
             end
             filename = [obj.instrument.(i).path.ui i '_QCDI_pickSpecific_UserSelection.mat'];
+            if all(strrep(filename, '.mat', '.json') & ~isfile(filename))
+              file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
+              save(filename, 'file_selection')
+            end
             if isfile(filename)
               % load hand picked bad DI values
               load(filename, 'file_selection');
