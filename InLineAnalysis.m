@@ -384,7 +384,7 @@ classdef InLineAnalysis < handle
       end
     end
     
-    function visProd_timeseries (obj)
+    function visProd_timeseries(obj)
       for i=obj.cfg.instruments2run; i = i{1};
         if  any(~contains(i, {'FLOW', 'FTH', 'Flow'}))
           fprintf('%s products time series plots\n', i);
@@ -629,8 +629,12 @@ classdef InLineAnalysis < handle
                 fooflow = obj.instrument.FLOW.qc.tsw;
               end
               if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
-              if contains(i, 'AC') && ~obj.cfg.qc.qc_once_for_all
+              if contains(i, 'AC')
                 channel = {'a', 'c'};
+              elseif contains(i, 'TSG')
+                channel = {'t', 's'};
+              end
+              if contains(i, {'AC', 'TSG'}) && ~obj.cfg.qc.qc_once_for_all
                 for j = channel
                   fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                              foo.qc.fsw, foo.suspect.fsw, j{:}, foo.view.varcol,...
@@ -840,7 +844,7 @@ classdef InLineAnalysis < handle
             if contains(i, 'AC') && ~obj.cfg.di.qc.qc_once_for_all  
               channel = {'a', 'c'};
               for j = 1:size(channel,2)
-                plot(foo.qc.diw.dt, foo.qc.diw.(channel{j})(:,foo.view.varcol), '.', 'Color', ColorSet(j,:));
+                plot(foo.qc.diw.dt, foo.qc.diw.(channel{j})(:,foo.view.varcol), 'o', 'Color', ColorSet(j,:));
                 title([i ' QC of "' channel{j} '" only' newline 'Trash section pressing t (q to save)']);
                 ylabel(channel{j});
                 datetick2_doy();
@@ -854,7 +858,7 @@ classdef InLineAnalysis < handle
                 clf(52)
               end
             else
-              plot(foo.qc.diw.dt, foo.qc.diw.(foo.view.varname)(:,foo.view.varcol), '.', 'Color', ColorSet(1,:));
+              plot(foo.qc.diw.dt, foo.qc.diw.(foo.view.varname)(:,foo.view.varcol), 'o', 'Color', ColorSet(1,:));
               ylabel(foo.view.varname);
               title([i ' QC all' newline 'Trash full section pressing t (q to save)']);
               datetick2_doy();
@@ -958,205 +962,16 @@ classdef InLineAnalysis < handle
       end
     end
     
-    function QCSwitchPosition(obj, shift_flow)
-      if isempty(obj.instrument.(obj.cfg.qcref.view).qc.tsw)
-        error('No %s qc tsw data loaded', obj.cfg.qcref.view)
-      end
-      if isempty(obj.instrument.(obj.cfg.qcref.view).qc.fsw)
-        error('No %s qc fsw data loaded', obj.cfg.qcref.view)
-      end
-      if isempty(obj.instrument.FLOW.qc.tsw)
-        error('No FLOW qc data loaded')
-      end
-      filtdt = datetime(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt, 'ConvertFrom', 'datenum');
-      filtdt = dateshift(filtdt, 'start', 'minute');
-      flowdt = datetime(obj.instrument.FLOW.qc.tsw.dt, 'ConvertFrom', 'datenum');
-      flowdt = dateshift(flowdt, 'start', 'minute');
-      fprintf('%.2f%% of filtered data is included into filtered switch position before QC\n', ...
-        sum(ismember(filtdt, flowdt)) / size(filtdt,1) * 100)
-      if nargin == 1
-        % Automatically detect how much to shift flow data time so that switch filtered
-        % position include the most filtered data in number of minutes
-        shift_flow_list = (-20:20)';
-        matchs = NaN(size(shift_flow_list));
-        for sh = 1:size(shift_flow_list, 1)
-          popoflow = obj.instrument.FLOW.qc.tsw(obj.instrument.FLOW.qc.tsw.swt == 1, :);
-          if shift_flow_list(sh) > 0
-            linetoadd_dt = (datetime(min(popoflow.dt), 'ConvertFrom', 'datenum') - ...
-              minutes(shift_flow_list(sh)):minutes(1):datetime(min(popoflow.dt), 'ConvertFrom', 'datenum') - ...
-              minutes(1))';
-            linetoadd = table(datenum(linetoadd_dt), zeros(size(linetoadd_dt)), zeros(size(linetoadd_dt)), ...
-              NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), ...
-              'VariableNames', popoflow.Properties.VariableNames);
-            popoflow = [repmat(linetoadd, shift_flow_list(sh), 1); popoflow(1:end-shift_flow_list(sh),:)];
-          elseif shift_flow_list(sh) < 0
-            linetoadd_dt = (datetime(max(popoflow.dt), 'ConvertFrom', 'datenum') + ...
-              minutes(shift_flow_list(sh)):minutes(1):datetime(min(popoflow.dt), 'ConvertFrom', 'datenum') + ...
-              minutes(1))';
-            linetoadd = table(datenum(linetoadd_dt), zeros(size(linetoadd_dt)), zeros(size(linetoadd_dt)), ...
-              NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), ...
-              'VariableNames', popoflow.Properties.VariableNames);
-            popoflow = [popoflow(abs(shift_flow_list(sh))+1:end, :); repmat(linetoadd, abs(shift_flow_list(sh)), 1)];
-          end
-          popoflow.dt = datenum(datetime(popoflow.dt, 'ConvertFrom', 'datenum') + minutes(shift_flow_list(sh)));
-          filtdt = datetime(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt, 'ConvertFrom', 'datenum');
-          filtdt = dateshift(filtdt, 'start', 'minute');
-          flowdt = datetime(popoflow.dt, 'ConvertFrom', 'datenum');
-          flowdt = dateshift(flowdt, 'start', 'minute');
-          matchs(sh) = sum(ismember(filtdt, flowdt));
-        end
-        shift_flow = shift_flow_list(matchs == max(matchs));
-        shift_flow = min(shift_flow);
-        if shift_flow ~= 0
-          fprintf('Switch position shifted automatically to best match filtered data: %i minute(s)\n', shift_flow)
-        end
-      elseif nargin > 2
-        error('Too many input arguments')
-      end
-      % Apply shift to flow data
-      shift_flow = round(shift_flow);
-      if shift_flow > 0
-        linetoadd_dt = (datetime(min(obj.instrument.FLOW.qc.tsw.dt), 'ConvertFrom', 'datenum') - ...
-          minutes(shift_flow):minutes(1):datetime(min(obj.instrument.FLOW.qc.tsw.dt), 'ConvertFrom', 'datenum') - ...
-          minutes(1))';
-        linetoadd = table(datenum(linetoadd_dt), zeros(size(linetoadd_dt)), zeros(size(linetoadd_dt)), ...
-          NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), ...
-          'VariableNames', obj.instrument.FLOW.qc.tsw.Properties.VariableNames);
-        obj.instrument.FLOW.qc.tsw = [repmat(linetoadd, shift_flow, 1); obj.instrument.FLOW.qc.tsw(1:end-shift_flow,:)];
-      elseif shift_flow < 0
-        linetoadd_dt = (datetime(max(obj.instrument.FLOW.qc.tsw.dt), 'ConvertFrom', 'datenum') + ...
-          minutes(shift_flow):minutes(1):datetime(min(obj.instrument.FLOW.qc.tsw.dt), 'ConvertFrom', 'datenum') + ...
-          minutes(1))';
-        linetoadd = table(datenum(linetoadd_dt), zeros(size(linetoadd_dt)), zeros(size(linetoadd_dt)), ...
-          NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), NaN(size(linetoadd_dt)), ...
-          'VariableNames', obj.instrument.FLOW.qc.tsw.Properties.VariableNames);
-        obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw(abs(shift_flow)+1:end, :); repmat(linetoadd, abs(shift_flow), 1)];
-      end
-      obj.instrument.FLOW.qc.tsw.dt = datenum(datetime(obj.instrument.FLOW.qc.tsw.dt, 'ConvertFrom', 'datenum') + minutes(shift_flow));
-      % create filter event duplicate when long period without filter event
-      fh = visFlag(obj.instrument.(obj.cfg.qcref.view).raw.tsw, obj.instrument.(obj.cfg.qcref.view).raw.fsw, ...
-        obj.instrument.(obj.cfg.qcref.view).qc.tsw, [], obj.instrument.(obj.cfg.qcref.view).qc.fsw, [], ...
-        obj.instrument.(obj.cfg.qcref.view).view.varname, obj.instrument.(obj.cfg.qcref.view).view.varcol, ...
-        obj.instrument.(obj.cfg.qcref.view).raw.bad, obj.instrument.FLOW.qc.tsw);
-      leg = plot(obj.instrument.FLOW.qc.tsw.dt, obj.instrument.FLOW.qc.tsw.swt, '-k');
-      title(['Select filter event to duplicate (press f)' newline 'Select new time slot for filter event duplicated (press s)' newline 'Change switch position (press t)'], ...
-        'FontSize', 14)
-      legend(leg, 'switch position (1=filtered | 0=total)','AutoUpdate','off', 'FontSize', 12)
-      [toswitch_t, toduplicate_f, newtime_s] = guiSelectOnTimeSeries(fh);
-      % check number of entries
-      if size(toduplicate_f,1) ~= size(newtime_s,1)
-        fprintf('Warning: Inconsistent number of entries (f and t), new filter event ignored\n')
-        toduplicate_f = [];
-        newtime_s = [];
-      end
-      % duplicate filter events f and s commands
-      for j = 1:size(toduplicate_f, 1)
-        idx_acs = obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt >= toduplicate_f(j, 1) & ...
-          obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt <= toduplicate_f(j, 2);
-        if sum(idx_acs) > 0
-          % copy closest filter event to specific new time slot
-          new_filt = obj.instrument.(obj.cfg.qcref.view).qc.fsw(idx_acs, :);
-          nts = dateshift(datetime(newtime_s(j), 'ConvertFrom', 'datenum'), 'start', 'minute');
-          new_filt.dt = new_filt.dt - (new_filt.dt(1) - datenum(nts));
-          obj.instrument.(obj.cfg.qcref.view).qc.fsw = [obj.instrument.(obj.cfg.qcref.view).qc.fsw; new_filt];
-          % sort by date
-          [~,b] = sort(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt);
-          obj.instrument.(obj.cfg.qcref.view).qc.fsw = obj.instrument.(obj.cfg.qcref.view).qc.fsw(b,:);
-          idx_flow_newfilt = obj.instrument.FLOW.qc.tsw.dt >= new_filt.dt(1) & obj.instrument.FLOW.qc.tsw.dt <= new_filt.dt(end);
-          obj.instrument.FLOW.qc.tsw(idx_flow_newfilt,:) = [];
-%           if any(idx_flow_newfilt)
-%             obj.instrument.FLOW.qc.tsw.swt(idx_flow_newfilt) = 1;
-%             obj.instrument.FLOW.qc.tsw.swt_avg_sd(idx_flow_newfilt) = 1;
-%           end
-%           remaining_idx = size(new_filt,1) - sum(idx_flow_newfilt);
-%           if remaining_idx > 0
-%             % create flow table
-%             new_flow = table();
-%             new_flow.dt = new_filt.dt(end-remaining_idx+1:end);
-%             new_flow.swt = ones(remaining_idx,1);
-%             new_flow.swt_avg_sd = zeros(remaining_idx,1);
-%             new_flow.swt_avg_n = NaN(remaining_idx,1);
-%             new_flow.spd = NaN(remaining_idx,1);
-%             new_flow.spd_avg_sd = NaN(remaining_idx,1);
-%             new_flow.spd_avg_n = NaN(remaining_idx,1);
-%             obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw; new_flow];
-%           end
-          % create flow table
-          new_flow = table();
-          new_flow.dt = new_filt.dt;
-          new_flow.swt = ones(size(new_filt,1),1);
-          new_flow.swt_avg_sd = zeros(size(new_filt,1),1);
-          new_flow.swt_avg_n = NaN(size(new_filt,1),1);
-          new_flow.spd = NaN(size(new_filt,1),1);
-          new_flow.spd_avg_sd = NaN(size(new_filt,1),1);
-          new_flow.spd_avg_n = NaN(size(new_filt,1),1);
-          flow_swt_offst = table(datenum(datetime(new_filt.dt(1), 'ConvertFrom', 'datenum') - ...
-            minutes(1)'), 0, 0, NaN, NaN, NaN, NaN, 'VariableNames', ...
-            obj.instrument.FLOW.qc.tsw.Properties.VariableNames);
-          flow_swt_offend = table(datenum(datetime(new_filt.dt(end), 'ConvertFrom', 'datenum') + ...
-            minutes(1)'), 0, 0, NaN, NaN, NaN, NaN, 'VariableNames', ...
-            obj.instrument.FLOW.qc.tsw.Properties.VariableNames);
-          obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw; flow_swt_offst; new_flow; flow_swt_offend];
-           % sort by date
-          [~,b] = sort(obj.instrument.FLOW.qc.tsw.dt);
-          obj.instrument.FLOW.qc.tsw = obj.instrument.FLOW.qc.tsw(b,:);
-        end
-      end
-      % change switch position t command
-      for j = 1:size(toswitch_t, 1)
-        idx_flow = obj.instrument.FLOW.qc.tsw.dt > toswitch_t(j, 1) & ...
-          obj.instrument.FLOW.qc.tsw.dt < toswitch_t(j, 2);
-        nbtoswitch = floor(minutes(abs(datetime(toswitch_t(j, 2), 'ConvertFrom', 'datenum') - ...
-          datetime(toswitch_t(j, 1), 'ConvertFrom', 'datenum'))));
-        if sum(idx_flow) < nbtoswitch % replace all FLOW data with new table
-            obj.instrument.FLOW.qc.tsw(idx_flow, :) = [];
-            closest_position = obj.instrument.FLOW.qc.tsw.swt(abs(obj.instrument.FLOW.qc.tsw.dt - mean(toswitch_t(j, :))) == ...
-              min(abs(obj.instrument.FLOW.qc.tsw.dt - mean(toswitch_t(j, :))))); % get the closest switch position in time
-            new_flow = table();
-            new_flow.dt = datenum(datetime(toswitch_t(j, 1), 'ConvertFrom', 'datenum'):...
-              minutes(1):datetime(toswitch_t(j, 2), 'ConvertFrom', 'datenum'))';
-            if closest_position > 0 % set the switch position to the opposite to the closest switch position
-              new_flow.swt = zeros(size(new_flow,1),1);
-            else
-              new_flow.swt = ones(size(new_flow,1),1);
-            end
-            new_flow.swt_avg_sd = zeros(size(new_flow,1),1);
-            new_flow.swt_avg_n = NaN(size(new_flow,1),1);
-            new_flow.spd = NaN(size(new_flow,1),1);
-            new_flow.spd_avg_sd = NaN(size(new_flow,1),1);
-            new_flow.spd_avg_n = NaN(size(new_flow,1),1);
-            obj.instrument.FLOW.qc.tsw = [obj.instrument.FLOW.qc.tsw; new_flow];
-             % sort by date
-            [~,b] = sort(obj.instrument.FLOW.qc.tsw.dt);
-            obj.instrument.FLOW.qc.tsw = obj.instrument.FLOW.qc.tsw(b,:);
+    function QCSwitchPosition(obj)
+      if isfield(obj.cfg.calibrate.(obj.cfg.qcref.view), 'filt_method')
+        if strcmp(obj.cfg.calibrate.(obj.cfg.qcref.view).filt_method, 'exponential_fit')
+          QCSwitchPosition(obj.instrument.(obj.cfg.qcref.view), obj.instrument.FLOW, 'raw')
         else
-    %       obj.instrument.FLOW.qc.tsw.swt(idx_flow) = 1;
-          if sum(obj.instrument.FLOW.qc.tsw.swt(idx_flow) == 0) > sum(obj.instrument.FLOW.qc.tsw.swt(idx_flow) > 0)
-            obj.instrument.FLOW.qc.tsw.swt(idx_flow) = 1;
-          else
-            obj.instrument.FLOW.qc.tsw.swt(idx_flow) = 0;
-          end
+          QCSwitchPosition(obj.instrument.(obj.cfg.qcref.view), obj.instrument.FLOW, 'qc')
         end
+      else
+        QCSwitchPosition(obj.instrument.(obj.cfg.qcref.view), obj.instrument.FLOW, 'qc')
       end
-      % check for duplicats in flow data and delete
-      [~, L, ~] = unique(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt,'first');
-      indexToDump = not(ismember(1:numel(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt),L));
-      if sum(indexToDump) > 0
-        fprintf('Warning: %i identical dates in AC data => deleted\n', sum(indexToDump))
-        obj.instrument.(obj.cfg.qcref.view).qc.fsw(indexToDump, :) = [];
-      end
-      [~, L, ~] = unique(obj.instrument.FLOW.qc.tsw.dt,'first');
-      indexToDump = not(ismember(1:numel(obj.instrument.FLOW.qc.tsw.dt),L));
-      if sum(indexToDump) > 0
-        fprintf('Warning: %i identical dates in FLOW data => deleted\n', sum(indexToDump))
-        obj.instrument.FLOW.qc.tsw(indexToDump, :) = [];
-      end
-      filtdt = datetime(obj.instrument.(obj.cfg.qcref.view).qc.fsw.dt, 'ConvertFrom', 'datenum');
-      filtdt = dateshift(filtdt, 'start', 'minute');
-      flowdt = datetime(obj.instrument.FLOW.qc.tsw.dt, 'ConvertFrom', 'datenum');
-      flowdt = dateshift(flowdt, 'start', 'minute');
-      fprintf('%.2f%% of filtered data is included into filtered switch position after QC\n', ...
-        sum(ismember(filtdt, flowdt)) / size(filtdt,1) * 100)
     end
     
     % Process

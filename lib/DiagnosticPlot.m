@@ -164,13 +164,15 @@ for j = 1:length(level)
           zlabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
           xlabel('lambda (nm)');
           ylabel('time');
+          title([level{j} ' ' tabletoplot{i}], 'FontSize', 16);
         elseif ~isempty(data.(level{j}).(tabletoplot{i}).dt(sel))
           fh = visProd2D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, j*i+k*10);
           ylabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
           xlabel('lambda (nm)');
-          title(datestr(data.(level{j}).(tabletoplot{i}).dt(sel)));
+          title([level{j} ' ' tabletoplot{i} ' ' datestr(data.(level{j}).(tabletoplot{i}).dt(sel))], ...
+            'FontSize', 16);
         end
         % plot plan at 676 nm to check shift in chl a peak wavelength
         if contains(instrument,'AC') && contains(toplot{i, k}, 'a') && ...

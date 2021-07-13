@@ -11,7 +11,7 @@ fiterr = NaN(nspect,1);
 
 %setting options for fmisearch
 opts = optimset('fminsearch');
-opts = optimset(opts,'MaxIter',4000);
+opts = optimset(opts,'MaxIter',4000, 'Display', 'none');
 opts = optimset(opts,'MaxFunEvals',2000);   % usually 100*number of params
 opts = optimset(opts,'TolFun',1e-9);
 %opts = optimset('LevenbergMarquardt','on');
