@@ -165,7 +165,7 @@ for j = 1:size(totalswitch, 1)
   new_flow = array2table([linetoadd_dt zeros(size(linetoadd_dt, 1), 1) ...
       NaN(size(linetoadd_dt, 1), size(popoflow, 2) - 2)], ...
       'VariableNames', flow.(level).tsw.Properties.VariableNames);
-  if any(idx_flow)
+  if sum(idx_flow) > 3
     new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
   end
   flow.(level).tsw(idx_flow, :) = [];
@@ -180,7 +180,7 @@ for j = 1:size(filterswitch, 1)
   new_flow = array2table([linetoadd_dt ones(size(linetoadd_dt, 1), 1) ...
       NaN(size(linetoadd_dt, 1), size(popoflow, 2) - 2)], ...
       'VariableNames', flow.(level).tsw.Properties.VariableNames);
-  if any(idx_flow)
+  if sum(idx_flow) > 3
     new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
   end
   new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
