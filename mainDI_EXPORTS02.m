@@ -32,15 +32,14 @@ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','SPCD'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
-ila.cfg.qcref.view = 'SPCD';
+ila.cfg.instruments2run = {'FLOW','HBB'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
+ila.cfg.qcref.view = 'HBB';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = true;
 
 %% 1. Read DI 
 % To get ag and cg from ACS can run DI day by day
 % To get betag from BB3 need to run the entire dataset if select di method constant
-% ila.cfg.days2run = ila.cfg.days2run(1)-1:ila.cfg.days2run(end)+1;
 ila.cfg.force_import = false;
 ila.ReadRawDI();
 ila.CheckDataStatus();
@@ -85,7 +84,8 @@ ila.Read('qc');
 
 %% 3. QC DI
 ila.cfg.di.qc.mode = 'ui';
-ila.cfg.di.qc.qc_once_for_all = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
+ila.cfg.di.qc.remove_old = false;  % remove old selection of this period
+ila.cfg.di.qc.qc_once_for_all = false;  % true = QC all variables | false = QC variables separately)
 ila.QCDI();
 
 %% 4. Second auto QC DI
@@ -109,20 +109,19 @@ ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
 ila.DiagnosticPlot('BB',{'qc'}, false, {'diw','beta'});
 
-%% 5. Write QC
-ila.Write('qc')
+%% 5. Write QC | write only 'part' or 'diw' or 'all'
+ila.Write('qc', 'diw')
 ila.CheckDataStatus();
 
 %% 6. BIN DI
-% ila.cfg.days2run = ila.cfg.days2run(1)+1:ila.cfg.days2run(end)-1;
 ila.BinDI();
 
 %% 6.1. Diagnostic Plot
 % check binned spectrums AC or BB sensors
 ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
 
-%% 7. Write bin DI
-ila.Write('bin')
+%% 7. Write bin DI | write only 'part' or 'diw' or 'all'
+ila.Write('bin', 'diw')
 ila.CheckDataStatus();
 
 %% 8. Calibrate
@@ -157,16 +156,16 @@ ila.cfg.qc.mode='load';  % load or ui
 ila.cfg.qc.specific.run = {ila.cfg.qcref.view}; % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
 ila.QC();
 
-%% 10. Save products
-ila.Write('prod')
+%% 10. Save products | write only 'part' or 'diw' or 'all'
+ila.Write('prod', 'diw')
 
 % % Notify with a song that the job is done
 % notif_sound = load('gong'); sound(notif_sound.y, notif_sound.Fs); % handel
 % return
 
-%% re-write last version of 'qc' and 'bin'
-ila.Write('bin')
-ila.Write('qc')
+%% re-write last version of 'qc' and 'bin' | write only 'part' or 'diw' or 'all'
+ila.Write('bin', 'diw')
+ila.Write('qc', 'diw')
 
 
 

@@ -34,13 +34,13 @@ ila = InLineAnalysis('cfg/EXPORTS02_cfg.m');
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,6,1,0,0,0);
  
 %% HBB
- ila.cfg.days2run =datenum(2021,5,1,0,0,0):datenum(2021,5,10,0,0,0);
-% ila.cfg.days2run = datenum(2021,5,11,0,0,0):datenum(2021,5,20,0,0,0);
+%  ila.cfg.days2run =datenum(2021,5,1,0,0,0):datenum(2021,5,10,0,0,0);
+ila.cfg.days2run = datenum(2021,5,11,0,0,0):datenum(2021,5,20,0,0,0);
 % ila.cfg.days2run = datenum(2021,5,21,0,0,0):datenum(2021,6,1,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','LISST'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
-ila.cfg.qcref.view = 'LISST';
+ila.cfg.instruments2run = {'FLOW','HBB'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
+ila.cfg.qcref.view = 'HBB';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 
@@ -102,6 +102,7 @@ visSync(ila.instrument.FLOW.data, ila.instrument.LISST.data.dt, ila.instrument.L
 % QC during the same period of time is erased, QC done on other periods of
 % time is kept in the json file
 ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
+ila.cfg.qcref.remove_old = true; % remove old selection of the same period
 ila.QCRef
 
 %% 4. Split fsw and tsw
@@ -152,7 +153,7 @@ ila.cfg.qc.specific.run = {ila.cfg.qcref.view}; % 'FLOW','ACS57','TSG', 'BB31502
 ila.QC();
 
 %% 5.4. Write raw for BB3 and HBB
-ila.Write('raw')
+ila.Write('raw', 'part')
 ila.CheckDataStatus();
 
 %% 6. Bin
@@ -169,14 +170,14 @@ ila.CheckDataStatus();
 ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
 
 %% 6.2. Write bin
-ila.Write('bin')
+ila.Write('bin', 'part')
 ila.CheckDataStatus();
 
 %% Load processed data from mat files
-% ila.Read('raw');
-% ila.Read('bin');
-% ila.Read('qc');
-% ila.Read('prod');
+ila.Read('raw');
+ila.Read('bin');
+ila.Read('qc');
+ila.Read('prod');
 
 %% 7. Flag
 ila.Flag() % Now deprecated will juqst copy data to next level
@@ -184,8 +185,9 @@ ila.CheckDataStatus();
 
 %% 8. QC Interactive or Loading previous qc selection
 %%%%% Settings %%%%%
-ila.cfg.qc.mode='ui';  % load or ui
-ila.cfg.qc.qc_once_for_all = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
+ila.cfg.qc.mode='load';  % load or ui
+ila.cfg.qc.remove_old = false;  % remove old selection of this period
+ila.cfg.qc.qc_once_for_all = false;  % true = QC all variables | false = QC variables separately)
 % Global
 ila.cfg.qc.global.view = {ila.cfg.qcref.view};
 ila.cfg.qc.global.active = false;
@@ -219,14 +221,13 @@ ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
 ila.DiagnosticPlot('AC',{'qc'}, false, {'fsw','a'});
 ila.DiagnosticPlot('BB',{'qc'}, false, {'fsw','all'});
 
-
 %% 9. QC Switch position
 % QC switch position to make sure each filter event is separated by a
 % period of total water and eventually move filter events
 ila.QCSwitchPosition()
 
 %% 9.1. Write qc
-ila.Write('qc')
+ila.Write('qc', 'part')
 ila.CheckDataStatus();
 
 %% 10. Calibrate and compute products
@@ -281,15 +282,16 @@ ila.cfg.qc.specific.run = {ila.cfg.qcref.view}; % 'FLOW','ACS57','TSG', 'BB31502
 ila.QC();
 
 %% 12. Save products
-ila.Write('prod')
+ila.Write('prod', 'part')
 
 % % Notify with a song that the job is done
 % notif_sound = load('gong'); sound(notif_sound.y, notif_sound.Fs); % handel
 % return
 
 %% re-write final version of 'qc' and 'bin'
-ila.Write('bin')
-ila.Write('qc')
+ila.Write('raw', 'part')
+ila.Write('bin', 'part')
+ila.Write('qc', 'part')
 
 
 

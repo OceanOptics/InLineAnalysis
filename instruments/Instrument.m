@@ -290,11 +290,26 @@ classdef (Abstract) Instrument < handle
       end
     end
     
-    function Write(obj, filename_prefix, days2write, level)
-      if nargin < 4; level = 'prod'; end
-      if isstruct(obj.(level))
+    function Write(obj, filename_prefix, days2write, level, part_or_diw)
+      if nargin < 4
+        level = 'prod';
+        part_or_diw = 'all';
+      elseif nargin < 5
+        part_or_diw = 'all';
+      end
+      part_or_diw = lower(part_or_diw);
+      fieldna = fieldnames(obj.(level))';
+      switch part_or_diw
+        case {'part', 'particulate'}
+          fieldna(contains(fieldna, {'diw','g'})) = [];
+        case {'diw', 'dissolved'}
+          fieldna(contains(fieldna, {'tsw','fsw','p','FiltStat','QCfailed'})) = [];
+        otherwise
+          error("Type of data to write not recognized: 'part' or 'diw' or 'all'")
+      end
+%       if isstruct(obj.(level))
         % For each product type (particulate, dissoved...)
-        for f = fieldnames(obj.(level))'; f = f{1};
+        for f = fieldna; f = f{1};
           filename = [filename_prefix '_' level '_' f '.mat'];
           if isempty(obj.(level).(f)); continue; end
           days2write = floor(days2write); % force days2write to entire day
@@ -304,17 +319,17 @@ classdef (Abstract) Instrument < handle
           if ~isfolder(obj.path.wk); mkdir(obj.path.(level)); end
           save([obj.path.wk filename], 'data');
         end
-      else
-        % One Table at the level
-        filename = [filename_prefix '_' level '.mat'];
-        if isempty(obj.(level)); fprintf('WRITE: %s_%s No data.\n', filename_prefix, level); return; end
-        days2write = floor(days2write); % force days2write to entire day
-        sel = min(days2write) <= obj.(level).dt & obj.(level).dt < max(days2write) + 1;
-        if ~any(sel); fprintf('WRITE: %s_%s No data.\n', filename_prefix, level); return; end
-        data = obj.(level)(sel,:);
-        if ~isfolder(obj.path.wk); mkdir(obj.path.(level)); end
-        save([obj.path.wk filename], 'data');
-      end
+%       else
+%         % One Table at the level
+%         filename = [filename_prefix '_' level '.mat'];
+%         if isempty(obj.(level)); fprintf('WRITE: %s_%s No data.\n', filename_prefix, level); return; end
+%         days2write = floor(days2write); % force days2write to entire day
+%         sel = min(days2write) <= obj.(level).dt & obj.(level).dt < max(days2write) + 1;
+%         if ~any(sel); fprintf('WRITE: %s_%s No data.\n', filename_prefix, level); return; end
+%         data = obj.(level)(sel,:);
+%         if ~isfolder(obj.path.wk); mkdir(obj.path.(level)); end
+%         save([obj.path.wk filename], 'data');
+%       end
     end
     
     function Read(obj, filename_prefix, days2read, level)

@@ -44,6 +44,10 @@ for i = progress(1:nspect)
         lim_neg = median(deriv_neg, 'omitnan') * 3;
         foo.beta([deriv; zeros(1, size(foo.beta, 2))] < lim_neg & ...
           [zeros(1, size(foo.beta, 2)); deriv] > 0) = NaN;
+        % remove duplicates
+        [~, L, ~] = unique(foo.dt,'first');
+        indexToDump = not(ismember(1:numel(foo.dt), L));
+        foo(indexToDump, :) = [];
         while j < 5 && any(isnan(foo.beta(:)))
           foo.beta = fillmissing(foo.beta,'linear','SamplePoints', foo.dt);
 %           figure();

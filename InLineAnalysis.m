@@ -374,11 +374,11 @@ classdef InLineAnalysis < handle
             end
             % Save user selection
             if strcmp(toClean{1}, 'diw')
-              filename = [obj.instrument.(i).path.ui i '_QCDIpickSpecific_UserSelection.mat'];
+              filename = [obj.instrument.(i).path.ui i '_QCDI_pickSpecific_UserSelection.mat'];
             else
               filename = [obj.instrument.(i).path.ui i '_QCpickSpecific_UserSelection.mat'];
             end
-            obj.update_userselection_bad(filename, user_selection, level{:}, toClean);
+            obj.update_userselection_bad(filename, user_selection, false, level{:}, toClean);
           end
         end
       end
@@ -458,15 +458,17 @@ classdef InLineAnalysis < handle
           if isfile(filename)
             % Load file
             load(filename, 'file_selection');
-%             % Remove old (days2run) selections REMOVED TO KEEP ALL HISTORY OF USER SELECTION
-%             if ~isempty(file_selection.total)
-%               sel = min(obj.cfg.days2run) <= file_selection.total(:,1) & file_selection.total(:,1) < max(obj.cfg.days2run) + 1;
-%               file_selection.total(sel,:) = [];
-%             end
-%             if ~isempty(file_selection.filtered)
-%               sel = min(obj.cfg.days2run) <= file_selection.filtered(:,1) & file_selection.filtered(:,1) < max(obj.cfg.days2run) + 1;
-%               file_selection.filtered(sel,:) = [];
-%             end
+            if obj.cfg.qcref.remove_old
+              % Remove old (days2run) selections
+              if ~isempty(file_selection.total)
+                sel = min(obj.cfg.days2run) <= file_selection.total(:,1) & file_selection.total(:,1) < max(obj.cfg.days2run) + 1;
+                file_selection.total(sel,:) = [];
+              end
+              if ~isempty(file_selection.filtered)
+                sel = min(obj.cfg.days2run) <= file_selection.filtered(:,1) & file_selection.filtered(:,1) < max(obj.cfg.days2run) + 1;
+                file_selection.filtered(sel,:) = [];
+              end
+            end
             % Add new user selection
             file_selection.total = [file_selection.total; user_selection.total];
             file_selection.filtered = [file_selection.filtered; user_selection.filtered];
@@ -609,7 +611,7 @@ classdef InLineAnalysis < handle
               if ~isfolder(fileparts(fileparts(obj.instrument.(i).path.ui)))
                 mkdir(fileparts(fileparts(obj.instrument.(i).path.ui)));
               end
-              obj.update_userselection_bad(filename, user_selection);
+              obj.update_userselection_bad(filename, user_selection, obj.cfg.qc.remove_old);
             end
           end
           if obj.cfg.qc.specific.active
@@ -647,8 +649,10 @@ classdef InLineAnalysis < handle
                   obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', ['fsw' j]);
                   % Save user selection
                   filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
-                  obj.update_userselection_bad(filename, user_selection, 'qc', ['tsw' j]);
-                  obj.update_userselection_bad(filename, user_selection, 'qc', ['fsw' j]);
+                  obj.update_userselection_bad(filename, user_selection, obj.cfg.qc.remove_old, ...
+                          'qc', ['tsw' j]);
+                  obj.update_userselection_bad(filename, user_selection, obj.cfg.qc.remove_old, ...
+                          'qc', ['fsw' j]);
                   clf(52)
                 end
               elseif contains(i, 'ALFA') && ~obj.cfg.qc.qc_once_for_all
@@ -671,7 +675,8 @@ classdef InLineAnalysis < handle
                   obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', ['tsw' j]);
                   % Save user selection
                   filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
-                  obj.update_userselection_bad(filename, user_selection, 'qc', ['tsw' j]);
+                  obj.update_userselection_bad(filename, user_selection, obj.cfg.qc.remove_old, ...
+                          'qc', ['tsw' j]);
                   clf(52)
                 end
               else
@@ -691,7 +696,7 @@ classdef InLineAnalysis < handle
                 obj.instrument.(i).DeleteUserSelection(user_selection);
                 % Save user selection
                 filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
-                obj.update_userselection_bad(filename, user_selection);
+                obj.update_userselection_bad(filename, user_selection, obj.cfg.qc.remove_old);
               end
             end
           end
@@ -828,7 +833,7 @@ classdef InLineAnalysis < handle
           for i=obj.cfg.instruments2run; i = i{1};
             if ~any(strcmp(obj.cfg.instruments2run, i)) || any(strcmp(obj.cfg.di.skip, i)); continue; end
             % Display interactive figure
-            foo = obj.instrument.(i);
+            foo = obj.instrument.(i); %(obj.instrument.(i).dt, ;
             if isempty(foo.qc.diw)
               error('Empty qc diw \n');
             end
@@ -854,7 +859,8 @@ classdef InLineAnalysis < handle
                 % Apply user selection
                 obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', ['diw' channel(j)]);
                 % Save user selection
-                obj.update_userselection_bad(filename, user_selection, 'qc', ['diw' channel(j)]);
+                obj.update_userselection_bad(filename, user_selection, obj.cfg.di.qc.remove_old, ...
+                        'qc', ['diw' channel(j)]);
                 clf(52)
               end
             else
@@ -868,7 +874,7 @@ classdef InLineAnalysis < handle
               % Apply user selection
               obj.instrument.(i).DeleteUserSelection(user_selection);
               % Save user selection
-              obj.update_userselection_bad(filename, user_selection);
+              obj.update_userselection_bad(filename, user_selection, obj.cfg.di.qc.remove_old);
             end
           end
         case 'load'
@@ -927,7 +933,7 @@ classdef InLineAnalysis < handle
                 file_selection.(sel_picktoload{j})(~any(min(obj.cfg.days2run) < file_selection.(sel_picktoload{j}) & ...
                   file_selection.(sel_picktoload{j}) < max(obj.cfg.days2run), 2)) = [];
                 if ~isempty(file_selection.(sel_picktoload{j}))
-                  channel = strsplit(file_selection{j}, 'bad_');
+                  channel = strsplit(sel_picktoload{j}, 'bad_');
                   foo = strsplit(channel{end}, '_');
                   if size(foo, 2) == 1
                     level = 'qc';
@@ -1018,7 +1024,7 @@ classdef InLineAnalysis < handle
     end
     
     % Write
-    function Write(obj, level)
+    function Write(obj, level, part_or_diw)
       if nargin < 2; level = 'prod'; end
       % for each instrument
       for i=obj.cfg.instruments2run; i = i{1};
@@ -1029,11 +1035,11 @@ classdef InLineAnalysis < handle
           switch obj.cfg.write.mode
             case 'One file'
               % Save all days2run in one file
-              obj.instrument.(i).Write([i '_ALL'], obj.cfg.days2run, level);
+              obj.instrument.(i).Write([i '_ALL'], obj.cfg.days2run, level, part_or_diw);
             case 'One day one file'
               % Save each day from days2run in independent files
               for d=obj.cfg.days2run
-                obj.instrument.(i).Write([i '_' datestr(d,'yyyymmdd')], d, level);
+                obj.instrument.(i).Write([i '_' datestr(d,'yyyymmdd')], d, level, part_or_diw);
               end
             otherwise
               error('Unknow writing mode.');
@@ -1193,11 +1199,11 @@ classdef InLineAnalysis < handle
   end
   
   methods (Access=private)
-    function update_userselection_bad(~, filename, user_selection, level, channel) % obj, 
-      if nargin < 4
+    function update_userselection_bad(~, filename, user_selection, remove_old, level, channel)
+      if nargin < 5
         level = 'qc';
         channel = '';
-      elseif nargin < 5
+      elseif nargin < 6
         channel = ['_' level];
       else
         channel = join(['_' level '_' strjoin(channel, '_')],'');
@@ -1210,10 +1216,12 @@ classdef InLineAnalysis < handle
         end
         load(filename, 'file_selection');
         if isfield(file_selection, ['bad' channel]) && ~isempty(file_selection.(['bad' channel]))
-%           % Remove old (days2run) selections REMOVED TO KEEP ALL HISTORY OF USER SELECTION
-%           sel = min(obj.cfg.days2run) <= file_selection.(['bad' channel])(:,1) & ...
-%             file_selection.(['bad' channel])(:,1) < max(obj.cfg.days2run) + 1;
-%           file_selection.(['bad' channel])(sel,:) = [];
+          if remove_old
+            % Remove old (days2run) selections
+            sel = min(obj.cfg.days2run) <= file_selection.(['bad' channel])(:,1) & ...
+              file_selection.(['bad' channel])(:,1) < max(obj.cfg.days2run) + 1;
+            file_selection.(['bad' channel])(sel,:) = [];
+          end
           % Add new user selection
           file_selection.(['bad' channel]) = [file_selection.(['bad' channel]); user_selection];
         else

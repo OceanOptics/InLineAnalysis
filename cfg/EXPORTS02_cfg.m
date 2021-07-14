@@ -189,8 +189,9 @@ cfg.process.force_import = false;
 cfg.process.parallel = Inf; % 0: disable parallel or Inf: as many thread available
 cfg.process.di = struct();
 cfg.process.di.skip = {'FLOW', 'TSG'};
-cfg.process.di.qc = struct('mode', 'ui');
-ila.process.di.qc.qc_once_for_all = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
+cfg.process.di.qc = struct('mode', 'ui',... % ui or load
+                           'qc_once_for_all', false,... % true = QC all variables | false = QC variables separately)
+                           'remove_old', false); % remove old selection of the same period
 cfg.process.di.bin = struct('bin_size', 30);
 
 %%% Synchronization %%%
@@ -208,7 +209,8 @@ cfg.process.sync.skip = {'TSG'};
 cfg.process.qcref = struct();
 cfg.process.qcref.reference = 'FLOW';
 cfg.process.qcref.view = 'BB3';
-cfg.process.qcref.mode = 'load'; % load or ui
+cfg.process.qcref.mode = 'ui'; % load or ui
+cfg.process.qcref.remove_old = false; % remove old selection of the same period
 cfg.process.qcref.MinFiltPeriod = 50; % filter event period in minute
 cfg.process.qcref.szFilt = 12; % filter even length in minute
 
@@ -270,7 +272,8 @@ cfg.process.qc.Saturation_Threshold_bb = 4100; % (counts) max being 4130
   
 %%% Manually QC %%%
 cfg.process.qc.mode = 'ui';
-ila.process.qc.qc_once_for_all = false;  % true = QC 'a' and 'c' together | false = QC 'a' and 'c' separately
+cfg.process.qc.qc_once_for_all = false;  % true = QC all variables | false = QC variables separately);
+cfg.process.qc.remove_old = false; % remove old selection of the same period
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
 cfg.process.qc.global.view = 'ACS91';

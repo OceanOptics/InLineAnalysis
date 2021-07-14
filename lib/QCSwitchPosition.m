@@ -91,23 +91,23 @@ flow.(level).tsw.dt = flow.(level).tsw.dt + datenum(minutes(shift_flow));
 fh = visFlag(instru.raw.tsw, instru.raw.fsw, instru.qc.tsw, [], instru.qc.fsw, [], ...
   instru.view.varname, instru.view.varcol, instru.raw.bad, flow.qc.tsw);
 leg = plot(flow.(level).tsw.dt, flow.(level).tsw.swt, '-k');
-title(['Select filter event to duplicate (press f)' newline 'Select new time slot for filter event duplicated (press s)' newline 'Change switch position (press t)'], ...
+title(['Select filter event to duplicate (press x)' newline 'Select new time slot for filter event duplicated (press s)' newline 'Change switch position to filtered (press f)'  newline 'Change switch position to total (press t)'], ...
   'FontSize', 14)
 legend(leg, 'switch position (1=filtered | 0=total)','AutoUpdate','off', 'FontSize', 12)
-[toswitch_t, toduplicate_f, newtime_s] = guiSelectOnTimeSeries(fh);
+[totalswitch, filterswitch, newtime_s, ~, toduplicate_x] = guiSelectOnTimeSeries(fh);
 % check number of entries
-if size(toduplicate_f,1) ~= size(newtime_s,1)
-  fprintf('Warning: Inconsistent number of entries (f and t), new filter event ignored\n')
-  toduplicate_f = [];
+if size(toduplicate_x,1) ~= size(newtime_s,1)
+  fprintf('Warning: Inconsistent number of entries (f and s), filter events duplication ignored\n')
+  toduplicate_x = [];
   newtime_s = [];
 end
 % duplicate filter events f and s commands
-for j = 1:size(toduplicate_f, 1)
+for j = 1:size(toduplicate_x, 1)
   if strcmp(level, 'raw')
-    idx_inst_qc = instru.qc.fsw.dt >= toduplicate_f(j, 1) & instru.qc.fsw.dt <= toduplicate_f(j, 2);
-    idx_inst_bad = instru.raw.bad.dt >= toduplicate_f(j, 1) & instru.raw.bad.dt <= toduplicate_f(j, 2);
+    idx_inst_qc = instru.qc.fsw.dt >= toduplicate_x(j, 1) & instru.qc.fsw.dt <= toduplicate_x(j, 2);
+    idx_inst_bad = instru.raw.bad.dt >= toduplicate_x(j, 1) & instru.raw.bad.dt <= toduplicate_x(j, 2);
   end
-  idx_inst = instru.(level).fsw.dt >= toduplicate_f(j, 1) & instru.(level).fsw.dt <= toduplicate_f(j, 2);
+  idx_inst = instru.(level).fsw.dt >= toduplicate_x(j, 1) & instru.(level).fsw.dt <= toduplicate_x(j, 2);
   if any(idx_inst)
     % copy filter event to specific new time slot
     new_filt = instru.(level).fsw(idx_inst, :);
@@ -158,36 +158,65 @@ for j = 1:size(toduplicate_f, 1)
     flow.(level).tsw = sortrows(flow.(level).tsw, 'dt');
   end
 end
-% change switch position t command
-for j = 1:size(toswitch_t, 1)
-  idx_flow = flow.(level).tsw.dt > toswitch_t(j, 1) & flow.(level).tsw.dt < toswitch_t(j, 2);
-  nbtoswitch = size(toswitch_t(j, 1):d_flowdt:toswitch_t(j, 2),2);
-  if sum(idx_flow) < nbtoswitch % replace all FLOW data with new table
-    closest_position = flow.(level).tsw.swt(abs(flow.(level).tsw.dt(~idx_flow) - mean(toswitch_t(j, :))) == ...
-      min(abs(flow.(level).tsw.dt(~idx_flow) - mean(toswitch_t(j, :))))); % get the closest switch position in time
-    linetoadd_dt = (toswitch_t(j, 1):d_flowdt:toswitch_t(j, 2))';
-    new_flow = array2table([linetoadd_dt repmat(closest_position, size(linetoadd_dt, 1), 1) ...
+% change switch position to total (t)
+for j = 1:size(totalswitch, 1)
+  idx_flow = flow.(level).tsw.dt > totalswitch(j, 1) & flow.(level).tsw.dt < totalswitch(j, 2);
+  linetoadd_dt = (totalswitch(j, 1):d_flowdt:totalswitch(j, 2))';
+  new_flow = array2table([linetoadd_dt zeros(size(linetoadd_dt, 1), 1) ...
       NaN(size(linetoadd_dt, 1), size(popoflow, 2) - 2)], ...
       'VariableNames', flow.(level).tsw.Properties.VariableNames);
+  if any(idx_flow)
     new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
-    flow.(level).tsw(idx_flow, :) = [];
-    flow.(level).tsw = [flow.(level).tsw; new_flow];
-    % sort by date
-    flow.(level).tsw = sortrows(flow.(level).tsw, 'dt');
-  else
-%     flow.(level).tsw.swt(idx_flow) = 1;
-    if sum(flow.(level).tsw.swt(idx_flow) == 0) > sum(flow.(level).tsw.swt(idx_flow) > 0)
-      flow.(level).tsw.swt(idx_flow) = 1;
-    else
-      flow.(level).tsw.swt(idx_flow) = 0;
-    end
   end
+  flow.(level).tsw(idx_flow, :) = [];
+  flow.(level).tsw = [flow.(level).tsw; new_flow];
+  % sort by date
+  flow.(level).tsw = sortrows(flow.(level).tsw, 'dt');
 end
+% change switch position to filtered (f)
+for j = 1:size(filterswitch, 1)
+  idx_flow = flow.(level).tsw.dt > filterswitch(j, 1) & flow.(level).tsw.dt < filterswitch(j, 2);
+  linetoadd_dt = (filterswitch(j, 1):d_flowdt:filterswitch(j, 2))';
+  new_flow = array2table([linetoadd_dt ones(size(linetoadd_dt, 1), 1) ...
+      NaN(size(linetoadd_dt, 1), size(popoflow, 2) - 2)], ...
+      'VariableNames', flow.(level).tsw.Properties.VariableNames);
+  if any(idx_flow)
+    new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
+  end
+  new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
+  flow.(level).tsw(idx_flow, :) = [];
+  flow.(level).tsw = [flow.(level).tsw; new_flow];
+  % sort by date
+  flow.(level).tsw = sortrows(flow.(level).tsw, 'dt');
+end
+%   nbtoswitch = size(totalswitch(j, 1):d_flowdt:totalswitch(j, 2),2);
+%   if sum(idx_flow) < nbtoswitch % replace all FLOW data with new table
+%     closest_position = flow.(level).tsw.swt(abs(flow.(level).tsw.dt(~idx_flow) - mean(totalswitch(j, :))) == ...
+%       min(abs(flow.(level).tsw.dt(~idx_flow) - mean(totalswitch(j, :))))); % get the closest switch position in time
+%     linetoadd_dt = (totalswitch(j, 1):d_flowdt:totalswitch(j, 2))';
+%     new_flow = array2table([linetoadd_dt repmat(closest_position, size(linetoadd_dt, 1), 1) ...
+%       NaN(size(linetoadd_dt, 1), size(popoflow, 2) - 2)], ...
+%       'VariableNames', flow.(level).tsw.Properties.VariableNames);
+%     new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
+%     flow.(level).tsw(idx_flow, :) = [];
+%     flow.(level).tsw = [flow.(level).tsw; new_flow];
+%     % sort by date
+%     flow.(level).tsw = sortrows(flow.(level).tsw, 'dt');
+%   else
+% %     flow.(level).tsw.swt(idx_flow) = 1;
+%     if sum(flow.(level).tsw.swt(idx_flow) == 0) > sum(flow.(level).tsw.swt(idx_flow) > 0)
+%       flow.(level).tsw.swt(idx_flow) = 1;
+%     else
+%       flow.(level).tsw.swt(idx_flow) = 0;
+%     end
+%   end
+% end
+
 % check for duplicats in flow data and delete
 [~, L, ~] = unique(instru.(level).fsw.dt,'first');
 indexToDump = not(ismember(1:numel(instru.(level).fsw.dt),L));
 if sum(indexToDump) > 0
-  fprintf('Warning: %i identical dates in AC data => deleted\n', sum(indexToDump))
+  fprintf('Warning: %i identical dates in instrument data => deleted\n', sum(indexToDump))
   instru.(level).fsw(indexToDump, :) = [];
 end
 [~, L, ~] = unique(flow.(level).tsw.dt,'first');
