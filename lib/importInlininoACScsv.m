@@ -1,5 +1,14 @@
-function [ data ] = importInlininoACScsv( filename, verbose )
-%IMPORTINLININO Import ACS data from csv files
+function [ data, lambda_a, lambda_c ] = importInlininoACScsv( filename, verbose )
+% IMPORTINLININO Import ACS data from csv files
+% Author: Guillaume Bourdin
+% Date: Dec 2020
+%
+% Input:
+%   - filename: <char> filename including full path
+%   - verbose (optional)
+% 
+% Example: [ data, lambda_a, lambda_c ] = importInlininoACScsv( filename, verbose )
+%%
 
 if nargin < 2; verbose = false; end
 if verbose
@@ -18,7 +27,7 @@ end
 % Get header
 hd = strip(strsplit(fgetl(fid), ','));
 hd(strcmp(hd, 'time')) = {'dt'};
-% get units skipping empty lines (bug in Inlinino)
+% get units skipping empty lines (bug in old Inlinino)
 unit = fgetl(fid);
 while isempty(unit)
     unit = fgetl(fid);
@@ -46,7 +55,7 @@ data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{2}, [t{3}], [t{4}], ...
              t{5}, t{6}, t{7}, 'VariableNames', hd);
 data.Properties.VariableUnits = strip(strsplit(unit, ','));
 
-% Remove last line if it's past midnight (Bug in Inlinino)
+% Remove last line if it's past midnight (bug in old Inlinino)
 if ~isempty(data)
   if data.dt(end-1) > data.dt(end)
     data(end,:) = [];

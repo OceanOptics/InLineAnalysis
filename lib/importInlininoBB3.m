@@ -1,6 +1,14 @@
-function [ data ] = importInlininoBB3( filename, verbose )
-%IMPORTINLININO Import BB3 data from EXPORTS
-
+function [ data, lambda] = importInlininoBB3( filename, verbose )
+% IMPORTINLININO Import BB3 data from csv files
+% Author: Guillaume Bourdin
+% Date: Dec 2020
+%
+% Input:
+%   - filename: <char> filename including full path
+%   - verbose (optional)
+% 
+% Example: [ data, lambda] = importInlininoBB3( filename, verbose )
+%%
 if nargin < 2; verbose = false; end
 if verbose
   foo = strsplit(filename, '/');
@@ -22,7 +30,7 @@ end
 
 % Get header
 hd = strip(strsplit(fgetl(fid), ','));
-% get units skipping empty lines (bug in Inlinino)
+% get units skipping empty lines (bug in old Inlinino)
 unit = fgetl(fid);
 while isempty(unit)
     unit = fgetl(fid);
@@ -39,15 +47,15 @@ fclose(fid);
 
 % Build table
 if all(contains(t{1}, '/'))
-    data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), [t{2:4}], ...
-             'VariableNames', {'dt', 'beta'});
+  data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), [t{2:4}], ...
+       'VariableNames', {'dt', 'beta'});
 else
-    data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
-                 [t{2:4}], 'VariableNames', {'dt', 'beta'});
+  data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
+       [t{2:4}], 'VariableNames', {'dt', 'beta'});
 end
 data.Properties.VariableUnits = unit;
 
-% Remove last line if it's past midnight (Bug in Inlinino)
+% Remove last line if it's past midnight (bug in old Inlinino)
 if ~isempty(data) && size(data,1) > 1
   if data.dt(end-1) > data.dt(end)
     data(end,:) = [];
