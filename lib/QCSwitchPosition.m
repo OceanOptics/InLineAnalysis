@@ -183,7 +183,6 @@ for j = 1:size(filterswitch, 1)
   if sum(idx_flow) > 3
     new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
   end
-  new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
   flow.(level).tsw(idx_flow, :) = [];
   flow.(level).tsw = [flow.(level).tsw; new_flow];
   % sort by date
