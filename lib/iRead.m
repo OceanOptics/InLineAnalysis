@@ -75,13 +75,17 @@ for i=1:length(dt)
       % Keep only data of day
       sel = dt(i) <= ddata.dt & ddata.dt < dt(i) + 1;
       ddata = ddata(sel,:);
-      % Write data of day
-      if ~nowrite
-        if ~isfolder(dir_out); mkdir(dir_out); end
-        data = ddata;
-        if verbose; fprintf('Saving %s... ', fn_out); end
-        save([dir_out fn_out], 'data');
-        if verbose; fprintf('Done\n'); end
+      if ~isempty(ddata)
+        % Write data of day
+        if ~nowrite
+          if ~isfolder(dir_out); mkdir(dir_out); end
+          data = ddata;
+          if verbose; fprintf('Saving %s... ', fn_out); end
+          save([dir_out fn_out], 'data');
+          if verbose; fprintf('Done\n'); end
+        end
+      else
+        fprintf('WARNING: No data found on %s\n', datestr(dt(i)));
       end
       % Add data of day to the global dataset
       gdata = [gdata; ddata];

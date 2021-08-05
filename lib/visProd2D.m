@@ -22,7 +22,7 @@ end
 if nargin < 5; figid = 61; end
 
 fh = fig(figid);
-if size(dt, 1) > 1
+if size(dt, 1) > 2
   % Save current defaultAxesColorOrder
   defaultAxesColorOrder = get(groot, 'defaultAxesColorOrder');
   set(groot,'defaultAxesColorOrder',colorval(dt(sel), parula));

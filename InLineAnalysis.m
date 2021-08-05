@@ -993,10 +993,12 @@ classdef InLineAnalysis < handle
           obj.instrument.(i).prod.a = obj.instrument.(i).qc.tsw;
         else
           fprintf('CALIBRATE: %s\n', i);
-          if isempty(obj.cfg.calibrate.(i).CDOM_source)
-            cdom_source = [];
-          else
-            cdom_source = obj.instrument.(obj.cfg.calibrate.(i).CDOM_source);
+          if contains(i, 'AC')
+            if isempty(obj.cfg.calibrate.(i).CDOM_source)
+              cdom_source = [];
+            else
+              cdom_source = obj.instrument.(obj.cfg.calibrate.(i).CDOM_source);
+            end
           end
           switch obj.instrument.(i).model
             case 'AC9'

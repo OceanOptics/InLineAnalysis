@@ -47,6 +47,9 @@ try
   t = textscan(fid, parser, 'delimiter','\t');
   fclose(fid);
   spd_col = find(cell2mat(cellfun(@(x) any(x>0), t(end-1:end), 'un', 0)));
+  if size(spd_col, 2) > 1
+    spd_col = find(cell2mat(cellfun(@(x) sum(x>0)>0.1*size(t{end},1), t(end-1:end), 'un', 0)));
+  end
   if isempty(spd_col); spd_col = 1; end
   dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{spd_col+5},...
            'VariableNames', {'dt', 'swt', 'spd'}); % Build table
@@ -63,6 +66,9 @@ catch
   t{1,6} = str2double(strrep(t{1,6}, ',', '.'));
   t{1,7} = str2double(strrep(t{1,7}, ',', '.'));
   spd_col = find(cell2mat(cellfun(@(x) any(x>0), t(end-1:end), 'un', 0)));
+  if size(spd_col, 2) > 1
+    spd_col = find(cell2mat(cellfun(@(x) sum(x>0)>0.1*size(t{end},1), t(end-1:end), 'un', 0)));
+  end
   if isempty(spd_col); spd_col = 1; end
   dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{spd_col+5},...
            'VariableNames', {'dt', 'swt', 'spd'}); % Build table

@@ -108,7 +108,7 @@ cfg.instruments.BB3.view = struct('varname', 'beta', 'varcol', 2);
 
 %%% General parameters %%%
 cfg.process.days2run = datenum(2021,5,2):datenum(2021,5,5);
-cfg.process.instruments2run = {'FLOW', 'TSG', 'ACS94', 'AC9274'};
+cfg.process.instruments2run = {'FLOW', 'TSG', 'ACS94', 'AC9274', 'BB3'};
 cfg.process.write = true;
 cfg.process.force_import = false;
 cfg.process.parallel = Inf; % 0: disable parallel or Inf: as many thread available
