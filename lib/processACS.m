@@ -309,7 +309,7 @@ if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
     ndel_spec(i) = sum(above_median_d600_ap450);
   end
   fudge_factor = fudge_list(find(abs(diff(ndel_spec)) == min(abs(diff(ndel_spec))) & ...
-    ndel_spec(2:end) < 0.05 * max(ndel_spec), 1,  'first')); % threshold on first derivative of number of spectrum deleted
+    ndel_spec(2:end) < 0.001 * max(ndel_spec), 1,  'first')); % 0.05 threshold on first derivative of number of spectrum deleted
   above_median_d600_ap450 = ratiod600_ap450 > fudge_factor * median(ratiod600_ap450);
   if sum(above_median_d600_ap450) > 0
     fprintf('%.2f%% (%i) spectrum failed auto-QC: sum(abs(d(ap)/d(lambda(600-650)))) / ap450nm\n', ...
@@ -401,7 +401,7 @@ p.poc(p.poc < 0) = NaN;
 ap_a = interp1(lambda.a, p.ap',[650 676 715],'linear')';
 p.ap(ap_a(:,1) > ap_a(:,2), :) = NaN; % deleted unrealistic spectra
 ap_a(ap_a(:,1) > ap_a(:,2), :) = NaN; % deleted unrealistic spectra
-p.ap676_lh = ap_a(:,2)-(39/65*ap_a(:,1)+26/65*ap_a(:,3));
+p.ap676_lh = ap_a(:,2)-(39/65*ap_a(:,1)+26/65*ap_a(:,3));  % ap_a650-(39/65*ap_a(:,1)+26/65*ap_a(:,3));
 p.chl_ap676lh = 157*p.ap676_lh.^1.22;
 p.chl_ap676lh(real(p.chl_ap676lh) ~= p.chl_ap676lh) = NaN;
 p.chl_ap676lh(p.chl_ap676lh < 0) = NaN;
@@ -563,7 +563,8 @@ opts = optimset(opts,'TolX',1e-8);
 opts = optimset(opts,'TolFun',1e-8);
 
 % Wavelength selection
-iwl = wl >= 450;
+% iwl = wl >= 450;
+iwl = wl >= 700;
 
 % Init minimization parameters
 deltaT = 10;
@@ -620,7 +621,7 @@ psiT = [0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0
 psiT = interp1(psi_wl, psiT, wl);
 
 % Parameters of minization routine
-opts = optimset('fminsearch');      
+opts = optimset('fminsearch');
 % opts = optimset(opts,'NonlEqnAlgorithm', 'gn'); % Does not work on R2017a
 opts = optimset(opts,'MaxIter',20000000); 
 opts = optimset(opts,'MaxFunEvals',20000);

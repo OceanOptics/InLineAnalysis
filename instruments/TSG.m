@@ -49,6 +49,9 @@ classdef TSG < Instrument
         case 'RRevelle'
           obj.data = iRead(@importRRevelleUnderway, obj.path.raw, obj.path.wk, '',...
                          days2run, 'RRevelleUnderway', force_import, ~write, true);
+        case 'IRA-C'
+          obj.data = iRead(@importSBE37_TSG, obj.path.raw, obj.path.wk, 'tsg_',...
+                         days2run, 'MatlabTSG', force_import, ~write, true);
         case 'JCook'
           switch obj.logger
             case {'SBE45TSG'}

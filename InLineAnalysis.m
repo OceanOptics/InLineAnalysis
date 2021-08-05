@@ -500,8 +500,12 @@ classdef InLineAnalysis < handle
               file_selection.filtered(sel,:) = [];
             end
             % Apply selection
-            obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.total, 'total');
-            obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.filtered, 'filtered');
+            if ~isempty(file_selection.total)
+              obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.total, 'total');
+            end
+            if ~isempty(file_selection.filtered)
+              obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.filtered, 'filtered');
+            end
           else
             fprintf(['Warning: ' filename ' not found\n'])
           end
@@ -989,18 +993,23 @@ classdef InLineAnalysis < handle
           obj.instrument.(i).prod.a = obj.instrument.(i).qc.tsw;
         else
           fprintf('CALIBRATE: %s\n', i);
+          if isempty(obj.cfg.calibrate.(i).CDOM_source)
+            cdom_source = [];
+          else
+            cdom_source = obj.instrument.(obj.cfg.calibrate.(i).CDOM_source);
+          end
           switch obj.instrument.(i).model
             case 'AC9'
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.cfg.calibrate.(i).interpolation_method,...
-                                           obj.instrument.(obj.cfg.calibrate.(i).CDOM_source),...
+                                           cdom_source,...
                                            obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
                                            obj.cfg.calibrate.(i).di_method, ...
                                            obj.cfg.calibrate.(i).compute_ad_aphi);
             case 'ACS'
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.cfg.calibrate.(i).interpolation_method,...
-                                           obj.instrument.(obj.cfg.calibrate.(i).CDOM_source),...
+                                           cdom_source,...
                                            obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
                                            obj.cfg.calibrate.(i).di_method, ...
                                            obj.cfg.calibrate.(i).compute_ad_aphi);

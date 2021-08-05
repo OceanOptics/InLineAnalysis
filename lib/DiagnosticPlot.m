@@ -144,8 +144,8 @@ for j = 1:length(level)
           end
 %           sel = data.(level{j}).(tabletoplot{i}).dt >= day_to_plot(1) & ...
 %             data.(level{j}).(tabletoplot{i}).dt <= day_to_plot(2);
-        end        
-        
+        end
+        sel = sel | ~all(isnan(data.(level{j}).(tabletoplot{i}).(toplot{i, k})),2);
 %         if strcmp(tabletoplot{i}, 'diw') % if DI plot entire dataset
 %           sel = true(size(data.(level{j}).(tabletoplot{i}).dt));
 %         else
@@ -157,7 +157,7 @@ for j = 1:length(level)
         elseif contains(instrument,'AC') && contains(toplot{i, k}, 'c')
           wl = wlc;
         end
-        if size(data.(level{j}).(tabletoplot{i}).dt(sel),1) > 1
+        if sum(sel) > 1
           fh = visProd3D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, 'Wavelength', false, j*i+k*10);
@@ -165,7 +165,7 @@ for j = 1:length(level)
           xlabel('lambda (nm)');
           ylabel('time');
           title([level{j} ' ' tabletoplot{i}], 'FontSize', 16);
-        elseif ~isempty(data.(level{j}).(tabletoplot{i}).dt(sel))
+        elseif sum(sel) < 2
           fh = visProd2D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, j*i+k*10);
