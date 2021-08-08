@@ -488,7 +488,7 @@ if ~isempty(di)
   g.cg = interp1(lambda.c', g.cg', lambda.ref', 'linear', 'extrap')';
   fprintf('Correcting for temperature & salinity dependence ... ')
   % Temperature & Salinity Correction (No Scattering correction needed)
-  [g.ag, g.cg] = TemperatureAndSalinityDependence(g.ag, g.cg, lambda.ref);
+  [g.ag, g.cg] = TemperatureAndSalinityDependence(g.ag, g.cg, lambda.a, lambda.c);
 %   [g.ag, g.cg] = ResidualTemperatureAndScatteringCorrection(g.ag, g.cg, lambda.ref);
   fprintf('Done\n')
 
@@ -533,7 +533,7 @@ else
 end
 end
 
-function [a_corr, c_corr, a_slope, c_slope] = TemperatureAndSalinityDependence(a, c, wl)
+function [a_corr, c_corr, a_slope, c_slope] = TemperatureAndSalinityDependence(a, c, wl_a, wl_c)
 % Note that a and c does not have to be on the same wvelength, however the
 %   function would need to be edited for that
 % Sullivan et al. 2006 values
@@ -542,12 +542,13 @@ psiT = [0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0
 c_psiS = [-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-4.0e-05;-3.0e-05;-3.0e-05;-2.0e-05;-1.0e-05;0;1.0e-05;1.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-5.0e-05;-6.0e-05;-6.0e-05;-8.0e-05;-9.0e-05;-0.00010;-0.00011;-0.00013;-0.00014;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00021;-0.00022;-0.00022;-0.00023;-0.00023;-0.00023;-0.00024;-0.00024;-0.00024;-0.00024;-0.00022;-0.00021;-0.00017;-0.00012;-6.0e-05;2.0e-05;0.00012;0.00022;0.00031;0.00041;0.00049;0.00056;0.00062]';
 a_psiS = [3.0e-05;3.0e-05;3.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;0;0;0;0;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;0;1.0e-05;2.0e-05;3.0e-05;3.0e-05;4.0e-05;5.0e-05;5.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;5.0e-05;5.0e-05;5.0e-05;5.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;-1.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-6.0e-05;-7.0e-05;-8.0e-05;-9.0e-05;-0.00011;-0.00012;-0.00014;-0.00015;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00020;-0.00020;-0.00021;-0.00021;-0.00021;-0.00021;-0.00021;-0.00020;-0.00017;-0.00013;-8.0e-05;-1.0e-05;7.0e-05;0.00016;0.00026;0.00037;0.00046;0.00054;0.00061;0.00067]';
 % Interpolate Sullivan values on the current ACS
-psiT=interp1(psi_wl,psiT,wl,'spline'); % PCHIP or SPLINE -> better than linear
-a_psiS=interp1(psi_wl,a_psiS,wl,'spline');
-c_psiS=interp1(psi_wl,c_psiS,wl,'spline');
+a_psiT=interp1(psi_wl,psiT,wl_a,'spline'); % PCHIP or SPLINE -> better than linear
+c_psiT=interp1(psi_wl,psiT,wl_c,'spline'); % PCHIP or SPLINE -> better than linear
+a_psiS=interp1(psi_wl,a_psiS,wl_a,'spline');
+c_psiS=interp1(psi_wl,c_psiS,wl_c,'spline');
 % Center psiS on 0 instead of +/- 0.001
-a_psiS = a_psiS - median(a_psiS(wl <= 590));
-c_psiS = c_psiS - median(c_psiS(wl <= 590));
+a_psiS = a_psiS - median(a_psiS(wl_a <= 590));
+c_psiS = c_psiS - median(c_psiS(wl_c <= 590));
 % tmp = xlsread('Sullivan_etal_2006_instrumentspecific.xls');
 % psi_wl = tmp(:,1);
 % phiT=interp1(tmp(:,1),tmp(:,2),wl,'linear');
@@ -563,13 +564,14 @@ opts = optimset(opts,'TolX',1e-8);
 opts = optimset(opts,'TolFun',1e-8);
 
 % Wavelength selection
-% iwl = wl >= 450;
-iwl = wl >= 700;
+iwla = wl_a >= 450;
+iwlc = wl_c >= 450;
+% iwl = wl >= 700;
 
 % Init minimization parameters
 deltaT = 10;
 deltaS = 20;
-amp = a(20);
+amp = a(find(~any(isnan(a),2), 1, 'first'),20);
 slope = 0.014;
 
 % Init loop
@@ -586,20 +588,22 @@ c_slope = NaN(n,1);
 % Run minimization
 for k=1:n
   % Force Temperature, Salinity, and Slope
-  x = fminsearch(@costfun_TSD, [deltaT, deltaS, amp, slope], opts, a(k,iwl), psiT(iwl), a_psiS(iwl), wl(iwl));
+  x = fminsearch(@costfun_TSD, [deltaT, deltaS, amp, slope], opts, a(k,iwla), a_psiT(iwla), a_psiS(iwla), wl_a(iwla));
   a_deltaT(k) = x(1); a_deltaS(k) = x(2); a_amp(k) = x(3); a_slope(k) = x(4);
-  x = fminsearch(@costfun_TSD, [deltaT, deltaS, amp, slope], opts, c(k,iwl), psiT(iwl), c_psiS(iwl), wl(iwl));
+  x = fminsearch(@costfun_TSD, [deltaT, deltaS, amp, slope], opts, c(k,iwlc), c_psiT(iwlc), c_psiS(iwlc), wl_c(iwlc));
   c_deltaT(k) = x(1); c_deltaS(k) = x(2); c_amp(k) = x(3); c_slope(k) = x(4);
   % Without Salinity forcing
-%   x = fminsearch(@costfun_TSD, [deltaT, amp, slope], opts, a(k,iwl), psiT(iwl), a_psiS(iwl), wl(iwl));
+%   x = fminsearch(@costfun_TSD, [deltaT, amp, slope], opts, a(k,iwla), a_psiT(iwla), a_psiS(iwla), wl_a(iwla));
 %   a_deltaT(k) = x(1); a_amp(k) = x(2); a_slope(k) = x(3);
-%   x = fminsearch(@costfun_TSD, [deltaT, amp, slope], opts, c(k,iwl), psiT(iwl), c_psiS(iwl), wl(iwl));
+%   x = fminsearch(@costfun_TSD, [deltaT, amp, slope], opts, c(k,iwlc), c_psiT(iwlc), c_psiS(iwlc), wl_c(iwlc));
 %   c_deltaT(k) = x(1); c_amp(k) = x(2); c_slope(k) = x(3);
 end
 
 % Apply correction
-a_corr = a - a_deltaT.*psiT - deltaS.*a_psiS;
-c_corr = c - c_deltaT.*psiT - deltaS.*c_psiS;
+% a_corr = a - a_deltaT.*a_psiT - deltaS.*a_psiS;
+% c_corr = c - c_deltaT.*c_psiT - deltaS.*c_psiS;
+a_corr = a - a_deltaT.*a_psiT - a_deltaS.*a_psiS;
+c_corr = c - c_deltaT.*c_psiT - c_deltaS.*c_psiS;
 
 % Display the forcing parameters
 % disp([a_deltaT, c_deltaT, a_deltaS, c_deltaS, a_slope, c_slope])
