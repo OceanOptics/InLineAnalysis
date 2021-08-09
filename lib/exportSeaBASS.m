@@ -6,6 +6,10 @@ if nargin < 4; subfields = {[]}; end
 [file_path,file_name,file_ext] = fileparts(filename);
 if isempty(file_ext); file_ext = '.sb'; end
 
+if isfile([file_path filesep file_name file_ext])
+  delete([file_path filesep file_name file_ext])
+end
+
 % Create file
 fid = fopen([file_path filesep file_name file_ext], 'W+', 'n', 'US-ASCII');
 
@@ -92,24 +96,52 @@ fprintf(fid,'/delimiter=comma\n'); % tab, space, or comma
 % Fields
 core_fields_sb = {'date', 'time', 'lat', 'lon', 'Wt', 'sal'};
 core_units_sb = {'yyyymmdd', 'hh:mm:ss', 'degrees', 'degrees', 'degreesC', 'PSU'};
-fields = {core_fields_sb{:} specific_fields{:}};
-units = {core_units_sb{:} specific_units{:}};
+fields = [core_fields_sb(:)' specific_fields(:)'];
+units = [core_units_sb(:)' specific_units(:)'];
 foo = sprintf('%s,', fields{:}); fprintf(fid,'/fields=%s\n', foo(1:end-1));
 foo = sprintf('%s,', units{:});fprintf(fid,'/units=%s\n', foo(1:end-1));
 fprintf(fid,'/end_header\n');
-
-% Make content
-% Pre-format dt
-date_str = datestr(data.dt, 'yyyymmdd');
-time_str = datestr(data.dt, 'HH:MM:SS');
-for i=progress(1:size(data.dt,1))
-  fprintf(fid,'%s,%s,%.4f,%.4f,%.4f,%.4f', date_str(i,:), time_str(i,:), data.lat(i), data.lon(i), data.t(i), data.s(i));
-  for j=1:size(i_specific_fields,2)
-    fprintf(fid,[',' data.Properties.VariableDescriptions{i_specific_fields(j)}], table2array(data(i,i_specific_fields(j))));
-  end
-  fprintf(fid,'\n');
-end
-
 fclose(fid);
 
+dat = table(datestr(data.dt, 'yyyymmdd'), datestr(data.dt, 'HH:MM:SS'), round(data.lat, 4), ...
+  round(data.lon, 4), round(data.t, 4), round(data.s, 4), 'VariableNames', {'Date', 'Time', ...
+  'lat', 'lon', 't', 's'});
+for j=progress(1:size(i_specific_fields,2))
+  var = data.Properties.VariableNames{i_specific_fields(j)};
+  dat = [dat array2table(round(data.(var), 4), 'VariableNames', ...
+    cellfun(@(x) [var '_' x], cellstr(num2str((1:size(data.(var), 2))')), 'un', 0))];
+end
+writetable(dat,[file_path filesep file_name file_ext],'Encoding','US-ASCII', ...
+  'Filetype', 'text','WriteMode','Append',...
+    'WriteVariableNames',false,'WriteRowNames',false)
+  
+% % set separator
+% com = repmat(',', size(data, 1), 1);
+% % build date, time, lat, lon
+% dat = [datestr(data.dt, 'yyyymmdd') com datestr(data.dt, 'HH:MM:SS') com char(num2str(round(data.lat, 4))), ...
+%   com char(num2str(round(data.lon, 4))) com char(num2str(round(data.t, 4))) com char(num2str(round(data.s, 4)))];
+% dat = cellstr(dat);
+% % populate with instrument specific variables
+% for j=progress(1:size(i_specific_fields,2))
+%   dat = [dat join(compose('%g', (round(table2array(data(:,i_specific_fields(j))), 4))), ',', 2)];
+% end
+% dat = join(dat, ',');
+% dat = [dat, repmat({'\n'}, size(data, 1), 1)];
+% dat = char(join(dat,''));
+
+
+% DEPRECATED (works well but very slow)
+% Make content
+% Pre-format dt
+% date_str = datestr(data.dt, 'yyyymmdd');
+% time_str = datestr(data.dt, 'HH:MM:SS');
+% for i=progress(1:size(data.dt,1))
+%   fprintf('%s,%s,%.4f,%.4f,%.4f,%.4f', date_str(i,:), time_str(i,:), data.lat(i), data.lon(i), data.t(i), data.s(i));
+%   fprintf(fid,'%s,%s,%.4f,%.4f,%.4f,%.4f', date_str(i,:), time_str(i,:), data.lat(i), data.lon(i), data.t(i), data.s(i));
+%   for j=1:size(i_specific_fields,2)
+%     fprintf(fid,[',' data.Properties.VariableDescriptions{i_specific_fields(j)}], table2array(data(i,i_specific_fields(j))));
+%   end
+%   fprintf(fid,'\n');
+% end
+% fclose(fid);
 end

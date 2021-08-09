@@ -93,10 +93,10 @@ fprintf('Done\n');
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% AC %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 list_leg = {...
     datenum(2020,12,24):datenum(2021,02,05);...
-    datenum(2020,02,17):datenum(2021,3,17);...
-    datenum(2020,03,20):datenum(2021,4,7);...
-    datenum(2020,04,11):datenum(2021,4,20);...
-    datenum(2020,04,26):datenum(2021,5,9);...
+    datenum(2021,02,17):datenum(2021,3,17);...
+    datenum(2021,03,20):datenum(2021,4,7);...
+    datenum(2021,04,11):datenum(2021,4,20);...
+    datenum(2021,04,26):datenum(2021,5,9);...
     };
 
 list_dev = {...
@@ -121,81 +121,82 @@ data_AC = struct('particulate', [], 'product', []);
 acs = [];
 
 for i=1:size(list_instru,1)
-ila.cfg.instruments2run = list_instru(i);
-ila.cfg.days2run = list_leg{i};
+  ila = InLineAnalysis(['cfg' filesep cruise '_cfg.m']);
+  ila.cfg.instruments2run = list_instru(i);
+  ila.cfg.days2run = list_leg{i};
 
-% populate ila.instrument
-ila.Read('prod');
+  % populate ila.instrument
+  ila.Read('prod');
 
-[ila.instrument.(list_instru{i}).lambda_c, ...
-  ila.instrument.(list_instru{i}).lambda_a] = importACSDeviceFile(list_dev{i});
-if contains(list_dev(i),{'ac9', 'AC9'})
-    ila.instrument.(list_instru{i}).lambda_a = [412 440 488 510 532 555 650 676 715];
-    ila.instrument.(list_instru{i}).lambda_c = [412 440 488 510 532 555 650 676 715];
-end
+  [ila.instrument.(list_instru{i}).lambda_c, ...
+    ila.instrument.(list_instru{i}).lambda_a] = importACSDeviceFile(list_dev{i});
+  if contains(list_dev(i),{'ac9', 'AC9'})
+      ila.instrument.(list_instru{i}).lambda_a = [412 440 488 510 532 555 650 676 715];
+      ila.instrument.(list_instru{i}).lambda_c = [412 440 488 510 532 555 650 676 715];
+  end
 
-% interpolate SST / SSS / LatLon
-ref = [list_instru{i} '_' datestr(ila.cfg.days2run(1),'yyyymmdd') '_' datestr(ila.cfg.days2run(end),'yyyymmdd')];
-AC = ila.instrument.(list_instru{i}).prod.p;
-AC.dt = datetime(AC.dt,'ConvertFrom','datenum');
-% latlon_interp = interp1(latlon.dt, [latlon.lat, latlon.lon], AC.dt, 'linear', 'extrap'); % extrap needed for first minute of data
-tsg_interp = interp1(tsg.dt, [tsg.lat, tsg.lon, tsg.sst, tsg.sss], AC.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+  % interpolate SST / SSS / LatLon
+  ref = [list_instru{i} '_' datestr(ila.cfg.days2run(1),'yyyymmdd') '_' datestr(ila.cfg.days2run(end),'yyyymmdd')];
+  AC = ila.instrument.(list_instru{i}).prod.p;
+  AC.dt = datetime(AC.dt,'ConvertFrom','datenum');
+  % latlon_interp = interp1(latlon.dt, [latlon.lat, latlon.lon], AC.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+  tsg_interp = interp1(tsg.dt, [tsg.lat, tsg.lon, tsg.sst, tsg.sss], AC.dt, 'linear', 'extrap'); % extrap needed for first minute of data
 
-% ACS Particulate for SeaBASS
-data_AC.particulate.(ref) = table(AC.dt, tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3), tsg_interp(:,4), AC.ap, AC.ap_sd, AC.cp, AC.cp_sd, AC.cp_n,...
-             'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'ap', 'ap_sd', 'cp', 'cp_sd', 'bincount'});
-data_AC.particulate.(ref).Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', '1/m', '1/m', '1/m', '1/m', 'none'};
-data_AC.particulate.(ref).Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%d'};
+  % ACS Particulate for SeaBASS
+  data_AC.particulate.(ref) = table(AC.dt, tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3), tsg_interp(:,4), AC.ap, AC.ap_sd, AC.cp, AC.cp_sd, AC.cp_n,...
+               'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'ap', 'ap_sd', 'cp', 'cp_sd', 'bincount'});
+  data_AC.particulate.(ref).Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', '1/m', '1/m', '1/m', '1/m', 'none'};
+  data_AC.particulate.(ref).Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%d'};
 
-% ACS Products
-data_AC.product.(ref) = table(AC.dt, tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3), tsg_interp(:,4),...
-             'VariableNames', {'dt', 'lat', 'lon', 't', 's'});
-data_AC.product.(ref) = [data_AC.product.(ref) AC(:, 8:end)];
-data_AC.product.(ref).Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', ...
-            '1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m', ...
-            'ug/L','unitless','ug/L','unitless','unitless','ug/L','microns','??'};
-data_AC.product.(ref).Properties.VariableDescriptions = [{''}, repmat({'%.4f'}, 1, size(data_AC.product.(ref),2) - 1)];
+  % ACS Products
+  data_AC.product.(ref) = table(AC.dt, tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3), tsg_interp(:,4),...
+               'VariableNames', {'dt', 'lat', 'lon', 't', 's'});
+  data_AC.product.(ref) = [data_AC.product.(ref) AC(:, 8:end)];
+  data_AC.product.(ref).Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', ...
+              '1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m','1/m', ...
+              'ug/L','unitless','ug/L','unitless','unitless','ug/L','microns','??'};
+  data_AC.product.(ref).Properties.VariableDescriptions = [{''}, repmat({'%.4f'}, 1, size(data_AC.product.(ref),2) - 1)];
 
-data_AC.product.(ref).Properties.VariableNames{...
-  strcmp(data_AC.product.(ref).Properties.VariableNames, 'poc')} = 'POC_cp';
-data_AC.product.(ref).Properties.VariableNames{...
-  strcmp(data_AC.product.(ref).Properties.VariableNames, 'gamma')} = 'cp_gamma';
-data_AC.product.(ref).Properties.VariableNames{...
-  strcmp(data_AC.product.(ref).Properties.VariableNames, 'chl_ap676lh')} = 'Chl_lineheight';
+  data_AC.product.(ref).Properties.VariableNames{...
+    strcmp(data_AC.product.(ref).Properties.VariableNames, 'poc')} = 'POC_cp';
+  data_AC.product.(ref).Properties.VariableNames{...
+    strcmp(data_AC.product.(ref).Properties.VariableNames, 'gamma')} = 'cp_gamma';
+  data_AC.product.(ref).Properties.VariableNames{...
+    strcmp(data_AC.product.(ref).Properties.VariableNames, 'chl_ap676lh')} = 'Chl_lineheight';
 
-% Remove NaN and aberrant 
-data_AC.product.(ref).POC_cp(data_AC.product.(ref).POC_cp < 0) = NaN;
-data_AC.product.(ref).Chl_lineheight(data_AC.product.(ref).Chl_lineheight < 0) = NaN;
-data_AC.product.(ref).cp_gamma(data_AC.product.(ref).cp_gamma < 0) = NaN;
-data_AC.product.(ref)(all(isnan(table2array(data_AC.product.(ref)(:,6:8))),2),:)=[];
+  % Remove NaN and aberrant 
+  data_AC.product.(ref).POC_cp(data_AC.product.(ref).POC_cp < 0) = NaN;
+  data_AC.product.(ref).Chl_lineheight(data_AC.product.(ref).Chl_lineheight < 0) = NaN;
+  data_AC.product.(ref).cp_gamma(data_AC.product.(ref).cp_gamma < 0) = NaN;
+  data_AC.product.(ref)(all(isnan(table2array(data_AC.product.(ref)(:,6:8))),2),:)=[];
 
-%%% AC 3D plots %%%
-save_figures = false;
-ila.DiagnosticPlot('AC', {'prod'}, save_figures); % AC or BB
-close all
+  %%% AC 3D plots %%%
+  save_figures = true;
+  ila.DiagnosticPlot('AC', {'prod'}, save_figures); % AC or BB
+  close all
 
-% export particulate to SeaBASS format
-ila.meta.documents = [cruise '_ACS_ProcessingReport.pdf'];
-[~, calfile] = fileparts(list_dev{i});
-ila.meta.calibration_files = [calfile '.dev'];
-exportSeaBASS([ila.instrument.(list_instru{i}).path.prod cruise '_InLine_' ref '_Particulate.sb'],...
-    ila.meta,...
-    data_AC.particulate.(ref),...
-    {string(ila.instrument.(list_instru{i}).lambda_a),...
-    string(ila.instrument.(list_instru{i}).lambda_a),...
-    string(ila.instrument.(list_instru{i}).lambda_c),...
-    string(ila.instrument.(list_instru{i}).lambda_c),''});
-sprintf('%s_InLine_%s_Particulate.sb saved', cruise, ref)
+  % export particulate to SeaBASS format
+  ila.meta.documents = [cruise '_ACS_ProcessingReport.pdf'];
+  [~, calfile] = fileparts(list_dev{i});
+  ila.meta.calibration_files = [calfile '.dev'];
+  exportSeaBASS([ila.instrument.(list_instru{i}).path.prod cruise '_InLine_' ref '_Particulate.sb'],...
+      ila.meta,...
+      data_AC.particulate.(ref),...
+      {string(ila.instrument.(list_instru{i}).lambda_a),...
+      string(ila.instrument.(list_instru{i}).lambda_a),...
+      string(ila.instrument.(list_instru{i}).lambda_c),...
+      string(ila.instrument.(list_instru{i}).lambda_c),''});
+  sprintf('%s_InLine_%s_Particulate.sb saved', cruise, ref)
 
-% % export product to SeaBASS format
-% exportSeaBASS([ila.instrument.(list_instru{i}).path.prod cruise '_InLine_' ref '_Product.sb'],...
-%     ila.meta,...
-%     data_AC.product.(ref),...
-%     {'', '', ''});
-% sprintf('%s_InLine_%s_Product.sb saved', cruise, ref)
+  % % export product to SeaBASS format
+  % exportSeaBASS([ila.instrument.(list_instru{i}).path.prod cruise '_InLine_' ref '_Product.sb'],...
+  %     ila.meta,...
+  %     data_AC.product.(ref),...
+  %     {'', '', ''});
+  % sprintf('%s_InLine_%s_Product.sb saved', cruise, ref)
 
-% ACS merged prod
-acs = [acs; data_AC.product.(ref)];
+  % ACS merged prod
+  acs = [acs; data_AC.product.(ref)];
 end
 
 % sort AC and save prod file .mat
@@ -203,29 +204,29 @@ end
 acs = acs(b,:);
 
 ila.visProd_timeseries()
-saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_ACS_prod_timeseries'], 'jpg')
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'plots' filesep cruise '_ACS_prod_timeseries'], 'jpg')
 close figure 78
-saveGraph([ila.instrument.(list_instru{i}).path.prod 'Graphs' filesep cruise '_ACS_prod_regressions'], 'jpg')
+saveGraph([ila.instrument.(list_instru{i}).path.prod 'plots' filesep cruise '_ACS_prod_regressions'], 'jpg')
 close figure 77
 
 SimpleMap(acs.chl_Halh, acs(:,1:3), 'Houskeeper [chl] (mg.m^{-3})')
-saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_chl_Houskeeper_map'], 'jpg')
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_ACS_chl_Houskeeper_map'], 'jpg')
 close figure 1
 
 SimpleMap(acs.HH_G50, acs(:,1:3), 'H&H phytoplankton G50: cross-sectional area (\mum)')
-saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_H&H_map'], 'jpg')
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_ACS_H&H_map'], 'jpg')
 close figure 1
 
 SimpleMap(acs.POC_cp, acs(:,1:3), '[POC] cp (mg.m^{-3})')
-saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_POC_map'], 'jpg')
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_ACS_POC_map'], 'jpg')
 close figure 1
 
 SimpleMap(acs.Chl_lineheight, acs(:,1:3), 'a_{p676} line height [chl a] (mg.m^{-3})')
-saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_chl_map'], 'jpg')
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_ACS_chl_map'], 'jpg')
 close figure 1
 
 SimpleMap(acs.cp_gamma, acs(:,1:3), 'gamma cp (unitless)')
-saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_ACS_gamma_map'], 'jpg')
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_ACS_gamma_map'], 'jpg')
 close figure 1
 
 % save AC prod
@@ -370,10 +371,18 @@ bb3.VSF_124ang_sd(bb3.VSF_124ang<0)=NaN;
 bb3.VSF_124ang(bb3.VSF_124ang<0)=NaN;
 bb3(all(isnan(bb3.bbp),2),:)=[];
 
+%%% BB 3D plots %%%
+save_figures = true;
+ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
+close all
+
+
 % plot time series
 ila.visProd_timeseries()
-saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_BB3_timeseries'], 'jpg')
-close figure 1
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_BB3particulate_timeseries'], 'jpg')
+close figure 85
+saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_BB3dissolved_timeseries'], 'jpg')
+close figure 86
 
 SimpleMap(bb3.bbp(:,2), bb3(:,1:3), 'bbp (532 nm) [m^-^1]')
 saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_bb3_bbp_map'], 'jpg')
