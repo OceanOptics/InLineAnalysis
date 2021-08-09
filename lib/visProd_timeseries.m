@@ -139,46 +139,45 @@ switch instrument
   case {'BB', 'HBB'}
     if size(lambda, 1) > size(lambda, 2); lambda = lambda'; end
     if any(contains(data.Properties.VariableNames, 'betap'))
-      toplot = 'poc';
+      toplot = {'poc', 'bbp'};
       unit = '(mg.m^{-3})';
-      fignum = 85;
+      fignum = [85 86];
     elseif any(contains(data.Properties.VariableNames, 'betag'))
-      toplot = 'betag';
+      toplot = {'betag'};
       unit = 'm^{-1}';
-      fignum = 86;
+      fignum = 87;
     end
-    if contains(instrument, 'HBB')
-      data.(toplot)(:, lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
-      lambda(lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
-    end
-    C = reshape(spectrumRGB(lambda), max(size(lambda)),  3);
-    fig(fignum);
-    clf
-    yyaxis('left')
-    hold on
-    scatter(data.dt, data.(toplot), 10, C, 'filled');
-    ylabel([toplot ' ' unit]);
-    leg = cellfun(@(c) [toplot '_{' c 'nm}'], cellstr(num2str(lambda')), 'un', 0);
-    if any(contains(data.Properties.VariableNames, 'gamma_bbp'))
-      yyaxis('right')
+    for i = 1:size(toplot, 2)
+      if contains(instrument, 'HBB')
+        data.(toplot{i})(:, lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
+        lambda(lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
+      end
+      C = reshape(spectrumRGB(lambda), max(size(lambda)),  3);
+      fig(fignum(i));
+      clf
+      yyaxis('left')
       hold on
-      scatter(data.dt, data.gamma_bbp, 50, ...
-        'k', 'filled', 'Marker', 'v');
-      ylabel('Gamma bbp (unitless)');
-      leg = [leg; {'gamma bbp'}];
-      xlim([min(data.dt) max(data.dt)]);
-    elseif any(contains(data.Properties.VariableNames, 'gamma_bbg'))
-      yyaxis('right')
-      scatter(data.dt, data.gamma_bbg, 50, ...
-        'k', 'filled', 'Marker', 'v');
-      ylabel('Gamma bbg (unitless)');
-      leg = [leg; {'gamma bbg'}];
+      scatter(data.dt, data.(toplot{i}), 10, C, 'filled');
+      ylabel([toplot{i} ' ' unit]);
+      leg = cellfun(@(c) [toplot{i} '_{' c 'nm}'], cellstr(num2str(lambda')), 'un', 0);
+      if any(contains(data.Properties.VariableNames, 'gamma_bbp'))
+        yyaxis('right')
+        hold on
+        scatter(data.dt, data.gamma_bbp, 50, 'k', 'filled', 'Marker', 'v');
+        ylabel('Gamma bbp (unitless)');
+        leg = [leg; {'gamma bbp'}];
+        xlim([min(data.dt) max(data.dt)]);
+      elseif any(contains(data.Properties.VariableNames, 'gamma_bbg'))
+        yyaxis('right')
+        scatter(data.dt, data.gamma_bbg, 50, 'k', 'filled', 'Marker', 'v');
+        ylabel('Gamma bbg (unitless)');
+        leg = [leg; {'gamma bbg'}];
+        xlim([min(data.dt) max(data.dt)]);
+      end
+      hold off
+      legend(leg)
       xlim([min(data.dt) max(data.dt)]);
     end
-    hold off
-    legend(leg)
-    xlim([min(data.dt) ...
-      max(data.dt)]);
   case 'TSG'
     varT = data.Properties.VariableNames{strcmp(data.Properties.VariableNames, 't') | ...
       strcmp(data.Properties.VariableNames, 'sst') | ...
