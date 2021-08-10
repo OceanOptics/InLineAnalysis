@@ -79,7 +79,10 @@ if exist('fth', 'var')
         end
       end
     case 'exponential_fit'
-      % Method from Dall'Olmo et al. 2017
+      % Based on method in: Dall’Olmo, G., Westberry, T.K., Behrenfeld, M.J., Boss, 
+      %       E., Slade, W.H., 2009. Direct contribution of phytoplankton-sized particles 
+      %       to optical backscattering in the open ocean. Biogeosciences Discuss 6, 291–340. 
+      %       https://doi.org/10.5194/bgd-6-291-2009
       fprintf('Fitting exponential to filter events ... ')
       [filt_avg, FiltStat] = FiltExpFit(filt_avg, filt_raw_merged, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
       fprintf('Done\n')

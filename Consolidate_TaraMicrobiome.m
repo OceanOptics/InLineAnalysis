@@ -90,6 +90,271 @@ writetable(tsg, [ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ..
     cruise '_InLine_TSG_prod.csv']);
 fprintf('Done\n');
 
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% WSCD %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
+ila.cfg.instruments2run = {'WSCD859'}; % {'FLOW', 'TSG', 'BB31502','PAR', 'WSCD859'}
+ila.cfg.days2run = datenum(2020,12,24):datenum(2021,5,9);
+
+% populate ila.instrument
+ila.Read('prod');
+
+% interpolate SST / SSS / LatLon
+wscd_temp = ila.instrument.(ila.cfg.instruments2run{:}).prod.pd;
+wscd_temp.dt = datetime(wscd_temp.dt,'ConvertFrom','datenum');
+% latlon_interp = interp1(latlon.dt, [latlon.lat, latlon.lon], fdom_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+tsg_interp = interp1(tsg.dt, [tsg.lat, tsg.lon, tsg.sst, tsg.sss], wscd_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+
+% FDOM Products
+wscd = table(wscd_temp.dt, tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3), tsg_interp(:,4), wscd_temp.fdom, wscd_temp.fdom_sd, wscd_temp.fdom_n,...
+             'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'fdom','fdom_sd','bincount'});
+wscd.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'ppb', 'ppb', 'none'};
+wscd.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f', '%.2f'};
+
+% sort by date
+wscd = sortrows(wscd, 'dt');
+
+ila.visProd_timeseries()
+saveGraph([ila.instrument.(ila.cfg.instruments2run{:}).path.prod ...
+  'Graphs' filesep cruise '_FDOM_timeseries'], 'jpg')
+close figure 94
+
+SimpleMap(wscd.fdom, wscd(:,1:3), 'WSCD fdom ppb')
+saveGraph([ila.instrument.(ila.cfg.instruments2run{:}).path.prod 'plots' filesep cruise '_WSCD_fdom_map'], 'jpg')
+close figure 1
+
+% filename = [ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod cruise ...
+%   '_InLine_' cell2mat(ila.cfg.instruments2run) '_Product_v' datestr(now, 'yyyymmdd') '.sb'];
+
+% % export product to SeaBASS format
+% ila.meta.documents = [cruise '_WSCD_ProcessingReport_V2.pdf';
+% ila.meta.calibration_files = cell2mat(list_dev(i));
+% exportSeaBASS(filename,...
+%     ila.meta,...
+%     wscd,...
+%     {'', '', ''});
+% sprintf('%s_InLine_%s_Product.sb saved', cruise, cell2mat(ila.cfg.instruments2run))
+
+wscd.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss','fdom','fdom_sd','fdom_n'};
+
+% save WSCD prod
+fprintf('Export to mat and csv... ');
+save([ila.instrument.(ila.cfg.instruments2run{:}).path.prod ...
+    cruise '_InLine_WSCD_prod'], 'wscd');
+writetable(wscd, [ila.instrument.(ila.cfg.instruments2run{:}).path.prod ...
+    cruise '_InLine_WSCD_prod.csv']);
+fprintf('Done\n');
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PAR %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
+% ila.cfg.instruments2run = {'PAR'}; % {'FLOW', 'TSG', 'BB3','PAR', 'WSCD1082P'}
+% ila.cfg.days2run = datenum(2020,12,24):datenum(2021,5,9);
+% 
+% % populate ila.instrument
+% ila.Read('prod');
+% 
+% % interpolate SST / SSS / LatLon
+% par_temp = ila.instrument.(cell2mat(ila.cfg.instruments2run)).prod.a;
+% par_temp.dt = datetime(par_temp.dt,'ConvertFrom','datenum');
+% latlon_interp = interp1(latlon.dt, [latlon.lat, latlon.lon], par_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+% tsg_interp = interp1(tsg.dt, [tsg.sst, tsg.sss_adj], par_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+% 
+% % par Products in uE/cm^2/s for SeaBASS
+% par = table(par_temp.dt, latlon_interp(:,1), latlon_interp(:,2), tsg_interp(:,1), tsg_interp(:,2), par_temp.par./10000, par_temp.par_sd./10000, par_temp.par_n,...
+%              'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'par','par_sd','bincount'});
+% par.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'uE/cm^2/s', 'uE/cm^2/s', 'none'};
+% par.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f', '%.2f'};
+% 
+% [~,b] = sort(par.dt); % sort by date
+% par = par(b,:);
+% 
+% ila.visProd_timeseries()
+% saveGraph([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
+%   'Graphs' filesep cruise '_PAR_timeseries'], 'jpg')
+% close figure 1
+%
+% filename = [ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod cruise ...
+%   '_InLine_' cell2mat(ila.cfg.instruments2run) '_Product_v' datestr(now, 'yyyymmdd') '.sb'];
+%
+% % export product to SeaBASS format
+% ila.meta.documents = [cruise '_PAR_ProcessingReport_V2.pdf'];
+% ila.meta.calibration_files = 'PAR-50168_CalSheet.pdf';
+% exportSeaBASS(filename,...
+%     ila.meta,...
+%     par,...
+%     {'', '', ''});
+% sprintf('%s_InLine_%s_Product.sb saved', cruise, cell2mat(ila.cfg.instruments2run))
+% 
+% par.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss', 'par', 'par_sd', 'par_n'};
+% 
+% % convert to uE/m^2/s for mat file
+% par.par = par.par.*10000;
+% par.par_sd = par.par_sd.*10000;
+% par.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'uE/m^2/s', 'uE/m^2/s', 'none'};
+% 
+% % save PAR prod
+% fprintf('Export to mat and csv... ');
+% save([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
+%     cruise '_InLine_PAR_prod'], 'par');
+% writetable(par, [ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
+%     cruise '_InLine_PAR_prod.csv']);
+% fprintf('Done\n');
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BB3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
+ila.cfg.instruments2run = {'BB31502'}; % {'FLOW', 'TSG', 'BB31502','PAR', 'WSCD1082'}
+ila.cfg.days2run = datenum(2020,12,24):datenum(2021,5,9);
+
+% populate ila.instrument
+ila.Read('prod');
+
+% interpolate SST / SSS / LatLon
+bb3_lambda = ila.instrument.(ila.cfg.instruments2run{:}).lambda;
+bb3_temp = ila.instrument.(ila.cfg.instruments2run{:}).prod.p;
+bb3_temp.dt = datetime(bb3_temp.dt,'ConvertFrom','datenum');
+% latlon_interp = interp1(latlon.dt, [latlon.lat, latlon.lon], bb3_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+tsg_interp = interp1(tsg.dt, [tsg.lat, tsg.lon, tsg.sst, tsg.sss], bb3_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+
+% bb3 Products
+bb3 = table(bb3_temp.dt, tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3), tsg_interp(:,4), bb3_temp.betap, bb3_temp.bbp, bb3_temp.betap_sd, bb3_temp.betap_n,...
+             'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'VSF_124ang','bbp','VSF_124ang_sd','bincount'});
+bb3.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', '1/m/sr', '1/m', '1/m/sr', 'none'};
+bb3.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f'};
+
+% sort by date
+bb3 = sortrows(bb3, 'dt'); 
+bb3.bbp(bb3.bbp<0)=NaN;
+bb3.VSF_124ang_sd(bb3.VSF_124ang<0)=NaN;
+bb3.VSF_124ang(bb3.VSF_124ang<0)=NaN;
+bb3(all(isnan(bb3.bbp),2),:)=[];
+
+% remove dobious values
+bb3(bb3.dt > datetime(2021,2,17,0,0,0) & bb3.dt < datetime(2021,2,23,18,30,0), :) = [];
+bb3(bb3.dt > datetime(2021,3,23,21,25,0) & bb3.dt < datetime(2021,3,25,0,0,0), :) = [];
+bb3(bb3.dt > datetime(2021,3,25,3,14,0) & bb3.dt < datetime(2021,3,31,0,0,0), :) = [];
+
+%%% BB 3D plots %%%
+save_figures = true;
+ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
+close all
+
+% plot time series
+ila.visProd_timeseries()
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_BB3_BBparticulate_timeseries'], 'jpg')
+close figure 86
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_BB3_POCparticulate_timeseries'], 'jpg')
+close figure 85
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_BB3_BBdissolved_timeseries'], 'jpg')
+close figure 87
+
+SimpleMap(bb3.bbp(:,2), bb3(:,1:3), 'bbp (532 nm) [m^-^1]')
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_bb3_bbp_map'], 'jpg')
+close figure 1
+
+filename = [ila.instrument.(ila.cfg.instruments2run{:}).path.prod cruise ...
+  '_InLine_' ila.cfg.instruments2run{:} '_Particulate_v' datestr(now, 'yyyymmdd') '.sb'];
+
+% export product to SeaBASS format
+ila.meta.documents = [cruise '_BB3_ProcessingReport.pdf'];
+ila.meta.calibration_files = 'BB3-1502_(470-532-650nm)_CharSheet.pdf';
+exportSeaBASS(filename,...
+    ila.meta,...
+    bb3,...
+    {string(bb3_lambda(1:2)),string(bb3_lambda(1:2)),string(bb3_lambda(1:2)),''});
+sprintf('%s_InLine_%s_Particulate.sb saved', cruise, ila.cfg.instruments2run{:})
+
+bb3.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss', 'VSF124', 'bbp', 'VSF124_sd','bincount'};
+bb3.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'm^-1.sr^-1', 'm^-1', 'm^-1.sr^-1', 'none'};
+bb3.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f'};
+
+% save BB3 prod
+fprintf('Export to mat and csv... ');
+save([ila.instrument.(ila.cfg.instruments2run{:}).path.prod ...
+    cruise '_InLine_BB3_particulate'], 'bb3', 'bb3_lambda');
+writetable(bb3,[ila.instrument.(ila.cfg.instruments2run{:}).path.prod ...
+    cruise '_InLine_BB3_particulate.csv']);
+fprintf('Done\n');
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% HBB %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
+ila.cfg.instruments2run = {'HBB'}; % {'FLOW', 'TSG', 'BB31502','PAR', 'WSCD1082', 'HBB'}
+ila.cfg.days2run = datenum(2020,12,24):datenum(2021,5,9);
+
+% populate ila.instrument
+ila.Read('prod');
+
+% interpolate SST / SSS / LatLon
+hbb_lambda = ila.instrument.(ila.cfg.instruments2run{:}).lambda;
+hbb_temp = ila.instrument.(ila.cfg.instruments2run{:}).prod.p;
+hbb_temp.dt = datetime(hbb_temp.dt,'ConvertFrom','datenum');
+% latlon_interp = interp1(latlon.dt, [latlon.lat, latlon.lon], bb3_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+tsg_interp = interp1(tsg.dt, [tsg.lat, tsg.lon, tsg.sst, tsg.sss], hbb_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+
+% bb3 Products
+hbb = table(hbb_temp.dt, tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3), tsg_interp(:,4), hbb_temp.betap, bb3_temp.bbp, bb3_temp.betap_sd, bb3_temp.betap_n,...
+             'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'VSF_124ang','bbp','VSF_124ang_sd','bincount'});
+hbb.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', '1/m/sr', '1/m', '1/m/sr', 'none'};
+hbb.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f'};
+
+% sort by date
+hbb = sortrows(hbb, 'dt'); 
+hbb.bbp(hbb.bbp<0)=NaN;
+hbb.VSF_124ang_sd(hbb.VSF_124ang<0)=NaN;
+hbb.VSF_124ang(hbb.VSF_124ang<0)=NaN;
+hbb(all(isnan(hbb.bbp),2),:)=[];
+
+% remove dobious values
+hbb(hbb.dt > datetime(2021,2,17,0,0,0) & hbb.dt < datetime(2021,2,23,18,30,0), :) = [];
+hbb(hbb.dt > datetime(2021,3,23,21,25,0) & hbb.dt < datetime(2021,3,25,0,0,0), :) = [];
+hbb(hbb.dt > datetime(2021,3,25,3,14,0) & hbb.dt < datetime(2021,3,31,0,0,0), :) = [];
+
+%%% BB 3D plots %%%
+save_figures = true;
+ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
+close all
+
+% plot time series
+ila.visProd_timeseries()
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_HBB_BBparticulate_timeseries'], 'jpg')
+close figure 86
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_HBB_POCparticulate_timeseries'], 'jpg')
+close figure 85
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_HBB_BBdissolved_timeseries'], 'jpg')
+close figure 87
+
+SimpleMap(hbb.bbp(:,hbb_lambda == 530), hbb(:,1:3), 'bbp (530 nm) [m^-^1]')
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_hbb_bbp_map'], 'jpg')
+close figure 1
+
+filename = [ila.instrument.(ila.cfg.instruments2run{:}).path.prod cruise ...
+  '_InLine_' ila.cfg.instruments2run{:} '_Particulate_v' datestr(now, 'yyyymmdd') '.sb'];
+
+% export product to SeaBASS format
+ila.meta.documents = [cruise '_HBB_ProcessingReport.pdf'];
+ila.meta.calibration_files = 'HBB8004_CharSheet.pdf';
+exportSeaBASS(filename,...
+    ila.meta,...
+    hbb,...
+    {string(lambda(1:2)),string(lambda(1:2)),string(lambda(1:2)),''});
+sprintf('%s_InLine_%s_Particulate.sb saved', cruise, ila.cfg.instruments2run{:})
+
+hbb.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss', 'VSF124', 'bbp', 'VSF124_sd','bincount'};
+hbb.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'm^-1.sr^-1', 'm^-1', 'm^-1.sr^-1', 'none'};
+hbb.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f'};
+
+% save HBB prod
+fprintf('Export to mat and csv... ');
+save([ila.instrument.(ila.cfg.instruments2run{:}).path.prod ...
+    cruise '_InLine_HBB_particulate'], 'hbb', 'lambda');
+writetable(hbb,[ila.instrument.(ila.cfg.instruments2run{:}).path.prod ...
+    cruise '_InLine_HBB_particulate.csv']);
+fprintf('Done\n');
+
+
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% AC %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 list_leg = {...
     datenum(2020,12,24):datenum(2021,02,05);...
@@ -119,6 +384,12 @@ list_instru = {...
 
 data_AC = struct('particulate', [], 'product', []);
 acs = [];
+if exist('bb3', 'var')
+  bb3_b = [];
+end
+if exist('hbb', 'var')
+  hbb_b = [];
+end
 
 for i=1:size(list_instru,1)
   ila = InLineAnalysis(['cfg' filesep cruise '_cfg.m']);
@@ -169,17 +440,30 @@ for i=1:size(list_instru,1)
   data_AC.product.(ref).Chl_lineheight(data_AC.product.(ref).Chl_lineheight < 0) = NaN;
   data_AC.product.(ref).cp_gamma(data_AC.product.(ref).cp_gamma < 0) = NaN;
   data_AC.product.(ref)(all(isnan(table2array(data_AC.product.(ref)(:,6:8))),2),:)=[];
-
+  
+  % interpolate over BB3 wavelength to QC/QA with bbp/bp ratio
+  bp = data_AC.particulate.(ref).cp - data_AC.particulate.(ref).ap;
+  if exist('bb3_b', 'var')
+    bb3_b = [bb3_b; datenum(data_AC.particulate.(ref).dt) interp1(ila.instrument.(list_instru{i}).lambda_a, ...
+      bp',bb3_lambda,'linear')'];
+  end
+  if exist('hbb_b', 'var')
+    hbb_b = [hbb_b; datenum(data_AC.particulate.(ref).dt) interp1(ila.instrument.(list_instru{i}).lambda_a, ...
+      bp',hbb_lambda,'linear')'];
+  end
+  
   %%% AC 3D plots %%%
   save_figures = true;
   ila.DiagnosticPlot('AC', {'prod'}, save_figures); % AC or BB
   close all
-
+  
+  filename = [ila.instrument.(list_instru{i}).path.prod cruise '_InLine_' ref ...
+    '_Particulate_v' datestr(now, 'yyyymmdd') '.sb'];
   % export particulate to SeaBASS format
   ila.meta.documents = [cruise '_ACS_ProcessingReport.pdf'];
   [~, calfile] = fileparts(list_dev{i});
   ila.meta.calibration_files = [calfile '.dev'];
-  exportSeaBASS([ila.instrument.(list_instru{i}).path.prod cruise '_InLine_' ref '_Particulate.sb'],...
+  exportSeaBASS(filename,...
       ila.meta,...
       data_AC.particulate.(ref),...
       {string(ila.instrument.(list_instru{i}).lambda_a),...
@@ -231,184 +515,41 @@ close figure 1
 
 % save AC prod
 fprintf('Export to mat and csv... ');
-save([ila.instrument.(list_instru{i}).path.prod ...
-    cruise '_InLine_ACS_prod'], 'acs');
-writetable(acs, [ila.instrument.(list_instru{i}).path.prod ...
-    cruise '_InLine_ACS_prod.csv']);
+save([ila.instrument.(list_instru{i}).path.prod cruise '_InLine_ACS_prod'], 'acs');
+writetable(acs, [ila.instrument.(list_instru{i}).path.prod cruise '_InLine_ACS_prod.csv']);
 fprintf('Done\n');
 
+%% bbp/bp graph to validate BB3 
+bp_interp = interp1(bb3_b(:,1), bb3_b(:,2:end), ...
+  datenum(bb3.dt), 'linear', 'extrap'); % extrap needed for first minute of data
 
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% WSCD %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
-ila.cfg.instruments2run = {'WSCD859'}; % {'FLOW', 'TSG', 'BB31502','PAR', 'WSCD859'}
-ila.cfg.days2run = datenum(2020,12,24):datenum(2021,5,9);
+% get spectrumRGB
+C = reshape(spectrumRGB(bb3_lambda), max(size(bb3_lambda)),  3);
 
-% populate ila.instrument
-ila.Read('prod');
-
-% interpolate SST / SSS / LatLon
-wscd_temp = ila.instrument.(cell2mat(ila.cfg.instruments2run)).prod.pd;
-wscd_temp.dt = datetime(wscd_temp.dt,'ConvertFrom','datenum');
-% latlon_interp = interp1(latlon.dt, [latlon.lat, latlon.lon], fdom_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
-tsg_interp = interp1(tsg.dt, [tsg.lat, tsg.lon, tsg.sst, tsg.sss], wscd_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
-
-% FDOM Products
-wscd = table(wscd_temp.dt, tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3), tsg_interp(:,4), wscd_temp.fdom, wscd_temp.fdom_sd, wscd_temp.fdom_n,...
-             'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'fdom','fdom_sd','bincount'});
-wscd.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'ppb', 'ppb', 'none'};
-wscd.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f', '%.2f'};
-
-% sort by date
-wscd = sortrows(wscd, 'dt');
-
-ila.visProd_timeseries()
-saveGraph([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-  'Graphs' filesep cruise '_FDOM_timeseries'], 'jpg')
-close figure 94
-
-SimpleMap(wscd.fdom, wscd(:,1:3), 'WSCD fdom ppb')
-saveGraph([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod 'Graphs' filesep cruise '_WSCD_fdom_map'], 'jpg')
+figure(); hold on
+scatter(bb3.dt, bb3.bbp./bp_interp, 15, C, 'filled')
+xlim([min(bb3.dt) max(bb3.dt)])
+ylabel('{\itbb_p}/{\itb_p}')
+legend(cellfun(@(x) [x 'nm'], cellstr(num2str(bb3_lambda')), 'un', 0), 'FontSize', 14)
+set(gca, 'FontSize', 13)
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_BB3_bbp_over_bp'], 'jpg')
 close figure 1
 
-% % export product to SeaBASS format
-% ila.meta.documents = [cruise '_WSCD_ProcessingReport_V2.pdf';
-% ila.meta.calibration_files = cell2mat(list_dev(i));
-% exportSeaBASS([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod cruise '_InLine_' cell2mat(ila.cfg.instruments2run) '_Product.sb'],...
-%     ila.meta,...
-%     wscd,...
-%     {'', '', ''});
-% sprintf('%s_InLine_%s_Product.sb saved', cruise, cell2mat(ila.cfg.instruments2run))
+%% bbp/bp graph to validate HBB data
+bp_interp = interp1(hbb_b(:,1), hbb_b(:,2:end), ...
+  datenum(hbb.dt), 'linear', 'extrap'); % extrap needed for first minute of data
 
-wscd.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss','fdom','fdom_sd','fdom_n'};
+% get spectrumRGB
+C = reshape(spectrumRGB(hbb_lambda), max(size(hbb_lambda)),  3);
 
-% save WSCD prod
-fprintf('Export to mat and csv... ');
-save([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-    cruise '_InLine_WSCD_prod'], 'wscd');
-writetable(wscd, [ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-    cruise '_InLine_WSCD_prod.csv']);
-fprintf('Done\n');
-
-
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PAR %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
-% ila.cfg.instruments2run = {'PAR'}; % {'FLOW', 'TSG', 'BB3','PAR', 'WSCD1082P'}
-% ila.cfg.days2run = datenum(2020,12,24):datenum(2021,5,9);
-% 
-% % populate ila.instrument
-% ila.Read('prod');
-% 
-% % interpolate SST / SSS / LatLon
-% par_temp = ila.instrument.(cell2mat(ila.cfg.instruments2run)).prod.a;
-% par_temp.dt = datetime(par_temp.dt,'ConvertFrom','datenum');
-% latlon_interp = interp1(latlon.dt, [latlon.lat, latlon.lon], par_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
-% tsg_interp = interp1(tsg.dt, [tsg.sst, tsg.sss_adj], par_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
-% 
-% % par Products in uE/cm^2/s for SeaBASS
-% par = table(par_temp.dt, latlon_interp(:,1), latlon_interp(:,2), tsg_interp(:,1), tsg_interp(:,2), par_temp.par./10000, par_temp.par_sd./10000, par_temp.par_n,...
-%              'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'par','par_sd','bincount'});
-% par.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'uE/cm^2/s', 'uE/cm^2/s', 'none'};
-% par.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f', '%.2f'};
-% 
-% [~,b] = sort(par.dt); % sort by date
-% par = par(b,:);
-% 
-% ila.visProd_timeseries()
-% saveGraph([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-%   'Graphs' filesep cruise '_PAR_timeseries'], 'jpg')
-% close figure 1
-% 
-% % export product to SeaBASS format
-% ila.meta.documents = [cruise '_PAR_ProcessingReport_V2.pdf'];
-% ila.meta.calibration_files = 'PAR-50168_CalSheet.pdf';
-% exportSeaBASS([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod cruise '_InLine_' cell2mat(ila.cfg.instruments2run) '_Product.sb'],...
-%     ila.meta,...
-%     par,...
-%     {'', '', ''});
-% sprintf('%s_InLine_%s_Product.sb saved', cruise, cell2mat(ila.cfg.instruments2run))
-% 
-% par.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss', 'par', 'par_sd', 'par_n'};
-% 
-% % convert to uE/m^2/s for mat file
-% par.par = par.par.*10000;
-% par.par_sd = par.par_sd.*10000;
-% par.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'uE/m^2/s', 'uE/m^2/s', 'none'};
-% 
-% % save PAR prod
-% fprintf('Export to mat and csv... ');
-% save([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-%     cruise '_InLine_PAR_prod'], 'par');
-% writetable(par, [ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-%     cruise '_InLine_PAR_prod.csv']);
-% fprintf('Done\n');
-
-
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BB3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
-ila.cfg.instruments2run = {'BB31502'}; % {'FLOW', 'TSG', 'BB31502','PAR', 'WSCD1082'}
-ila.cfg.days2run = datenum(2020,12,24):datenum(2021,5,9);
-
-% populate ila.instrument
-ila.Read('prod');
-
-% interpolate SST / SSS / LatLon
-lambda = ila.instrument.BB31502.lambda;
-bb3_temp = ila.instrument.(cell2mat(ila.cfg.instruments2run)).prod.p;
-bb3_temp.dt = datetime(bb3_temp.dt,'ConvertFrom','datenum');
-% latlon_interp = interp1(latlon.dt, [latlon.lat, latlon.lon], bb3_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
-tsg_interp = interp1(tsg.dt, [tsg.lat, tsg.lon, tsg.sst, tsg.sss], bb3_temp.dt, 'linear', 'extrap'); % extrap needed for first minute of data
-
-% bb3 Products
-bb3 = table(bb3_temp.dt, tsg_interp(:,1), tsg_interp(:,2), tsg_interp(:,3), tsg_interp(:,4), bb3_temp.betap, bb3_temp.bbp, bb3_temp.betap_sd, bb3_temp.betap_n,...
-             'VariableNames', {'dt', 'lat', 'lon', 't', 's', 'VSF_124ang','bbp','VSF_124ang_sd','bincount'});
-bb3.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', '1/m/sr', '1/m', '1/m/sr', 'none'};
-bb3.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f'};
-
-% sort by date
-bb3 = sortrows(bb3, 'dt'); 
-bb3.bbp(bb3.bbp<0)=NaN;
-bb3.VSF_124ang_sd(bb3.VSF_124ang<0)=NaN;
-bb3.VSF_124ang(bb3.VSF_124ang<0)=NaN;
-bb3(all(isnan(bb3.bbp),2),:)=[];
-
-%%% BB 3D plots %%%
-save_figures = true;
-ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
-close all
-
-
-% plot time series
-ila.visProd_timeseries()
-saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_BB3particulate_timeseries'], 'jpg')
-close figure 85
-saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_BB3dissolved_timeseries'], 'jpg')
-close figure 86
-
-SimpleMap(bb3.bbp(:,2), bb3(:,1:3), 'bbp (532 nm) [m^-^1]')
-saveGraph([ila.instrument.TSG.path.prod 'Graphs' filesep cruise '_bb3_bbp_map'], 'jpg')
+figure(); hold on
+scatter(hbb.dt, hbb.bbp./bp_interp, 15, C, 'filled')
+xlim([min(hbb.dt) max(hbb.dt)])
+ylabel('{\itbb_p}/{\itb_p}')
+legend(cellfun(@(x) [x 'nm'], cellstr(num2str(hbb_lambda')), 'un', 0), 'FontSize', 14)
+set(gca, 'FontSize', 13)
+saveGraph([ila.instrument.TSG.path.prod 'plots' filesep cruise '_HBB_bbp_over_bp'], 'jpg')
 close figure 1
-
-% export product to SeaBASS format
-ila.meta.documents = [cruise '_BB3_ProcessingReport.pdf'];
-ila.meta.calibration_files = 'BB3-1502_(470-532-650nm)_CharSheet.pdf';
-exportSeaBASS([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod cruise '_InLine_' cell2mat(ila.cfg.instruments2run) '_Particulate.sb'],...
-    ila.meta,...
-    bb3,...
-    {string(lambda(1:2)),string(lambda(1:2)),string(lambda(1:2)),''});
-sprintf('%s_InLine_%s_Particulate.sb saved', cruise, cell2mat(ila.cfg.instruments2run))
-
-bb3.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss', 'VSF124', 'bbp', 'VSF124_sd','bincount'};
-bb3.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'm^-1.sr^-1', 'm^-1', 'm^-1.sr^-1', 'none'};
-bb3.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f'};
-
-% save BB3 prod
-fprintf('Export to mat and csv... ');
-save([ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-    cruise '_InLine_BB3_particulate'], 'bb3', 'lambda');
-writetable(bb3,[ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod ...
-    cruise '_InLine_BB3_particulate.csv']);
-fprintf('Done\n');
-
 
 %% Merge (GPS+TSG+<products>)
 % fprintf('Consolidate... ');
