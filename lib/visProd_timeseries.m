@@ -138,6 +138,7 @@ switch instrument
       
   case {'BB', 'HBB'}
     if size(lambda, 1) > size(lambda, 2); lambda = lambda'; end
+    lambda_orig = lambda;
     if any(contains(data.Properties.VariableNames, 'betap'))
       toplot = {'poc', 'bbp'};
       unit = '(mg.m^{-3})';
@@ -149,7 +150,7 @@ switch instrument
     end
     for i = 1:size(toplot, 2)
       if contains(instrument, 'HBB')
-        data.(toplot{i})(:, lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
+        data.(toplot{i})(:, lambda_orig ~= 430 & lambda_orig ~= 550 & lambda_orig ~= 660 & lambda_orig ~= 680) = [];
         lambda(lambda ~= 430 & lambda ~= 550 & lambda ~= 660 & lambda ~= 680) = [];
       end
       C = reshape(spectrumRGB(lambda), max(size(lambda)),  3);
