@@ -68,8 +68,8 @@ if contains(instrument, 'AC')
   wl_a = lambda.a(lambda.a > 500 & lambda.a < 600);
   wl_c = lambda.c(lambda.c > 500 & lambda.c < 600);
 
-  diff_a = [diff(datanorm.a(:,lambda.a > 500 & lambda.a < 600),[],2) NaN(size(datanorm,1),1)];
-  diff_c = [diff(datanorm.c(:,lambda.c > 500 & lambda.c < 600),[],2) NaN(size(datanorm,1),1)];
+  diff_a = [diff(datanorm.a(:, wl_a),[],2) NaN(size(datanorm,1),1)];
+  diff_c = [diff(datanorm.c(:, wl_c),[],2) NaN(size(datanorm,1),1)];
 
   bad_a = max(abs(diff_a(:,wl_a > 560 & wl_a < 600)),[],2)...
     > fudge_factor.a*mean(abs(diff_a(:,wl_a > 500 & wl_a < 550)),2);

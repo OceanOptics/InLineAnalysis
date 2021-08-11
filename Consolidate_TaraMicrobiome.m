@@ -235,6 +235,7 @@ bb3(all(isnan(bb3.bbp),2),:)=[];
 bb3(bb3.dt > datetime(2021,2,17,0,0,0) & bb3.dt < datetime(2021,2,23,18,30,0), :) = [];
 bb3(bb3.dt > datetime(2021,3,23,21,25,0) & bb3.dt < datetime(2021,3,25,0,0,0), :) = [];
 bb3(bb3.dt > datetime(2021,3,25,3,14,0) & bb3.dt < datetime(2021,3,31,0,0,0), :) = [];
+% bb3(any(isnan([bb3.lat bb3.lon]),2), :) = [];
 
 %%% BB 3D plots %%%
 save_figures = true;
@@ -258,13 +259,14 @@ filename = [ila.instrument.(ila.cfg.instruments2run{:}).path.prod cruise ...
   '_InLine_' ila.cfg.instruments2run{:} '_Particulate_v' datestr(now, 'yyyymmdd') '.sb'];
 
 % export product to SeaBASS format
-ila.meta.documents = [cruise '_BB3_ProcessingReport.pdf'];
+ila.meta.documents = sprintf('%s_BB3_ProcessingReport_v%s.pdf', cruise, datestr(now, 'yyyymmdd'));
 ila.meta.calibration_files = 'BB3-1502_(470-532-650nm)_CharSheet.pdf';
 exportSeaBASS(filename,...
     ila.meta,...
     bb3,...
-    {string(bb3_lambda(1:2)),string(bb3_lambda(1:2)),string(bb3_lambda(1:2)),''});
-sprintf('%s_InLine_%s_Particulate.sb saved', cruise, ila.cfg.instruments2run{:})
+    {string(bb3_lambda),string(bb3_lambda),string(bb3_lambda),''});
+fprintf('%s_InLine_%s_Particulate_v%s.sb saved\n', cruise, ila.cfg.instruments2run{:}, ...
+  datestr(now, 'yyyymmdd'))
 
 bb3.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss', 'VSF124', 'bbp', 'VSF124_sd','bincount'};
 bb3.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'm^-1.sr^-1', 'm^-1', 'm^-1.sr^-1', 'none'};
@@ -307,11 +309,6 @@ hbb.VSF_124ang_sd(hbb.VSF_124ang<0)=NaN;
 hbb.VSF_124ang(hbb.VSF_124ang<0)=NaN;
 hbb(all(isnan(hbb.bbp),2),:)=[];
 
-% remove dobious values
-hbb(hbb.dt > datetime(2021,2,17,0,0,0) & hbb.dt < datetime(2021,2,23,18,30,0), :) = [];
-hbb(hbb.dt > datetime(2021,3,23,21,25,0) & hbb.dt < datetime(2021,3,25,0,0,0), :) = [];
-hbb(hbb.dt > datetime(2021,3,25,3,14,0) & hbb.dt < datetime(2021,3,31,0,0,0), :) = [];
-
 %%% BB 3D plots %%%
 save_figures = true;
 ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
@@ -334,13 +331,15 @@ filename = [ila.instrument.(ila.cfg.instruments2run{:}).path.prod cruise ...
   '_InLine_' ila.cfg.instruments2run{:} '_Particulate_v' datestr(now, 'yyyymmdd') '.sb'];
 
 % export product to SeaBASS format
+ila.meta.documents = sprintf('%s_HBB_ProcessingReport_v%s.pdf', cruise, datestr(now, 'yyyymmdd'));
 ila.meta.documents = [cruise '_HBB_ProcessingReport.pdf'];
 ila.meta.calibration_files = 'HBB8004_CharSheet.pdf';
 exportSeaBASS(filename,...
     ila.meta,...
     hbb,...
-    {string(lambda(1:2)),string(lambda(1:2)),string(lambda(1:2)),''});
-sprintf('%s_InLine_%s_Particulate.sb saved', cruise, ila.cfg.instruments2run{:})
+    {string(hbb_lambda),string(hbb_lambda),string(hbb_lambda),''});
+fprintf('%s_InLine_%s_Particulate_v%s.sb saved\n', cruise, ila.cfg.instruments2run{:}, ...
+  datestr(now, 'yyyymmdd'))
 
 hbb.Properties.VariableNames = {'dt', 'lat', 'lon', 'sst', 'sss', 'VSF124', 'bbp', 'VSF124_sd','bincount'};
 hbb.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'm^-1.sr^-1', 'm^-1', 'm^-1.sr^-1', 'none'};
@@ -435,11 +434,13 @@ for i=1:size(list_instru,1)
   data_AC.product.(ref).Properties.VariableNames{...
     strcmp(data_AC.product.(ref).Properties.VariableNames, 'chl_ap676lh')} = 'Chl_lineheight';
 
-  % Remove NaN and aberrant 
+  % Remove NaN and aberrant
+  data_AC.particulate.(ref)(any(isnan([data_AC.particulate.(ref).lat data_AC.particulate.(ref).lon]),2), :) = [];
   data_AC.product.(ref).POC_cp(data_AC.product.(ref).POC_cp < 0) = NaN;
   data_AC.product.(ref).Chl_lineheight(data_AC.product.(ref).Chl_lineheight < 0) = NaN;
   data_AC.product.(ref).cp_gamma(data_AC.product.(ref).cp_gamma < 0) = NaN;
   data_AC.product.(ref)(all(isnan(table2array(data_AC.product.(ref)(:,6:8))),2),:)=[];
+  data_AC.product.(ref)(any(isnan([data_AC.product.(ref).lat data_AC.product.(ref).lon]),2), :) = [];
   
   % interpolate over BB3 wavelength to QC/QA with bbp/bp ratio
   bp = data_AC.particulate.(ref).cp - data_AC.particulate.(ref).ap;
@@ -460,7 +461,7 @@ for i=1:size(list_instru,1)
   filename = [ila.instrument.(list_instru{i}).path.prod cruise '_InLine_' ref ...
     '_Particulate_v' datestr(now, 'yyyymmdd') '.sb'];
   % export particulate to SeaBASS format
-  ila.meta.documents = [cruise '_ACS_ProcessingReport.pdf'];
+  ila.meta.documents = sprintf('%s_ACS_ProcessingReport_v%s.pdf', cruise, datestr(now, 'yyyymmdd'));
   [~, calfile] = fileparts(list_dev{i});
   ila.meta.calibration_files = [calfile '.dev'];
   exportSeaBASS(filename,...
@@ -470,7 +471,8 @@ for i=1:size(list_instru,1)
       string(ila.instrument.(list_instru{i}).lambda_a),...
       string(ila.instrument.(list_instru{i}).lambda_c),...
       string(ila.instrument.(list_instru{i}).lambda_c),''});
-  sprintf('%s_InLine_%s_Particulate.sb saved', cruise, ref)
+  fprintf('%s_InLine_%s_Particulate_v%s.sb saved\n', cruise, ref, ...
+    datestr(now, 'yyyymmdd'))
 
   % % export product to SeaBASS format
   % exportSeaBASS([ila.instrument.(list_instru{i}).path.prod cruise '_InLine_' ref '_Product.sb'],...
