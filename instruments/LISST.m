@@ -45,7 +45,7 @@ classdef LISST < Instrument
       else
         fprintf('WARNING: Set inversion to spherical (default).'); 
       end
-      if isfield(cfg, 'ds'); 
+      if isfield(cfg, 'ds')
         obj.ds = cfg.ds;
       elseif strcmp(obj.inversion, 'spherical')
         obj.ds = 1.25*1.18.^(0:1:32);
