@@ -212,8 +212,8 @@ end
 % Propagate error (using geometric mean of measurement errors)
 %   Note: Error is not propagated through Scattering & Residual temperature
 %         correction as required by SeaBASS
-p.ap_sd = sqrt(tot.a_avg_sd .* filt_interp.a_avg_sd);
-p.cp_sd = sqrt(tot.c_avg_sd .* filt_interp.c_avg_sd);
+p.ap_sd = sqrt(tot.a_avg_sd.^2 + filt_interp.a_avg_sd.^2);
+p.cp_sd = sqrt(tot.c_avg_sd.^2 + filt_interp.c_avg_sd.^2);
 p.ap_n = tot.a_avg_n;
 p.cp_n = tot.c_avg_n;
 
@@ -495,8 +495,8 @@ if ~isempty(di)
   % Propagate error
   %   Note: Error is not propagated through Scattering & Residual temperature
   %         correction as required by SeaBASS
-  g.ag_sd = sqrt(filt_avg.a_avg_sd + di_interp.a_avg_sd);
-  g.cg_sd = sqrt(filt_avg.c_avg_sd + di_interp.c_avg_sd);
+  g.ag_sd = sqrt(filt_avg.a_avg_sd.^2 + di_interp.a_avg_sd.^2);
+  g.cg_sd = sqrt(filt_avg.c_avg_sd.^2 + di_interp.c_avg_sd.^2);
   g.ag_n = filt_avg.a_avg_n;
   g.cg_n = filt_avg.c_avg_n;
   
@@ -656,7 +656,7 @@ cp_corr = cp - psiT.*deltaT;
 end
 
 function cost = costFun_RTSC(deltaT, ap, bp, psiT, iNIR, iref)
-    cost = sum(abs(ap(iNIR) - psiT(iNIR).*deltaT - ((ap(iref)-psiT(iref).*deltaT)./bp(iref)).*bp(iNIR)));
+  cost = sum(abs(ap(iNIR) - psiT(iNIR).*deltaT - ((ap(iref)-psiT(iref).*deltaT)./bp(iref)).*bp(iNIR)));
 end
 
 %%%%%%%%%%%%%%%%%
@@ -818,7 +818,7 @@ acorr2onenm = interp1(lambda, ap_filled', onenm, 'spline');
 % define the matrix of component Gaussian functions using the peaks
 % and widths (sigma) above
 coef2 = exp(-0.5 .* (((onenm .* ones(size(peak_loc,2),1))' - peak_loc .* ...
-    ones(size(onenm,2),1)) ./ lsqsig) .^ 2);
+  ones(size(onenm,2),1)) ./ lsqsig) .^ 2);
 
 % define a function for non-algal particles and concatenate this to the Gaussian matrix
 coef2nap = exp(-0.01 * (onenm - 400));

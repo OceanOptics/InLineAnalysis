@@ -150,7 +150,7 @@ p.bbp = 2 * pi * X_p .* p.betap;
 % Propagate error
 %   Note: Error is not propagated through Scattering & Residual temperature
 %         correction as required by SeaBASS
-p.betap_sd = param.slope .* sqrt(tot.beta_avg_sd + filt_interp.beta_avg_sd);
+p.betap_sd = param.slope .* sqrt(tot.beta_avg_sd.^2 + filt_interp.beta_avg_sd.^2);
 p.betap_n = tot.beta_avg_n;
 
 % Derive Gamma_bbp (does not support NaN values)
@@ -221,7 +221,7 @@ if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering'))
       % Propagate error
       %   Note: Error is not propagated through Scattering & Residual temperature
       %         correction as required by SeaBASS
-      g.betag_sd = param.slope .* sqrt(filt_avg.beta_avg_sd + di_pp.beta_avg_sd);
+      g.betag_sd = param.slope .* sqrt(filt_avg.beta_avg_sd.^2 + di_pp.beta_avg_sd.^2);
     case 'SW_scattering'
       % Get beta salt from Zhang et al. 2009
       beta_sw = NaN(size(filt_avg.beta));
@@ -235,7 +235,7 @@ if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering'))
       % Propagate error
       %   Note: Error is not propagated through Scattering & Residual temperature
       %         correction as required by SeaBASS
-      % g.betag_sd = param.slope .* sqrt(filt_qc.beta_avg_sd + di_pp.beta_avg_sd);
+      % g.betag_sd = param.slope .* sqrt(filt_qc.beta_avg_sd.^2 + di_pp.beta_avg_sd.^2);
       g.betag_sd = filt_avg.beta_avg_sd;
     otherwise
       error('Method not supported.');

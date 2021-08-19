@@ -14,7 +14,7 @@ p = table(tot.dt, 'VariableNames', {'dt'});
 p.fchl = param.slope .* (tot.fchl - filt_interp.fchl);
 
 % Propagate error
-p.fchl_sd = param.slope .* sqrt(tot.fchl_avg_sd + filt_interp.fchl_avg_sd);
+p.fchl_sd = param.slope .* sqrt(tot.fchl_avg_sd.^2 + filt_interp.fchl_avg_sd.^2);
 p.fchl_n = tot.fchl_avg_n;
 
 end
