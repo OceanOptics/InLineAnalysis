@@ -252,6 +252,11 @@ switch instrument
     zlabel(['PSD (' data.Properties.VariableUnits{strcmp(data.Properties.VariableNames, 'PSD')} ')']);
     xlabel('Diameters \mum');
     ylabel('time');
+    visProd3D(data.Properties.UserData.diameters, data.dt, data.betap, false, 'Intensity', false, 102);
+    set(gca, 'ZScale', 'log', 'XScale', 'log');
+    zlabel(['VSF (' data.Properties.VariableUnits{strcmp(data.Properties.VariableNames, 'betap')} ')']);
+    xlabel('angle [degree]');
+    ylabel('time');
   otherwise
     warning('%s not supported for product visualisation', instrument)
 end
