@@ -15,7 +15,8 @@ classdef InLineAnalysis < handle
     function obj = InLineAnalysis(cfg_file_name)
       % Pre-initialization
       % Add path to library of functions
-      addpath('lib', 'instruments', 'packages', 'packages/datetick2_doy', 'packages/spectral_color');
+      addpath('lib', 'instruments', 'packages', 'packages/datetick2_doy', ...
+        'packages/spectral_color', 'packages/TEOS-10_subset');
       
       % Object Initilization
       obj = obj@handle();
@@ -79,8 +80,12 @@ classdef InLineAnalysis < handle
         % Initialize each instrument
         for i = fieldnames(cfg.instruments)'; i = i{1};
           switch cfg.instruments.(i).model
+            case {'NMEA','GPSSC701','GPSGP32'}
+              obj.instrument.(i) = NMEA(cfg.instruments.(i));
             case 'TSG'
               obj.instrument.(i) = TSG(cfg.instruments.(i));
+            case 'atlasTSG'
+              obj.instrument.(i) = atlasTSG(cfg.instruments.(i));
             case 'FTH'
               obj.instrument.(i) = FTH(cfg.instruments.(i));
             case 'ACS'
@@ -430,10 +435,12 @@ classdef InLineAnalysis < handle
           % Fresh selection does not take into account previous QC
           % TOTAL and FILTERED Sections
           fh = fig(31);
-          title('Select total (t; red) and filtered (f; green) sections (q to save)'); fprintf('Select total (t; red) and filtered (f; green) sections (q to save)\n');
+          title('Select total (t; red) and filtered (f; green) sections (q to save)');
+          fprintf('Select total (t; red) and filtered (f; green) sections (q to save)\n');
           yyaxis('left');
           plot(obj.instrument.(obj.cfg.qcref.reference).data.dt,...
-               obj.instrument.(obj.cfg.qcref.reference).data.(obj.instrument.(obj.cfg.qcref.reference).view.varname), 'k', 'LineWidth', obj.instrument.(obj.cfg.qcref.reference).view.varcol);
+               obj.instrument.(obj.cfg.qcref.reference).data.(obj.instrument.(obj.cfg.qcref.reference).view.varname), ...
+               'k', 'LineWidth', obj.instrument.(obj.cfg.qcref.reference).view.varcol);
           ylim([-0.1 1.1]);
           yyaxis('right');
           plot(obj.instrument.(obj.cfg.qcref.view).data.dt,...
@@ -593,7 +600,7 @@ classdef InLineAnalysis < handle
         case 'ui'
           if obj.cfg.qc.global.active
             % Display interactive figure
-            foo = obj.instrument.(obj.cfg.qc.global.view);
+            foo = obj.instrument.(obj.cfg.qc.global.view{:});
             if isempty(obj.instrument.FLOW.qc.tsw)
               fooflow = obj.instrument.FLOW.bin.tsw;
             else
@@ -602,7 +609,7 @@ classdef InLineAnalysis < handle
 
             fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                        foo.qc.fsw, foo.suspect.fsw, foo.view.varname, foo.view.varcol,...
-                       foo.raw.bad, fooflow);
+                       foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
             title('Global QC: Trash section pressing t (q to save)');
             user_selection = guiSelectOnTimeSeries(fh);
             % For each instrument 
@@ -638,13 +645,17 @@ classdef InLineAnalysis < handle
               if contains(i, 'AC')
                 channel = {'a', 'c'};
               elseif contains(i, 'TSG')
-                channel = {'t', 's'};
+                if ~strcmp(foo.qc.tsw.Properties.VariableNames, 's')
+                  channel = {foo.temperature_variable, 'c'};
+                else
+                  channel = {foo.temperature_variable, 's'};
+                end
               end
               if contains(i, {'AC', 'TSG'}) && ~obj.cfg.qc.qc_once_for_all
                 for j = channel
                   fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                              foo.qc.fsw, foo.suspect.fsw, j{:}, foo.view.varcol,...
-                             foo.raw.bad, fooflow);
+                             foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
                   title([i ' QC of "' j{:} '" only' newline 'Trash section pressing t (q to save)']);
                   % Get user selection
                   user_selection = guiSelectOnTimeSeries(fh);
@@ -671,7 +682,7 @@ classdef InLineAnalysis < handle
                   end
                   fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                              foo.qc.fsw, foo.suspect.fsw, j{:}, foo.view.varcol,...
-                             foo.raw.bad, fooflow);
+                             foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
                   title([i ' QC of "' j{:} '" only' newline 'Trash section pressing t (q to save)']);
                   % Get user selection
                   user_selection = guiSelectOnTimeSeries(fh);
@@ -687,11 +698,12 @@ classdef InLineAnalysis < handle
                 if ~isempty(foo.raw.tsw)
                   fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                              foo.qc.fsw, foo.suspect.fsw, foo.view.varname, foo.view.varcol,...
-                             foo.raw.bad, fooflow);
+                             foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
                 else
                   fh=visFlag([], [],...
                              foo.qc.tsw, foo.suspect.tsw, foo.qc.fsw, foo.suspect.fsw,...
-                             foo.view.varname, foo.view.varcol, foo.raw.bad, fooflow);
+                             foo.view.varname, foo.view.varcol, foo.raw.bad, fooflow,...
+                             obj.instrument.FLOW.view.spd_variable);
                 end
                 title([i ' QC all' newline 'Trash full section pressing t (q to save)']);
                 fprintf('Trash section pressing t (q to save)\n');

@@ -179,15 +179,18 @@ switch instrument
       legend(leg)
       xlim([min(data.dt) max(data.dt)]);
     end
-  case 'TSG'
+  case {'TSG', 'atlasTSG'}
     varT = data.Properties.VariableNames{strcmp(data.Properties.VariableNames, 't') | ...
+      strcmp(data.Properties.VariableNames, 't2') | ...
       strcmp(data.Properties.VariableNames, 'sst') | ...
+      strcmp(data.Properties.VariableNames, 'SST') | ...
+      strcmp(data.Properties.VariableNames, 'SST') | ...
       strcmp(data.Properties.VariableNames, 'SST')};
     varS = data.Properties.VariableNames{strcmp(data.Properties.VariableNames, 's') | ...
       strcmp(data.Properties.VariableNames, 'sss') | ...
       strcmp(data.Properties.VariableNames, 'SSS') | ...
       strcmp(data.Properties.VariableNames, 'sss_adj')};
-    fig(90);
+    fig(96);
     clf
     yyaxis('left')
     scatter(data.dt, data.(varT), 6, 'filled'); ylabel('TSG T (°C)');
@@ -200,7 +203,7 @@ switch instrument
     scatter(data.dt, data.par, 6, 'filled');
     ylabel('PAR (\muE.m^{-2}.s^{-1})');
     xlim([min(data.dt) max(data.dt)]);
-  case {'WSCD','SPCD'}
+  case {'WSCD','SUVF'}
     fig(94);
     clf
     scatter(data.dt, data.fdom, 6, 'filled');

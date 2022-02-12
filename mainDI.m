@@ -11,29 +11,13 @@
 % % Load InLineAnalysis and the configuration
 % ila = InLineAnalysis('cfg/EXPORTS02_cfg.m');
 
-%% Quick cfg update
-% ACS91
+% Quick cfg update
+%% update dates
 ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
-% ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
-% ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
-
-%% BB3
- ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
-% ila.cfg.days2run = datenum(2021,1,6,0,0,0):datenum(2021,1,20,0,0,0);
-% ila.cfg.days2run = datenum(2021,1,20,0,0,0):datenum(2021,2,5,0,0,0);
-
-%% SUVF
- ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
- 
-%% LISST
- ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
- 
-%% HBB
- ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,7,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','HBB'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SUVF','ACS91','LISST'
-ila.cfg.qcref.view = 'HBB';
+ila.cfg.instruments2run = {'FLOW','ACS57'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SUVF','ACS91','LISST'
+ila.cfg.qcref.view = 'ACS57';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = true;
 
@@ -44,9 +28,15 @@ ila.cfg.force_import = false;
 ila.ReadRawDI();
 ila.CheckDataStatus();
 
+%% Load processed data from mat files: 'data' = Raw | 'bin' = Bin | 'qc' = QCed | 'prod' = product
+% ila.Read('data');
+ila.Read('bin');
+ila.Read('qc');
+% ila.Read('prod');
+
 %% 1.1. Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
+ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 
 %% 2. Automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR values
 % fudge factor for auto QC ACS.
@@ -61,7 +51,7 @@ ila.CheckDataStatus();
 
 %% 2.1. Diagnostic Plot
 % check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
+ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 
 %% 2.2. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:
@@ -74,13 +64,7 @@ ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.DiagnosticPlot('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
-ila.DiagnosticPlot('BB',{'raw'}, false, {'diw','all'});
-
-%% Load processed data from mat files: 'data' = Raw | 'bin' = Bin | 'qc' = QCed | 'prod' = product
-% ila.Read('data');
-ila.Read('bin');
-ila.Read('qc');
-% ila.Read('prod');
+ila.DiagnosticPlot('AC',{'raw'}, false, {'diw','all'});
 
 %% 3. QC DI
 ila.cfg.di.qc.mode = 'ui';
@@ -94,7 +78,7 @@ ila.RawAutoQC('qc');
 %% 4.1. Diagnostic Plot
 % check QCed spectrums AC or BB sensors
 % {'raw','bin','qc','prod'}
-ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
+ila.DiagnosticPlot('AC',{'qc'}); % AC or BB
 
 %% 4.2. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:
@@ -107,7 +91,7 @@ ila.DiagnosticPlot('BB',{'qc'}); % AC or BB
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.DiagnosticPlot('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
-ila.DiagnosticPlot('BB',{'qc'}, false, {'diw','beta'});
+ila.DiagnosticPlot('AC',{'qc'}, false, {'diw','beta'});
 
 %% 5. Write QC | write only 'part' or 'diw' or 'all'
 ila.Write('qc', 'diw')
@@ -118,7 +102,7 @@ ila.BinDI();
 
 %% 6.1. Diagnostic Plot
 % check binned spectrums AC or BB sensors
-ila.DiagnosticPlot('BB',{'bin'}); % AC or BB
+ila.DiagnosticPlot('AC',{'bin'}); % AC or BB
 
 %% 7. Write bin DI | write only 'part' or 'diw' or 'all'
 ila.Write('bin', 'diw')
@@ -133,7 +117,7 @@ ila.CheckDataStatus();
 save_figures = false;
 
 %%% AC or BB 3D plots %%%
-ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
+ila.DiagnosticPlot('AC', {'prod'}, save_figures); % AC or BB
 
 %%% ACS BB3 TSG PAR WSCD final product visualisation %%%
 ila.visProd_timeseries()

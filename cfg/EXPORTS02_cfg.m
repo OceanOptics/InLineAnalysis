@@ -42,6 +42,19 @@ cfg.instruments.TSG.path = struct('raw',  [PATH_ROOT 'raw' filesep 'TSG' filesep
                                   'ui', [PATH_ROOT 'ui' filesep 'TSG' filesep]);
 cfg.instruments.TSG.view = struct('varname', 's');
 
+%%% atlasTSG %%%
+cfg.instruments.atlasTSG = struct();
+cfg.instruments.atlasTSG.model = 'atlasTSG';
+cfg.instruments.atlasTSG.TSseparated = true;
+cfg.instruments.atlasTSG.coef = struct('t', struct('slope',0.9969,'interc',-1.1649), ... % 'slope',1.0295,'interc',-1.6417
+                                  'c', struct('slope',6841.8295,'interc',-0.2801));
+cfg.instruments.atlasTSG.logger = 'Inlinino_atlasTSG';
+cfg.instruments.atlasTSG.path = struct('raw',  [PATH_ROOT 'raw' filesep 'atlasTSG' filesep],...
+                                  'wk',   [PATH_ROOT 'wk' filesep 'atlasTSG' filesep],...
+                                  'prod', [PATH_ROOT 'prod' filesep],...
+                                  'ui', [PATH_ROOT 'ui' filesep 'atlasTSG' filesep]);
+cfg.instruments.atlasTSG.view = struct('varname', 't');
+
 %%% FLOW (FlowControl) %%%
 cfg.instruments.FLOW = struct();
 cfg.instruments.FLOW.model = 'FTH';
@@ -111,24 +124,24 @@ cfg.instruments.BB3.path = struct('raw',  [PATH_ROOT 'raw' filesep ['BB3' SN] fi
                                   'ui', [PATH_ROOT 'ui' filesep ['BB3' SN] filesep]);
 cfg.instruments.BB3.view = struct('varname', 'beta', 'varcol', 2);
 
-%%% SPCD %%%
+%%% SUVF %%%
 SN = '6244';
-cfg.instruments.SPCD = struct();
-cfg.instruments.SPCD.di = struct();
-cfg.instruments.SPCD.di.prefix = ['DIW_SUVF' SN '_'];
-cfg.instruments.SPCD.di.postfix = '';
-cfg.instruments.SPCD.model = 'CD';
-cfg.instruments.SPCD.sn = '6244';
-cfg.instruments.SPCD.ila_prefix = ['SUVF' SN];
-cfg.instruments.SPCD.logger = 'InlininoSPCDSN';
-cfg.instruments.SPCD.slope = 1;
-cfg.instruments.SPCD.dark = 0;
-cfg.instruments.SPCD.path = struct('raw',  [PATH_ROOT 'raw' filesep ['SPCD' SN] filesep],...
-                                  'di',  [PATH_ROOT 'raw' filesep ['SPCD' SN] filesep 'DI' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep ['SPCD' SN] filesep],...
+cfg.instruments.SUVF = struct();
+cfg.instruments.SUVF.di = struct();
+cfg.instruments.SUVF.di.prefix = ['DIW_SUVF' SN '_'];
+cfg.instruments.SUVF.di.postfix = '';
+cfg.instruments.SUVF.model = 'CD';
+cfg.instruments.SUVF.sn = '6244';
+cfg.instruments.SUVF.ila_prefix = ['SUVF' SN];
+cfg.instruments.SUVF.logger = 'InlininoSUVFSN';
+cfg.instruments.SUVF.slope = 1;
+cfg.instruments.SUVF.dark = 0;
+cfg.instruments.SUVF.path = struct('raw',  [PATH_ROOT 'raw' filesep ['SUVF' SN] filesep],...
+                                  'di',  [PATH_ROOT 'raw' filesep ['SUVF' SN] filesep 'DI' filesep],...
+                                  'wk',   [PATH_ROOT 'wk' filesep ['SUVF' SN] filesep],...
                                   'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep ['SPCD' SN] filesep]);
-cfg.instruments.SPCD.view = struct('varname', 'fdom', 'varcol', 1);
+                                  'ui', [PATH_ROOT 'ui' filesep ['SUVF' SN] filesep]);
+cfg.instruments.SUVF.view = struct('varname', 'fdom', 'varcol', 1);
 
 %%% WSCD %%%
 SN = '1052';
@@ -183,12 +196,12 @@ cfg.instruments.LISST.view = struct('varname', 'beta', 'varcol', 15);
 
 %%% General parameters %%%
 cfg.process.days2run = datenum(2021,5,2):datenum(2021,5,5);
-cfg.process.instruments2run = {'FLOW', 'TSG', 'ACS91', 'BB3', 'LISST', 'SPCD','HBB'};
+cfg.process.instruments2run = {'FLOW', 'atlasTSG', 'TSG', 'ACS91', 'BB3', 'LISST', 'SUVF','HBB'};
 cfg.process.write = true;
 cfg.process.force_import = false;
 cfg.process.parallel = Inf; % 0: disable parallel or Inf: as many thread available
 cfg.process.di = struct();
-cfg.process.di.skip = {'FLOW', 'TSG'};
+cfg.process.di.skip = {'FLOW', 'TSG','atlasTSG'};
 cfg.process.di.qc = struct('mode', 'ui',... % ui or load
                            'qc_once_for_all', false,... % true = QC all variables | false = QC variables separately)
                            'remove_old', false); % remove old selection of the same period
@@ -202,7 +215,7 @@ cfg.process.sync.delay.ACS91 = 0;
 cfg.process.sync.delay.BB3 = 0;
 cfg.process.sync.delay.HBB = 0;
 cfg.process.sync.delay.LISST = 0;
-cfg.process.sync.delay.SPCD = 0;
+cfg.process.sync.delay.SUVF = 0;
 cfg.process.sync.skip = {'TSG'};
 
 %%% QC Reference (Flow Control/FLOW) %%%
@@ -222,7 +235,7 @@ cfg.process.split.buffer.ACS91 = [180, 30];
 cfg.process.split.buffer.BB3 = [420, 220];
 cfg.process.split.buffer.HBB = [540, 340];
 cfg.process.split.buffer.LISST = [540, 360];
-cfg.process.split.buffer.SPCD = [540, 20];
+cfg.process.split.buffer.SUVF = [540, 20];
 cfg.process.split.skip = {'FLOW', 'TSG'};
 
 %%% Binning %%%
@@ -239,13 +252,14 @@ cfg.process.bin.bin_size.ACS91 = 1;
 cfg.process.bin.bin_size.BB3 = 1;
 cfg.process.bin.bin_size.HBB = 5;
 cfg.process.bin.bin_size.LISST = 10;
-cfg.process.bin.bin_size.SPCD = 1;
+cfg.process.bin.bin_size.SUVF = 1;
 cfg.process.bin.bin_size.TSG = 1; % TSG does not need to be binned in most cases
+cfg.process.bin.bin_size.atlasTSG = 1;
 cfg.process.bin.skip = {};
 
 %%% Automatically flagging %%%
 cfg.process.flag = struct();
-cfg.process.flag.skip = {'FLOW', 'TSG', 'ACS91',  'BB3', 'LISST', 'SPCD', 'HBB'};
+cfg.process.flag.skip = {'FLOW', 'atlasTSG', 'TSG', 'ACS91',  'BB3', 'LISST', 'SUVF', 'HBB'};
 % Default: parameters set to all instruments if not specific parameters set
 cfg.process.flag.default = struct();
 cfg.process.flag.default.maximum_fudge_factor = 4;
@@ -277,22 +291,22 @@ cfg.process.qc.remove_old = false; % remove old selection of the same period
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
 cfg.process.qc.global.view = 'ACS91';
-cfg.process.qc.global.apply = {'ACS91', 'BB3', 'HBB', 'LISST', 'SPCD'};
+cfg.process.qc.global.apply = {'ACS91', 'BB3', 'HBB', 'LISST', 'SUVF'};
 cfg.process.qc.specific = struct();
 cfg.process.qc.specific.active = true;
-cfg.process.qc.specific.run = {'TSG', 'ACS91', 'BB3', 'HBB', 'LISST', 'SPCD'};
+cfg.process.qc.specific.run = {'TSG', 'atlasTSG', 'ACS91', 'BB3', 'HBB', 'LISST', 'SUVF'};
   
 %%% Calibrate %%%
 cfg.process.calibrate = struct();
 cfg.process.calibrate.ACS298 = struct('compute_dissolved', true, ...
                                   'interpolation_method', 'linear', ...
-                                  'CDOM_source', 'SPCD', ... 
+                                  'CDOM_source', 'SUVF', ... 
                                   'FLOW_source', 'FLOW', ...
                                   'di_method', 'normal', ... % best_di normal
                                   'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
 cfg.process.calibrate.ACS91 = struct('compute_dissolved', true, ...
                                   'interpolation_method', 'linear', ...
-                                  'CDOM_source', 'SPCD', ... 
+                                  'CDOM_source', 'SUVF', ... 
                                   'FLOW_source', 'FLOW', ...
                                   'di_method', 'normal', ... % best_di normal
                                   'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013

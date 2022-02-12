@@ -4,6 +4,7 @@ classdef TSG < Instrument
   
   properties
     boat = '';
+    temperature_variable = '';
   end
   
   methods
@@ -16,6 +17,8 @@ classdef TSG < Instrument
       % Post initialization
       if isfield(cfg, 'boat'); obj.boat = cfg.boat;
       else; error('Missing field boat.'); end
+      if isfield(cfg, 'temperature_variable'); obj.temperature_variable = cfg.temperature_variable;
+      else; error('Missing field temperature variable.'); end
       
       % Change default Split method
       obj.split.mode = 'None';
@@ -37,9 +40,21 @@ classdef TSG < Instrument
             case {'TeraTerm', 'teraterm', 'TERATERM'}
               obj.data = iRead(@importTSGTeraTerm, obj.path.raw, obj.path.wk, 'TeraTerm_tsg_',...
                              days2run, 'TeraTerm', force_import, ~write, true);
-%             case {'Inlinino'}
-%               obj.data = iRead(@importInlinino_miniTSG, obj.path.raw, obj.path.wk, 'C01_',...
-%                              days2run, 'Inlinino', force_import, ~write, true);
+            case {'Inlinino'}
+              obj.data = iRead(@importInlininoTSG, obj.path.raw, obj.path.wk, 'SBE38+45*_',...
+                             days2run, 'Inlinino', force_import, ~write, true);
+%               obj.data = renamevars(obj.data, obj.temperature_variable, 'sst');
+%               if strcmp(obj.view.varname, obj.temperature_variable)
+%                 obj.view.varname = 'sst';
+%               end
+%               obj.temperature_variable = 'sst';
+%               other_temp = obj.data.Properties.VariableNames{strcmp(obj.data.Properties.VariableNames, 't1') | ...
+%                 strcmp(obj.data.Properties.VariableNames, 't2') & ~strcmp(obj.data.Properties.VariableNames, obj.temperature_variable)};
+%               obj.data = renamevars(obj.data, other_temp, 't_cal');
+%               obj.data = renamevars(obj.data, 's', 'sss');
+%               if strcmp(obj.data.Properties.VariableNames, 'c1')
+%                 obj.data = renamevars(obj.data, 'c1', 'c');
+%               end
 %             case {'Inlinino'}
 %               obj.data = iRead(@importInlinino_miniTSG, obj.path.raw, obj.path.wk, 'T01_',...
 %                              days2run, 'Inlinino', force_import, ~write, true);

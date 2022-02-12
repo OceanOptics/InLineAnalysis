@@ -18,16 +18,16 @@ ila = InLineAnalysis('cfg/EXPORTS02_cfg.m');
 % ila.cfg.days2run = datenum(2021,1,10,0,0,0):datenum(2021,1,15,0,0,0);
 
 %% ACS91
- ila.cfg.days2run =datenum(2021,5,1,0,0,0):datenum(2021,5,10,0,0,0);
+ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,10,0,0,0);
 % ila.cfg.days2run = datenum(2021,5,11,0,0,0):datenum(2021,5,20,0,0,0);
 % ila.cfg.days2run = datenum(2021,5,21,0,0,0):datenum(2021,6,1,0,0,0);
 
 %% BB3
- ila.cfg.days2run =datenum(2021,5,1,0,0,0):datenum(2021,5,10,0,0,0);
+ ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,5,10,0,0,0);
 % ila.cfg.days2run = datenum(2021,5,11,0,0,0):datenum(2021,5,20,0,0,0);
 % ila.cfg.days2run = datenum(2021,5,21,0,0,0):datenum(2021,6,1,0,0,0);
 
-%% SPCD
+%% SUVF
  ila.cfg.days2run = datenum(2021,5,1,0,0,0):datenum(2021,6,1,0,0,0);
  
 %% LISST
@@ -39,8 +39,8 @@ ila.cfg.days2run = datenum(2021,5,11,0,0,0):datenum(2021,5,20,0,0,0);
 % ila.cfg.days2run = datenum(2021,5,21,0,0,0):datenum(2021,6,1,0,0,0);
 
 %%
-ila.cfg.instruments2run = {'FLOW','HBB'}; % 'FLOW', 'TSG', 'BB3', 'HBB', 'WSCD','SPCD','ACS91','LISST'
-ila.cfg.qcref.view = 'HBB';
+ila.cfg.instruments2run = {'FLOW','TSG','atlasTSG'}; % 'FLOW', 'TSG', 'atlasTSG', 'BB3', 'HBB', 'WSCD','SUVF','ACS91','LISST'
+ila.cfg.qcref.view = 'TSG';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 
@@ -57,7 +57,7 @@ ila.CheckDataStatus();
 % % No noticeable difference was observed between the TSG of EXPORTS and the BB3
 % % ila.instrument.FLOW.Sync(30);
 ila.instrument.TSG.Sync(0);
-ila.instrument.SPCD.Sync(0);
+ila.instrument.SUVF.Sync(0);
 ila.instrument.ACS91.Sync(0);
 ila.instrument.HBB.Sync(0);
 ila.instrument.BB3.Sync(0);
@@ -73,7 +73,7 @@ ila.instrument.LISST.Sync(0);
 % % yyaxis('right'); plot(ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,2)); ylabel('\beta (m^{-1} sr^{-1})'); ylim([80 300]);
 % % datetick2_doy();
 % visSync(ila.instrument.BB3.data, ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t, 'Temp (C)');
-visSync(ila.instrument.FLOW.data, ila.instrument.SPCD.data.dt, ila.instrument.SPCD.data.fdom, 'FDOM (counts)');
+visSync(ila.instrument.FLOW.data, ila.instrument.SUVF.data.dt, ila.instrument.SUVF.data.fdom, 'FDOM (counts)');
 visSync(ila.instrument.FLOW.data, ila.instrument.ACS91.data.dt, ila.instrument.ACS91.data.a(:,20), 'a (m^{-1})');
 visSync(ila.instrument.FLOW.data, ila.instrument.ACS91.data.dt, ila.instrument.ACS91.data.c(:,40), 'c (m^{-1})');
 visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB.data.beta(:,14), '\beta (counts)');
@@ -106,7 +106,7 @@ ila.cfg.qcref.remove_old = true; % remove old selection of the same period
 ila.QCRef
 
 %% 4. Split fsw and tsw
-ila.cfg.split.skip = {'FLOW','TSG'};
+ila.cfg.split.skip = {'FLOW','TSG','atlasTSG'};
 ila.Split();
 ila.CheckDataStatus();
 
@@ -185,7 +185,7 @@ ila.CheckDataStatus();
 
 %% 8. QC Interactive or Loading previous qc selection
 %%%%% Settings %%%%%
-ila.cfg.qc.mode='load';  % load or ui
+ila.cfg.qc.mode='ui';  % load or ui
 ila.cfg.qc.remove_old = false;  % remove old selection of this period
 ila.cfg.qc.qc_once_for_all = false;  % true = QC all variables | false = QC variables separately)
 % Global
@@ -260,8 +260,34 @@ save_figures = false;
 %%% AC or BB 3D plots %%%
 ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
 
-%%% ACS BB3 TSG PAR WSCD SPCD ALFA LISST final product visualisation %%%
+%%% ACS BB3 TSG PAR WSCD SUVF ALFA LISST final product visualisation %%%
 ila.visProd_timeseries()
+
+% savepath = '/Users/gui/Documents/Maine/raspberry/MiniTSG/Atlas_EXPORTSNA_cal';
+% ila.cfg.instruments2run = {'FLOW','atlasTSG'};
+% ila.visProd_timeseries()
+% title('Atlas scientifique TSG', 'FontSize', 14)
+% saveGraph(fullfile(savepath, 'EXPORTNA_AtlasTSG_timeseries'),'fig')
+% 
+% ila.cfg.instruments2run = {'FLOW','TSG'};
+% ila.visProd_timeseries()
+% title('James Cook TSG', 'FontSize', 14)
+% saveGraph(fullfile(savepath, 'EXPORTNA_JCTSG_timeseries'),'fig')
+% 
+% ila.instrument.TSG.prod.a.s_recalc = gsw_SP_from_C(ila.instrument.TSG.prod.a.c *10, ila.instrument.TSG.prod.a.tcal, 36*11.1094 - 10.1325);
+% ila.instrument.TSG.prod.a.s_recalc = gsw_SA_from_SP(ila.instrument.TSG.prod.a.s_recalc, 36*11.1094 - 10.1325, -14.8, 49.1);
+% 
+% fig(800);
+% clf
+% yyaxis('left'); hold on
+% sc(1) = scatter(datetime(ila.instrument.TSG.prod.a.dt, 'ConvertFrom', 'datenum'), ila.instrument.TSG.prod.a.t, 6, 'filled'); ylabel('T (°C)');
+% sc(2) = scatter(datetime(ila.instrument.atlasTSG.prod.a.dt, 'ConvertFrom', 'datenum'), ila.instrument.atlasTSG.prod.a.t, 30); ylabel('T (°C)');
+% yyaxis('right'); hold on
+% sc(3) = scatter(datetime(ila.instrument.TSG.prod.a.dt, 'ConvertFrom', 'datenum'), ila.instrument.TSG.prod.a.s, 6, 'filled'); ylabel('S (PSU)');
+% sc(4) = scatter(datetime(ila.instrument.TSG.prod.a.dt, 'ConvertFrom', 'datenum'), ila.instrument.TSG.prod.a.s_recalc, 6, 'k','filled'); ylabel('S (PSU)');
+% sc(5) = scatter(datetime(ila.instrument.atlasTSG.prod.a.dt, 'ConvertFrom', 'datenum'), ila.instrument.atlasTSG.prod.a.s, 30); ylabel('S (PSU)');
+% legend('James Cook TSG T', 'Atlas TSG T', 'James Cook TSG S', 'James Cook TSG S recalc', 'Atlas TSG S')
+% saveGraph(fullfile(savepath, 'EXPORTNA_JCTSGvsAtlasTSG_timeseries'),'fig')
 
 %% 11. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:

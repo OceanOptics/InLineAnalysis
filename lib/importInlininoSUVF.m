@@ -1,5 +1,5 @@
-function [ data ] = importInlininoSPCD( filename, verbose )
-% Import SPCD data logged with Inlinino
+function [ data ] = importInlininoSUVF( filename, verbose )
+% Import SUVF data logged with Inlinino
 %
 %%
 if nargin < 2; verbose = false; end

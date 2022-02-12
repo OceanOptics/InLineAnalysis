@@ -48,6 +48,9 @@ else
   error('Intrument not supported')
 end
 
+ACsize_to_plot = 10000;
+BBsize_to_plot = 30000;
+
 user_selection = [];
 for j = 1:length(level)
   % get fieldname of data.level structure
@@ -129,18 +132,18 @@ for j = 1:length(level)
           sel = true(size(data.(level{j}).(tabletoplot{i}).dt));
         else
           sel = false(size(data.(level{j}).(tabletoplot{i}).dt));
-          if contains(instrument,'AC') && size(sel,1) < 80000
+          if contains(instrument,'AC') && size(sel,1) < ACsize_to_plot
             sel(1:end) = true;
           elseif contains(instrument,'AC')
-            warning('Large dataset, only the first 30000 %s %s %s spectrum were plotted to save computer memory', ...
-              level{j}, tabletoplot{i}, toplot{i, k})
-            sel(1:30000) = true;
-          elseif contains(instrument,'BB') && size(sel,1) < 100000
+            warning('Large dataset, only the first %i %s %s %s spectrum were plotted to save computer memory', ...
+              ACsize_to_plot, level{j}, tabletoplot{i}, toplot{i, k})
+            sel(1:ACsize_to_plot) = true;
+          elseif contains(instrument,'BB') && size(sel,1) < BBsize_to_plot
             sel(1:end) = true;
           else
-            warning('Large dataset, only the first 100000 %s %s %s spectrum were plotted to save computer memory', ...
-              level{j}, tabletoplot{i}, toplot{i, k})
-            sel(1:100000) = true;
+            warning('Large dataset, only the first %i %s %s %s spectrum were plotted to save computer memory', ...
+              BBsize_to_plot, level{j}, tabletoplot{i}, toplot{i, k})
+            sel(1:BBsize_to_plot) = true;
           end
 %           sel = data.(level{j}).(tabletoplot{i}).dt >= day_to_plot(1) & ...
 %             data.(level{j}).(tabletoplot{i}).dt <= day_to_plot(2);

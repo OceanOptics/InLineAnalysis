@@ -39,7 +39,9 @@ cfg.instruments.TSG.path = struct('raw',  [PATH_ROOT 'raw' filesep 'TSG' filesep
                                   'wk',   [PATH_ROOT 'wk' filesep 'TSG' filesep],...
                                   'prod', [PATH_ROOT 'prod' filesep],...
                                   'ui', [PATH_ROOT 'ui' filesep 'TSG' filesep]);
-cfg.instruments.TSG.view = struct('varname', 't');
+cfg.instruments.TSG.view = struct('varname', 't2');
+cfg.instruments.TSG.temperature_variable = 't2';
+
 
 %%% FLOW (FlowControl) %%%
 cfg.instruments.FLOW = struct();
@@ -50,7 +52,7 @@ cfg.instruments.FLOW.path = struct('raw',  [PATH_ROOT 'raw' filesep 'FlowControl
                                   'wk',   [PATH_ROOT 'wk' filesep 'FlowControl' filesep],...
                                   'prod', [PATH_ROOT 'prod' filesep],...
                                   'ui', [PATH_ROOT 'ui' filesep 'FlowControl' filesep]);
-cfg.instruments.FLOW.view = struct('varname', 'swt');
+cfg.instruments.FLOW.view = struct('varname', 'swt','spd_variable','spd1'); % spd1 spd2
 
 %%% AC9 %%%
 SN = '245';
@@ -64,7 +66,7 @@ cfg.instruments.AC9.path = struct('raw',  [PATH_ROOT 'raw' filesep 'AC9' filesep
                                   'wk',   [PATH_ROOT 'wk' filesep 'AC9' filesep],...
                                   'prod', [PATH_ROOT 'prod' filesep],...
                                   'ui', [PATH_ROOT 'ui' filesep 'AC9' filesep]);
-cfg.instruments.AC9.view = struct('varname', 'a', 'varcol', 9);
+cfg.instruments.AC9.view = struct('varname', 'a', 'varcol', 5);
 
 %%% ACS 091 %%% (Aug 20 to ...)
 SN = '091';
@@ -188,49 +190,13 @@ cfg.instruments.PAR.path = struct('raw',  [PATH_ROOT 'raw' filesep 'PAR' filesep
                                   'ui', [PATH_ROOT 'ui' filesep 'PAR' filesep]);
 cfg.instruments.PAR.view = struct('varname', 'par');
 
-% %%% LISST %%%
-% cfg.instruments.LISST = struct();
-% cfg.instruments.LISST.model = 'LISST';
-% cfg.instruments.LISST.type = 'B'; 
-% cfg.instruments.LISST.sn = '1183';
-% cfg.instruments.LISST.logger = 'TeraTerm';
-% cfg.instruments.LISST.zsc = [2.203500e+001, 2.568500e+001, 2.503000e+001, 2.986000e+001, 2.842500e+001, 3.283000e+001, 3.077000e+001, 3.659500e+001, 2.978000e+001, 3.552000e+001, 3.198000e+001, 4.216000e+001, 3.916500e+001, 4.662500e+001, 3.974000e+001, 4.454000e+001, 4.403500e+001, 4.604500e+001, 4.430000e+001, 4.510500e+001, 4.719500e+001, 3.850000e+001, 5.373000e+001, 2.664000e+001, 3.180500e+001, 1.655500e+001, 2.205500e+001, 1.554000e+001, 1.422000e+001, 1.123000e+001, 8.780000e+000, 8.555000e+000, 1.515000e+003, 1.167900e+003, 6.410000e+001, 1.055150e+003, 7.700000e+001, 2.116600e+003, 1.807000e+003, 5.476500e+003];
-% % Original dcal file (ring area)
-% % cfg.instruments.LISST.dcal = [1.0000000e+000, 1.0038000e+000, 9.9360000e-001, 1.0027000e+000, 9.9720000e-001, 9.9570000e-001, 9.9030000e-001, 9.9430000e-001, 9.9290000e-001, 9.9000000e-001, 9.9290000e-001, 9.9300000e-001, 9.9150000e-001, 9.9300000e-001, 9.9230000e-001, 9.9090000e-001, 1.1032000e+000, 1.1123000e+000, 1.2430000e+000, 1.1562000e+000, 1.3273000e+000, 1.1999000e+000, 1.0740000e+000, 1.7489000e+000, 1.5382000e+000, 2.5109000e+000, 2.5468000e+000, 3.5504000e+000, 3.9338000e+000, 5.1747342e+000, 7.5143548e+000, 1.2528083e+001];
-% % dcal adhoc from email of Wayne Slade Dec 8, 2017
-% cfg.instruments.LISST.dcal = [ 1.0179083e+00	   9.9213489e-01	   1.0108161e+00	   9.9492883e-01	   1.0043707e+00	   9.9891840e-01	   9.9859055e-01	   1.0042049e+00	   1.0000763e+00	   9.9889997e-01	   1.0009497e+00	   1.0004019e+00	   1.0011130e+00	   1.0004677e+00	   1.0213554e+00	   9.9990262e-01	   1.1115630e+00	   1.1206668e+00	   1.2493699e+00	   1.1643199e+00	   1.3355657e+00	   1.2090892e+00	   1.0781540e+00	   1.7620752e+00	   1.5508563e+00	   2.5304119e+00	   2.5638592e+00	   3.5757212e+00	   3.9631987e+00	   5.0166411e+00	   5.6381118e+00	   8.6881539e+00];
-% % customize dcal of 1183 on Jan 16, 2018 due to bump in VSF at ring 30
-% cfg.instruments.LISST.dcal(30) = 2.6; % Good for low values but bad for high values ??
-% cfg.instruments.LISST.vcc = 48493;
-% cfg.instruments.LISST.inversion = 'spherical';
-% cfg.instruments.LISST.ds = [1.2500,1.4750,1.7405,2.0538,2.4235,2.8597,3.3744,3.9818,4.6986,5.5443,6.5423,7.7199,9.1095,10.7492,12.6841,14.9672,17.6613,20.8403,24.5916,29.0180,34.2413,40.4047,47.6776,56.2595,66.3863,78.3358,92.4362,109.0747,128.7082,151.8757,179.2133,211.4717,249.5366];
-% cfg.instruments.LISST.theta = [0.082, 0.096, 0.114, 0.134, 0.158, 0.187, 0.221, 0.260, 0.307, 0.362, 0.428, 0.505, 0.596, 0.703, 0.829, 0.979, 1.155, 1.363, 1.609, 1.898, 2.240, 2.643, 3.119, 3.681, 4.344, 5.126, 6.049, 7.138, 8.424, 9.941, 11.73, 13.84];
-% cfg.instruments.LISST.path = struct('raw',  [PATH_ROOT 'raw/LISST1183/'],...
-%                                   'wk',   [PATH_ROOT 'wk/LISST1183/'],...
-%                                   'prod', [PATH_ROOT 'prod/'],...
-%                                   'ui', [PATH_ROOT 'ui/LISST1183/']);
-% cfg.instruments.LISST.view = struct('varname', 'beta', 'varcol', 15);
-% 
-% %%% ALFA %%%
-% cfg.instruments.ALFA = struct();
-% cfg.instruments.ALFA.model = 'ALFA';
-% cfg.instruments.ALFA.sn = '011';
-% cfg.instruments.ALFA.logger = 'ALFA_LabView_m';
-% cfg.instruments.ALFA.path = struct('raw',  [PATH_ROOT 'raw/ALFA011/'],...
-%                                   'wk',   [PATH_ROOT 'wk/ALFA011/'],...
-%                                   'prod', [PATH_ROOT 'prod/'],...
-%                                   'ui', [PATH_ROOT 'ui/ALFA011/']);
-% cfg.instruments.ALFA.view = struct('varname', 'FvFm');
-
-
-%%%%%%%%%%%%%
-%% PROCESS %%
+%% %%%%%%% %%
+%  PROCESS  %
 %%%%%%%%%%%%%
 
 %%% General parameters %%%
 cfg.process.days2run = datenum(2018,5,30,0,0,0):datenum(2018,6,20,0,0,0);
-cfg.process.instruments2run = {'FLOW', 'TSG', 'ACS007','BB3','PAR', 'WSCD1082P'};
-% cfg.process.instruments2run = {'FLOW', 'PAR'};
+cfg.process.instruments2run = {'FLOW'};
 cfg.process.write = true;
 cfg.process.force_import = false;
 cfg.process.parallel = Inf; % 0: disable parallel or Inf: as many thread available
@@ -261,7 +227,7 @@ cfg.process.sync.skip = {'TSG','PAR'};
 %%% QC Reference (Flow Control/FLOW) %%%
 cfg.process.qcref = struct();
 cfg.process.qcref.reference = 'FLOW';
-cfg.process.qcref.view = 'PAR';
+cfg.process.qcref.view = 'ACS007';
 cfg.process.qcref.mode = 'ui'; % load or ui
 cfg.process.qcref.remove_old = false; % remove old selection of the same period
 cfg.process.qcref.MinFiltPeriod = 50; % filter event period in minute
@@ -334,7 +300,7 @@ cfg.process.qc.RawAutoQCLim.dissolved.c = 3;
 cfg.process.qc.RawAutoQCLim.filtered.bb = 3;
 cfg.process.qc.RawAutoQCLim.total.bb = 3;
 cfg.process.qc.RawAutoQCLim.dissolved.bb = 3;
-cfg.process.qc.Saturation_Threshold_bb = 4000; % (counts)
+cfg.process.qc.Saturation_Threshold_bb = 4100; % (counts)
   
 %%% Manually QC %%%
 cfg.process.qc.mode = 'ui';
@@ -351,45 +317,45 @@ cfg.process.qc.specific.run = {'ACS279','BB3','PAR'};
 %%% Calibrate %%%
 cfg.process.calibrate = struct();
 cfg.process.calibrate.ACS007 = struct('compute_dissolved', false, ...
-                                  'interpolation_method', 'linear', ...
+                                  'interpolation_method', 'CDOM', ...
                                   'CDOM_source', 'WSCD1082P', ... % Pay attention to serial number (must merge WSCD products first)
                                   'FLOW_source', 'FLOW', ...
                                   'di_method', 'normal', ... % best_di normal
-                                  'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
+                                  'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013                                
 cfg.process.calibrate.AC9 = struct('compute_dissolved', false, ...
-                                  'interpolation_method', 'linear', ...
+                                  'interpolation_method', 'CDOM', ...
                                   'CDOM_source', 'WSCD1082P',... % Pay attention to serial number (must merge WSCD products first)
                                   'FLOW_source', 'FLOW', ...
                                   'di_method', 'normal', ... % best_di normal
                                   'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
 cfg.process.calibrate.ACS057 = struct('compute_dissolved', false, ...
-                                  'interpolation_method', 'linear', ...
+                                  'interpolation_method', 'CDOM', ...
                                   'CDOM_source', 'WSCD1082P',... % Pay attention to serial number (must merge WSCD products first)
                                   'FLOW_source', 'FLOW', ...
                                   'di_method', 'normal', ... % best_di normal
                                   'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
 cfg.process.calibrate.ACS091 = struct('compute_dissolved', false, ...
-                                  'interpolation_method', 'linear', ...
+                                  'interpolation_method', 'CDOM', ...
                                   'CDOM_source', 'WSCD1082P',... % Pay attention to serial number (must merge WSCD products first)
                                   'FLOW_source', 'FLOW', ...
                                   'di_method', 'normal', ... % best_di normal
                                   'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
 cfg.process.calibrate.ACS111 = struct('compute_dissolved', false, ...
-                                  'interpolation_method', 'linear', ...
+                                  'interpolation_method', 'CDOM', ...
                                   'CDOM_source', 'WSCD1082P', ... % Pay attention to serial number (must merge WSCD products first)
                                   'FLOW_source', 'FLOW', ...
                                   'di_method', 'normal', ... % best_di normal
                                   'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
 cfg.process.calibrate.ACS279 = struct('compute_dissolved', false,...
-                                  'interpolation_method', 'linear', ...
+                                  'interpolation_method', 'CDOM', ...
                                   'CDOM_source', 'WSCD1082P',... % Pay attention to serial number (must merge WSCD products first)
                                   'FLOW_source', 'FLOW', ...
                                   'di_method', 'normal', ... % best_di normal
                                   'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
-cfg.process.calibrate.BB3 = struct('compute_dissolved', false, ...
+cfg.process.calibrate.BB3 = struct('compute_dissolved', true, ...
                                   'TSG_source', 'TSG', ...
                                   'FLOW_source', 'FLOW', ...
-                                  'di_method', 'interpolate', ... % interpolate constant SW_scattering
+                                  'di_method', 'SW_scattering', ... % interpolate constant SW_scattering
                                   'filt_method', 'exponential_fit'); % 25percentil exponential_fit
 cfg.process.calibrate.skip = {'FLOW', 'TSG'};
 

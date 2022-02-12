@@ -12,11 +12,11 @@ else
   SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
 end
 
-% interpolate fth.swt onto binned data to fill missing flow data
-fth_interp = table([tot.dt; fth.dt; filt.dt], 'VariableNames', {'dt'});
+% interpolate fth.qc.tsw.swt onto binned data to fill missing flow data
+fth_interp = table([tot.dt; fth.qc.tsw.dt; filt.dt], 'VariableNames', {'dt'});
 [~,b] = sort(fth_interp.dt); % sort dates
 fth_interp.dt = fth_interp.dt(b,:);
-fth_interp.swt = interp1(fth.dt, fth.swt, fth_interp.dt, 'previous');%, 'linear', 'extrap');
+fth_interp.swt = interp1(fth.qc.tsw.dt, fth.qc.tsw.swt, fth_interp.dt, 'previous');%, 'linear', 'extrap');
 fth_interp.swt = fth_interp.swt > 0;
 % Find switch events from total to filtered
 sel_start = find(fth_interp.swt(1:end-1) == SWITCH_TOTAL & fth_interp.swt(2:end) == SWITCH_FILTERED);
@@ -27,66 +27,101 @@ if sel_start(1) > sel_end(1); sel_end(1) = []; end
 if sel_start(end) > sel_end(end); sel_end(end+1) = size(fth_interp.swt,1); end
 if size(sel_start,1) ~= size(sel_end,1); error('Inconsistent fth data'); end
 % interpolate filtered event
+
+% Compute filtered period median
+filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
+% if strcmp(interpolation_method, 'CDOM')
+%   filt_avg.cdom = interp1(cdom.dt, cdom.fdom, filt_avg.dt, 'linear');
+%   filt_avg.cdom = NaN(size(filt_avg,1),1);
+% end
+filt_avg.a = NaN(size(filt_avg,1), size(lambda.a, 2));
+filt_avg.c = NaN(size(filt_avg,1), size(lambda.c, 2));
+filt_avg.a_avg_sd = NaN(size(filt_avg,1), size(lambda.a, 2));
+filt_avg.c_avg_sd = NaN(size(filt_avg,1), size(lambda.c, 2));
+filt_avg.a_avg_n = NaN(size(filt_avg,1), 1);
+filt_avg.c_avg_n = NaN(size(filt_avg,1), 1);
+for i=1:size(sel_start, 1)
+%   if strcmp(interpolation_method, 'CDOM')
+%     sel_cdom = fth_interp.dt(sel_start(i)) <= cdom.dt & cdom.dt <= fth_interp.dt(sel_end(i));
+%     filt_avg.cdom(i) = median(cdom.fdom(sel_cdom));
+%   end
+  sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
+  foo = filt(sel_filt,:);
+  if sum(sel_filt) == 1
+    filt_avg.a(i,:) = foo.a;
+    filt_avg.c(i,:) = foo.c;
+    filt_avg.a_avg_sd(i,:) = foo.a_avg_sd;
+    filt_avg.c_avg_sd(i,:) = foo.c_avg_sd;
+    filt_avg.a_avg_n(i) = foo.a_avg_n;
+    filt_avg.c_avg_n(i) = foo.c_avg_n;
+  else
+    foo.a_avg_sd(foo.a > prctile(foo.a, 25, 1)) = NaN;
+    foo.c_avg_sd(foo.c > prctile(foo.c, 25, 1)) = NaN;
+    foo.a(foo.a > prctile(foo.a, 25, 1)) = NaN;
+    foo.c(foo.c > prctile(foo.c, 25, 1)) = NaN;
+    % compute average of all values smaller than 25th percentile for each filter event
+    filt_avg.a(i,:) = mean(foo.a, 1, 'omitnan');
+    filt_avg.c(i,:) = mean(foo.c, 1, 'omitnan');
+    filt_avg.a_avg_sd(i,:) = mean(foo.a_avg_sd, 1, 'omitnan');
+    filt_avg.c_avg_sd(i,:) = mean(foo.c_avg_sd, 1, 'omitnan');
+    filt_avg.a_avg_n(i) = sum(foo.a_avg_n(any(~isnan(foo.a), 2)), 'omitnan');
+    filt_avg.c_avg_n(i) = sum(foo.c_avg_n(any(~isnan(foo.c), 2)), 'omitnan');
+  end
+end
+filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2), :) = [];
+
+
 switch interpolation_method
   case 'CDOM'
     % Require both CDOM & Switch position
     % Parameters for CDOM signal (in units of cdom.fdom, by default it's counts);
     param_extrap_threshold = 4;  % counts
-    param_min_variability = 1;   % counts
-    % Make filtered period median
-    filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
-    filt_avg.cdom = NaN(size(filt_avg,1),1);
-    filt_avg.a = NaN(size(filt_avg,1), size(lambda.a, 2));
-    filt_avg.c = NaN(size(filt_avg,1), size(lambda.c, 2));
-    for i=1:size(sel_start, 1)
-      sel_cdom = fth_interp.dt(sel_start(i)) <= cdom.dt & cdom.dt <= fth_interp.dt(sel_end(i));
-      filt_avg.cdom(i) = median(cdom.fdom(sel_cdom));
-      sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
-      filt_avg.a(i,:) = median(filt.a(sel_filt,:));
-      filt_avg.c(i,:) = median(filt.c(sel_filt,:));
-    end
-    % Remove periods were there is no filtered spectrum of ACS
-    filt_avg(any(isnan(filt_avg.a),2),:) = [];
-    % use regressions as interpolation method
-  %       warning('off', 'stats:regress:RankDefDesignMat');
-  %       % Make CDOM function to fill gaps between 2 filtered periods
-  %       n_periods = size(filt_avg,1)-1;
-  %       cdom_fun = table(cdom.dt, 'VariableNames', {'dt'});
-  %       cdom_fun.a = NaN(size(cdom_fun,1),n_wv);
-  %       cdom_fun.c = NaN(size(cdom_fun,1),n_wv);
-  %       slope_a = NaN(n_periods,n_wv); inter_a = NaN(n_periods,n_wv);
-  %       slope_c = NaN(n_periods,n_wv); inter_c = NaN(n_periods,n_wv);
-  %       for i=1:n_periods % For each total period
-  %         is = i; ie = i + 1;
-  %         % Compute regression for each wavelength
-  %         for j=1:n_wv
-  %           if any(isnan(filt_avg.a(is:ie, j)))
-  %             slope_a(i,j) = NaN; inter_a(i,j) = NaN;
-  %             slope_c(i,j) = NaN; inter_c(i,j) = NaN;
-  %           else
-  %             foo = regress(filt_avg.a(is:ie, j), [filt_avg.cdom(is:ie), [1;1]]);
-  %             slope_a(i,j) = foo(1); inter_a(i,j) = foo(2);
-  %             foo = regress(filt_avg.c(is:ie, j), [filt_avg.cdom(is:ie), [1;1]]);
-  %             slope_c(i,j) = foo(1); inter_c(i,j) = foo(2);
-  %           end
-  %         end
-  %         % Build a and c on cdom timestamp
-  %         sel = filt_avg.dt(is) <= cdom.dt & cdom.dt <= filt_avg.dt(ie);
-  %         cdom_fun.a(sel,:) = slope_a(i,:) .* cdom.fdom(sel) .* ones(1,n_wv) + inter_a(i,:);
-  %         cdom_fun.c(sel,:) = slope_c(i,:) .* cdom.fdom(sel) .* ones(1,n_wv) + inter_c(i,:);
-  %       end
-  %     %   cdom_fun(any(isnan(cdom_fun.a),1),:) = []; % Remove NaN values
-  %       % Interpolate cdom_fun on tot
-  %       filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-  %       filt_interp.a = interp1(cdom_fun.dt, cdom_fun.a, filt_interp.dt);%, 'linear', 'extrap');
-  %       filt_interp.c = interp1(cdom_fun.dt, cdom_fun.c, filt_interp.dt);%, 'linear', 'extrap');
-  %       warning('on', 'stats:regress:RankDefDesignMat');
+    param_min_variability = 0.001;   % counts
+    filt_avg.cdom = interp1(cdom.dt, cdom.fdom, filt_avg.dt, 'linear');
+    filt_avg.cdom(isnan(filt_avg.cdom)) = interp1(cdom.dt, cdom.fdom, filt_avg.dt(isnan(filt_avg.cdom)), ...
+      'nearest', 'extrap');
+    
+% %     % use regressions as interpolation method
+% %         warning('off', 'stats:regress:RankDefDesignMat');
+% %         % Make CDOM function to fill gaps between 2 filtered periods
+% %         n_periods = size(filt_avg,1)-1;
+% %         cdom_fun = table(cdom.dt, 'VariableNames', {'dt'});
+% %         cdom_fun.a = NaN(size(cdom_fun,1),size(lambda.a, 2));
+% %         cdom_fun.c = NaN(size(cdom_fun,1),size(lambda.c, 2));
+% %         slope_a = NaN(n_periods,size(lambda.a, 2)); inter_a = NaN(n_periods,size(lambda.a, 2));
+% %         slope_c = NaN(n_periods,size(lambda.c, 2)); inter_c = NaN(n_periods,size(lambda.c, 2));
+% %         for i=1:n_periods % For each total period
+% %           is = i; ie = i + 1;
+% %           % Compute regression for each wavelength
+% %           for j=1:size(lambda.a, 2)
+% %             if any(isnan(filt_avg.a(is:ie, j)))
+% %               slope_a(i,j) = NaN; inter_a(i,j) = NaN;
+% %               slope_c(i,j) = NaN; inter_c(i,j) = NaN;
+% %             else
+% %               foo = regress(filt_avg.a(is:ie, j), [filt_avg.cdom(is:ie), [1;1]]);
+% %               slope_a(i,j) = foo(1); inter_a(i,j) = foo(2);
+% %               foo = regress(filt_avg.c(is:ie, j), [filt_avg.cdom(is:ie), [1;1]]);
+% %               slope_c(i,j) = foo(1); inter_c(i,j) = foo(2);
+% %             end
+% %           end
+% %           % Build a and c on cdom timestamp
+% %           sel = filt_avg.dt(is) <= cdom.dt & cdom.dt <= filt_avg.dt(ie);
+% %           cdom_fun.a(sel,:) = slope_a(i,:) .* cdom.fdom(sel) .* ones(1,size(lambda.a, 2)) + inter_a(i,:);
+% %           cdom_fun.c(sel,:) = slope_c(i,:) .* cdom.fdom(sel) .* ones(1,size(lambda.c, 2)) + inter_c(i,:);
+% %         end
+% %       %   cdom_fun(any(isnan(cdom_fun.a),1),:) = []; % Remove NaN values
+% %         % Interpolate cdom_fun on tot
+% %         filt_interp = table(tot.dt, 'VariableNames', {'dt'});
+% %         filt_interp.a = interp1(cdom_fun.dt, cdom_fun.a, filt_interp.dt);%, 'linear', 'extrap');
+% %         filt_interp.c = interp1(cdom_fun.dt, cdom_fun.c, filt_interp.dt);%, 'linear', 'extrap');
+% %         warning('on', 'stats:regress:RankDefDesignMat');
+        
     % Use simple mathematical function to interpolate based on CDOM
     n_periods = size(filt_avg,1)-1;
     filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-    filt_interp.cdom = interp1(cdom.dt, cdom.fdom, tot.dt); % as independent from tot|filt period
-    filt_interp.a = NaN(size(filt_interp,1),n_wv);
-    filt_interp.c = NaN(size(filt_interp,1),n_wv);
+    filt_interp.cdom = interp1(cdom.dt, cdom.fdom, tot.dt, 'linear', 'extrap'); % as independent from tot|filt period
+    filt_interp.a = NaN(size(filt_interp,1),size(lambda.a, 2));
+    filt_interp.c = NaN(size(filt_interp,1),size(lambda.c, 2));
     % For each period going from t0 to t1, starting and finishing by a filtered time
     for i=1:n_periods
       it0 = i; it1 = i + 1;
@@ -103,9 +138,28 @@ switch interpolation_method
       elseif var_period > param_min_variability
         % Signficant variability in CDOM between 2 filtered periods
         % Use cdom signal to interpolate filt during tot periods
+%         
+%         figure(); hold on
+%         plot(filt_interp.dt, filt_interp.cdom)
+%         plot(filt_avg.dt, filt_avg.cdom)
+%         plot(tot.dt, tot.a(:,40))
+        
         Xt = (filt_avg.cdom(it1) - filt_interp.cdom(it)) / (filt_avg.cdom(it1) - filt_avg.cdom(it0));
-        filt_interp.a(it,:) = Xt .* filt_avg.a(it0,:) + (1 - Xt) .* filt_avg.a(it1,:);
-        filt_interp.c(it,:) = Xt .* filt_avg.c(it0,:) + (1 - Xt) .* filt_avg.c(it1,:);
+%         Xt = (filt_interp.cdom(it0) - filt_avg.cdom(it1)) / (filt_avg.cdom(it1) - filt_interp.cdom(it0)) * ...
+%           abs(filt_avg.cdom(it1) - filt_interp.cdom(it)) / (filt_avg.cdom(it1) - filt_avg.cdom(it0));
+
+%         popo_a = Xt .* filt_avg.a(it0,:) + (1 - Xt) .* filt_avg.a(it1,:);
+%         popo_c = Xt .* filt_avg.c(it0,:) + (1 - Xt) .* filt_avg.c(it1,:);
+%         
+%         figure(); hold on
+%         yyaxis('left')
+%         plot(filt_interp.dt(it), popo_a(:,40), 'linewidth', 1.5)
+%         plot(filt_interp.dt(it), popo_c(:,40), 'linewidth', 1.5)
+%         yyaxis('right')
+%         plot(filt_interp.dt(it), filt_interp.cdom(it), 'linewidth', 1.5)
+        
+          filt_interp.a(it,:) = Xt .* filt_avg.a(it0,:) + (1 - Xt) .* filt_avg.a(it1,:);
+          filt_interp.c(it,:) = Xt .* filt_avg.c(it0,:) + (1 - Xt) .* filt_avg.c(it1,:);
       else
         % Variability in CDOM is not significant between 2 filtered periods
         % Apply linear interpolation to estimate filt during tot period
@@ -123,39 +177,6 @@ switch interpolation_method
     filt_interp.c_avg_sd = interp1(filt.dt, filt.c_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
     
   case 'linear'
-    % Compute filtered period median
-    filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
-    filt_avg.a = NaN(size(filt_avg,1), size(lambda.a, 2));
-    filt_avg.c = NaN(size(filt_avg,1), size(lambda.c, 2));
-    filt_avg.a_avg_sd = NaN(size(filt_avg,1), size(lambda.a, 2));
-    filt_avg.c_avg_sd = NaN(size(filt_avg,1), size(lambda.c, 2));
-    filt_avg.a_avg_n = NaN(size(filt_avg,1), 1);
-    filt_avg.c_avg_n = NaN(size(filt_avg,1), 1);
-    for i=1:size(sel_start, 1)
-      sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
-      foo = filt(sel_filt,:);
-      if sum(sel_filt) == 1
-        filt_avg.a(i,:) = foo.a;
-        filt_avg.c(i,:) = foo.c;
-        filt_avg.a_avg_sd(i,:) = foo.a_avg_sd;
-        filt_avg.c_avg_sd(i,:) = foo.c_avg_sd;
-        filt_avg.a_avg_n(i) = foo.a_avg_n;
-        filt_avg.c_avg_n(i) = foo.c_avg_n;
-      else
-        foo.a_avg_sd(foo.a > prctile(foo.a, 25, 1)) = NaN;
-        foo.c_avg_sd(foo.c > prctile(foo.c, 25, 1)) = NaN;
-        foo.a(foo.a > prctile(foo.a, 25, 1)) = NaN;
-        foo.c(foo.c > prctile(foo.c, 25, 1)) = NaN;
-        % compute average of all values smaller than 25th percentile for each filter event
-        filt_avg.a(i,:) = mean(foo.a, 1, 'omitnan');
-        filt_avg.c(i,:) = mean(foo.c, 1, 'omitnan');
-        filt_avg.a_avg_sd(i,:) = mean(foo.a_avg_sd, 1, 'omitnan');
-        filt_avg.c_avg_sd(i,:) = mean(foo.c_avg_sd, 1, 'omitnan');
-        filt_avg.a_avg_n(i) = sum(foo.a_avg_n(any(~isnan(foo.a), 2)), 'omitnan');
-        filt_avg.c_avg_n(i) = sum(foo.c_avg_n(any(~isnan(foo.c), 2)), 'omitnan');
-      end
-    end
-    filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2), :) = [];
     % Interpolate filtered on total linearly
     filt_interp = table(tot.dt, 'VariableNames', {'dt'});
     filt_interp.a = interp1(filt_avg.dt, filt_avg.a, filt_interp.dt);%, 'linear', 'extrap');
@@ -166,17 +187,20 @@ switch interpolation_method
   error('Method not supported.');
 end
 
-if exist('visFlag', 'file') && exist('fth', 'var')
-  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'a', round(size(tot.a, 2)/2), [], fth);
-  title('Check filter event interpolation, press q to continue', 'FontSize', 14)
-  legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
-    'AutoUpdate','off', 'FontSize', 12)
-  guiSelectOnTimeSeries(fh);
-elseif exist('visFlag', 'file')
+if exist('visFlag', 'file')
   fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'a', round(size(tot.a, 2)/2), [], []);
   title('Check filter event interpolation, press q to continue', 'FontSize', 14)
-  legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
-    'AutoUpdate','off', 'FontSize', 12)
+  if strcmp(interpolation_method, 'CDOM')
+    ax1 = gca;
+    ax1.YColor = [0	205	205]/255;
+    scatter(cdom.dt, cdom.fdom, 15, [0	205	205]/255, 'filled')
+    ylabel('FDOM (volts)')
+    legend('Filtered interpolated', 'Total', 'Filtered median', 'FDOM',...
+      'AutoUpdate','off', 'FontSize', 12)
+  else
+    legend('Filtered interpolated', 'Total', 'Filtered median',...
+      'AutoUpdate','off', 'FontSize', 12)
+  end
   guiSelectOnTimeSeries(fh);
 end
 
@@ -233,19 +257,19 @@ wla_700 = lambda.a(find(lambda.a >= 700, 1,'first')); % find higher and closest 
 
 % replace values at each end of the spectra when < -0.0015
 p.ap_sd(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
-p.ap_sd(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
+% p.ap_sd(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
 p.ap(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
-p.ap(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
+% p.ap(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
 
-% delete ap spectra when ap430-700 < -0.0015
-todelete = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
-if sum(todelete) > 0
-  fprintf('%.2f%% (%i) spectrum failed auto-QC: ap 430-700 < -0.0015\n', ...
-    sum(todelete) / size(p, 1) * 100, sum(todelete))
-end
-bad = [p(todelete, :) table(repmat({'ap 430-700 < -0.0015'}, ...
-  sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-p.ap(todelete, :) = NaN;
+% % delete ap spectra when ap430-700 < -0.0015
+% todelete = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
+% if sum(todelete) > 0
+%   fprintf('%.2f%% (%i) spectrum failed auto-QC: ap 430-700 < -0.0015\n', ...
+%     sum(todelete) / size(p, 1) * 100, sum(todelete))
+% end
+% bad = [p(todelete, :) table(repmat({'ap 430-700 < -0.0015'}, ...
+%   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+% p.ap(todelete, :) = NaN;
 
 % delete cp spectra when any cp < -0.0015
 todelete = any(p.cp < -0.0015, 2);
@@ -253,7 +277,9 @@ if sum(todelete) > 0
   fprintf('%.2f%% (%i) spectrum failed auto-QC: cp < -0.0015\n', ...
     sum(todelete) / size(p, 1) * 100, sum(todelete))
 end
-bad = [bad; p(todelete, :) table(repmat({'cp < -0.0015'}, ...
+% bad = [bad; p(todelete, :) table(repmat({'cp < -0.0015'}, ...
+%   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+bad = [p(todelete, :) table(repmat({'cp < -0.0015'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 p.cp(todelete, :) = NaN;
 
@@ -310,17 +336,23 @@ if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
   end
   fudge_factor = fudge_list(find(abs(diff(ndel_spec)) == min(abs(diff(ndel_spec))) & ...
     ndel_spec(2:end) < 0.001 * max(ndel_spec), 1,  'first')); % 0.05 threshold on first derivative of number of spectrum deleted
-  above_median_d600_ap450 = ratiod600_ap450 > fudge_factor * median(ratiod600_ap450);
-  if sum(above_median_d600_ap450) > 0
-    fprintf('%.2f%% (%i) spectrum failed auto-QC: sum(abs(d(ap)/d(lambda(600-650)))) / ap450nm\n', ...
-      sum(above_median_d600_ap450) / size(p, 1) * 100, sum(above_median_d600_ap450))
+  if isempty(fudge_factor)
+    fudge_factor = fudge_list(find(abs(diff(ndel_spec)) == min(abs(diff(ndel_spec))) & ...
+      ndel_spec(2:end) < 0.01 * max(ndel_spec), 1,  'first')); % 0.05 threshold on first derivative of number of spectrum deleted
   end
+  if ~isempty(fudge_factor)
+    above_median_d600_ap450 = ratiod600_ap450 > fudge_factor * median(ratiod600_ap450);
+    if sum(above_median_d600_ap450) > 0
+      fprintf('%.2f%% (%i) spectrum failed auto-QC: sum(abs(d(ap)/d(lambda(600-650)))) / ap450nm\n', ...
+        sum(above_median_d600_ap450) / size(p, 1) * 100, sum(above_median_d600_ap450))
+    end
 
-%   delete bad spectrum
-  bad = [bad; p(above_median_d600_ap450, :) ...
-    table(repmat({'sum(abs(d(ap)/d(lambda(600-650)))) / ap_{450nm}'}, sum(above_median_d600_ap450), 1), ...
-    'VariableNames', {'QC_failed'})];
-  p.ap(above_median_d600_ap450, :) = NaN;
+  %   delete bad spectrum
+    bad = [bad; p(above_median_d600_ap450, :) ...
+      table(repmat({'sum(abs(d(ap)/d(lambda(600-650)))) / ap_{450nm}'}, sum(above_median_d600_ap450), 1), ...
+      'VariableNames', {'QC_failed'})];
+    p.ap(above_median_d600_ap450, :) = NaN;
+  end
 end
 
 % Auto QC when a positive first derivatives of ap over
@@ -360,26 +392,26 @@ bad = [bad; p(todelete, :) table(repmat({'4 consecutive d(ap)/d(lambda485-570) >
 bad = sortrows(bad, 'dt');
 p.ap(todelete, :) = NaN;
 
-% Auto QC when ap spectrum contains 5 consecutive positive first derivatives of cp over
-% wavelentght between 485 and 570 nm
-d485_570 = diff(p.cp(:, lambda.c > 485 & lambda.c <= 570),[],2);
-pos_d485_570 = d485_570 > 0;
-todelete = false(size(pos_d485_570, 1), 1);
-N = 5; % Required number of consecutive numbers following a first one
-for i = 1:size(todelete,1)
-  t = [false pos_d485_570(i,:) false];
-  if any(find(diff(t)==-1)-find(diff(t)==1)>=N) % First t followed by >=N consecutive numbers
-    todelete(i) = true;
-  end
-end
-if sum(todelete)
-  fprintf('%.2f%% (%i) spectrum failed auto-QC: 5 consecutive d(cp)/d(lambda485-570) > 0\n', ...
-    sum(todelete) / size(p, 1) * 100, sum(todelete))
-end
-bad = [bad; p(todelete, :) table(repmat({'5 consecutive d(cp)/d(lambda485-570) > 0'}, ...
-  sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-bad = sortrows(bad, 'dt');
-p.cp(todelete, :) = NaN;
+% % Auto QC when ap spectrum contains 5 consecutive positive first derivatives of cp over
+% % wavelentght between 485 and 570 nm
+% d485_570 = diff(p.cp(:, lambda.c > 485 & lambda.c <= 570),[],2);
+% pos_d485_570 = d485_570 > 0;
+% todelete = false(size(pos_d485_570, 1), 1);
+% N = 5; % Required number of consecutive numbers following a first one
+% for i = 1:size(todelete,1)
+%   t = [false pos_d485_570(i,:) false];
+%   if any(find(diff(t)==-1)-find(diff(t)==1)>=N) % First t followed by >=N consecutive numbers
+%     todelete(i) = true;
+%   end
+% end
+% if sum(todelete)
+%   fprintf('%.2f%% (%i) spectrum failed auto-QC: 5 consecutive d(cp)/d(lambda485-570) > 0\n', ...
+%     sum(todelete) / size(p, 1) * 100, sum(todelete))
+% end
+% bad = [bad; p(todelete, :) table(repmat({'5 consecutive d(cp)/d(lambda485-570) > 0'}, ...
+%   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+% bad = sortrows(bad, 'dt');
+% p.cp(todelete, :) = NaN;
 
 % run gaussian decomposition
 agaus = GaussDecomp(p, lambda.a, compute_ad_aphi);
