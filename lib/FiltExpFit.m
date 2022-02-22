@@ -25,10 +25,10 @@ for i = progress(1:nspect)
   sel_filt = filt_st(i) <= filt.dt & filt.dt <= filt_end(i);
   if sum(sel_filt) > 3
     foo = filt(sel_filt,:);
-    if max(foo.dt) - min(foo.dt) > 0.0007 * 4
+    if max(foo.dt) - min(foo.dt) > 0.0007 * 2
       avg_beta = median(foo.beta,2,'omitnan');
       foo(foo.dt < max(foo.dt(avg_beta == max(avg_beta))),:) = [];
-      if max(foo.dt) - min(foo.dt) > 0.0007 * 4
+      if max(foo.dt) - min(foo.dt) > 0.0007 * 2
         % remove short peaks and smooth signal
         j = 1;
         deriv = diff(foo.beta);

@@ -1,5 +1,5 @@
 function fh = visFlag(raw_tot, raw_filt, bin_tot_good, bin_tot_suspect, bin_filt_good, ...
-                      bin_filt_bad, varname, varindex, raw_bad, fooflow)
+                      bin_filt_bad, varname, varindex, raw_bad, fooflow, spd_var)
 if nargin < 9; raw_bad = []; end
 
 % Define constants
@@ -50,9 +50,9 @@ datetick2_doy();
 % plot flow right y axis
 if ~strcmp(varname,'par')
     yyaxis('right'); 
-    if ~isempty(fooflow) && any(~isnan(fooflow.spd))
-      plot(fooflow.dt, fooflow.spd,'Color',[0 0.8 0]); popo=gca; 
-      ylim([0 max(fooflow.spd)+4]); ylabel('Flow rate (lpm)'); popo.YColor = [0 0.8 0]; % green
+    if ~isempty(fooflow) && any(~isnan(fooflow.(spd_var)))
+      plot(fooflow.dt, fooflow.(spd_var),'Color',[0 0.8 0]); popo=gca; 
+      ylim([0 max(fooflow.(spd_var))+4]); ylabel('Flow rate (lpm)'); popo.YColor = [0 0.8 0]; % green
       ylabel('flow rate (lpm)');
     end
 end

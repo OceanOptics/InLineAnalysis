@@ -1,7 +1,10 @@
 function [ data, lambda ] = importInlininoHBB( filename, calfile_plaque, calfile_temp, verbose )
-% Import HyperBB data logged with Inlinino and apply calibration from
-% calfile_plaque and calfile_temp following SEQUOIA's method
+% Import HyperBB data logged with Inlinino and apply SEQUOIA's processing code
+% using calfile_plaque and calfile_temp
+% Authors: SEQUOIA SCIENTIFIC
+% Modified: Guillaume Bourdin
 % Date : May 2021
+%
 %%
 if nargin < 4; verbose = false; end
 if verbose
@@ -228,97 +231,13 @@ data.dt = NaN(size(uscan, 1), 1);
 data.ScanIdx = uscan;
 data.WaterTemp = NaN(size(uscan, 1), 1);
 data.Depth = NaN(size(uscan, 1), 1);
-% data.DataIdx = NaN(size(uscan, 1), 28);
-% data.StepPos = NaN(size(uscan, 1), 28);
-% data.NetRef = NaN(size(uscan, 1), 28);
-% data.Scat1 = NaN(size(uscan, 1), 28);
-% data.Scat2 = NaN(size(uscan, 1), 28);
-% data.Scat3 = NaN(size(uscan, 1), 28);
-% data.ScatCor1 = NaN(size(uscan, 1), 28);
-% data.ScatCor2 = NaN(size(uscan, 1), 28);
-% data.ScatCor3 = NaN(size(uscan, 1), 28);
-% data.ScatTempCor1 = NaN(size(uscan, 1), 28);
-% data.ScatTempCor2 = NaN(size(uscan, 1), 28);
-% data.ScatTempCor3 = NaN(size(uscan, 1), 28);
-% data.ScatTempCorX = NaN(size(uscan, 1), 28);
 data.beta = NaN(size(uscan, 1), max(size(lambda)));
-% % data.TempCorrCoeff = NaN(size(uscan, 1), 28);
-% % data.ScatX = NaN(size(uscan, 1), 28);
-% % data.GainX = NaN(size(uscan, 1), 28);
-% % data.NetSig1 = NaN(size(uscan, 1), 28);
-% % data.NetSig2 = NaN(size(uscan, 1), 28);
-% % data.NetSig3 = NaN(size(uscan, 1), 28);
-% % data.SigOn1 = NaN(size(uscan, 1), 28);
-% % data.SigOn1Std = NaN(size(uscan, 1), 28);
-% % data.RefOn = NaN(size(uscan, 1), 28);
-% % data.RefOnStd = NaN(size(uscan, 1), 28);
-% % data.SigOff1 = NaN(size(uscan, 1), 28);
-% % data.SigOff1Std = NaN(size(uscan, 1), 28);
-% % data.RefOff = NaN(size(uscan, 1), 28);
-% % data.RefOffStd = NaN(size(uscan, 1), 28);
-% % data.SigOn2 = NaN(size(uscan, 1), 28);
-% % data.SigOn2Std = NaN(size(uscan, 1), 28);
-% % data.SigOn3 = NaN(size(uscan, 1), 28);
-% % data.SigOn3Std = NaN(size(uscan, 1), 28);
-% % data.SigOff2 = NaN(size(uscan, 1), 28);
-% % data.SigOff2Std = NaN(size(uscan, 1), 28);
-% % data.SigOff3 = NaN(size(uscan, 1), 28);
-% % data.SigOff3Std = NaN(size(uscan, 1), 28);
-
-%% SPLITAPPLY SORTING DEPRECATED
-% oof = dat.ScanIdx - min(dat.ScanIdx) + 1;
-% data.dt = splitapply(@(x)median(x,'omitnan'), dat.dt, oof);
-% data.ScanIdx = uscan;
-% data.WaterTemp = splitapply(@(x)median(x,'omitnan'), dat.WaterTemp, oof);
-% data.Depth = splitapply(@(x)median(x,'omitnan'), dat.Depth, oof);
-% % data.LedTemp = splitapply(@(x)median(x,'omitnan'), dat.LedTemp, oof);
-% % data.Debug1 = splitapply(@(x)median(x,'omitnan'), dat.Debug1, oof);
-% % data.zDistance = splitapply(@(x)median(x,'omitnan'), dat.zDistance, oof);
-% % data.PmtGain = splitapply(@(x)median(x,'omitnan'), dat.PmtGain, oof);
-% % data.LedPwr = splitapply(@(x)median(x,'omitnan'), dat.LedPwr, oof);
-% % data.Debug1 = splitapply(@(x)median(x,'omitnan'), dat.Debug1, oof);
-%%
 
 for i = 1:size(uscan, 1)
   data.dt(i) = median(dat.dt(dat.ScanIdx == uscan(i)),'omitnan');
   data.WaterTemp(i) = median(dat.WaterTemp(dat.ScanIdx == uscan(i)),'omitnan');
   data.Depth(i) = median(dat.Depth(dat.ScanIdx == uscan(i)),'omitnan');
-%   data.DataIdx(i, foo(dat.ScanIdx == uscan(i))) = dat.DataIdx(dat.ScanIdx == uscan(i))';
-%   data.StepPos(i, foo(dat.ScanIdx == uscan(i))) = dat.StepPos(dat.ScanIdx == uscan(i))';
-%   data.NetRef(i, foo(dat.ScanIdx == uscan(i))) = dat.NetRef(dat.ScanIdx == uscan(i))';
-%   data.Scat1(i, foo(dat.ScanIdx == uscan(i))) = dat.Scat1(dat.ScanIdx == uscan(i))';
-%   data.Scat2(i, foo(dat.ScanIdx == uscan(i))) = dat.Scat2(dat.ScanIdx == uscan(i))';
-%   data.Scat3(i, foo(dat.ScanIdx == uscan(i))) = dat.Scat3(dat.ScanIdx == uscan(i))';
-%   data.ScatCor1(i, foo(dat.ScanIdx == uscan(i))) = dat.ScatCor1(dat.ScanIdx == uscan(i))';
-%   data.ScatCor2(i, foo(dat.ScanIdx == uscan(i))) = dat.ScatCor2(dat.ScanIdx == uscan(i))';
-%   data.ScatCor3(i, foo(dat.ScanIdx == uscan(i))) = dat.ScatCor3(dat.ScanIdx == uscan(i))';
-%   data.ScatTempCor1(i, foo(dat.ScanIdx == uscan(i))) = dat.ScatTempCor1(dat.ScanIdx == uscan(i))';
-%   data.ScatTempCor2(i, foo(dat.ScanIdx == uscan(i))) = dat.ScatTempCor2(dat.ScanIdx == uscan(i))';
-%   data.ScatTempCor3(i, foo(dat.ScanIdx == uscan(i))) = dat.ScatTempCor3(dat.ScanIdx == uscan(i))';
-%   data.ScatTempCorX(i, foo(dat.ScanIdx == uscan(i))) = dat.ScatTempCorX(dat.ScanIdx == uscan(i))';
   data.beta(i, foo(dat.ScanIdx == uscan(i))) = dat.beta(dat.ScanIdx == uscan(i))';
-%   data.TempCorrCoeff(i, foo(dat.ScanIdx == uscan(i))) = dat.TempCorrCoeff(dat.ScanIdx == uscan(i))';
-%   data.ScatX(i, foo(dat.ScanIdx == uscan(i))) = dat.ScatX(dat.ScanIdx == uscan(i))';
-%   data.GainX(i, foo(dat.ScanIdx == uscan(i))) = dat.GainX(dat.ScanIdx == uscan(i))';
-%   data.NetSig1(i, foo(dat.ScanIdx == uscan(i))) = dat.NetSig1(dat.ScanIdx == uscan(i))';
-%   data.NetSig2(i, foo(dat.ScanIdx == uscan(i))) = dat.NetSig2(dat.ScanIdx == uscan(i))';
-%   data.NetSig3(i, foo(dat.ScanIdx == uscan(i))) = dat.NetSig3(dat.ScanIdx == uscan(i))';
-%   data.SigOn1(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOn1(dat.ScanIdx == uscan(i))';
-%   data.SigOn1Std(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOn1Std(dat.ScanIdx == uscan(i))';
-%   data.RefOn(i, foo(dat.ScanIdx == uscan(i))) = dat.RefOn(dat.ScanIdx == uscan(i))';
-%   data.RefOnStd(i, foo(dat.ScanIdx == uscan(i))) = dat.RefOnStd(dat.ScanIdx == uscan(i))';
-%   data.SigOff1(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOff1(dat.ScanIdx == uscan(i))';
-%   data.SigOff1Std(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOff1Std(dat.ScanIdx == uscan(i))';
-%   data.RefOff(i, foo(dat.ScanIdx == uscan(i))) = dat.RefOff(dat.ScanIdx == uscan(i))';
-%   data.RefOffStd(i, foo(dat.ScanIdx == uscan(i))) = dat.RefOffStd(dat.ScanIdx == uscan(i))';
-%   data.SigOn2(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOn2(dat.ScanIdx == uscan(i))';
-%   data.SigOn2Std(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOn2Std(dat.ScanIdx == uscan(i))';
-%   data.SigOn3(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOn3(dat.ScanIdx == uscan(i))';
-%   data.SigOn3Std(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOn3Std(dat.ScanIdx == uscan(i))';
-%   data.SigOff2(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOff2(dat.ScanIdx == uscan(i))';
-%   data.SigOff2Std(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOff2Std(dat.ScanIdx == uscan(i))';
-%   data.SigOff3(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOff3(dat.ScanIdx == uscan(i))';
-%   data.SigOff3Std(i, foo(dat.ScanIdx == uscan(i))) = dat.SigOff3Std(dat.ScanIdx == uscan(i))';
 end
-data = sortrows(data);
+data = sortrows(data, 'dt');
 end

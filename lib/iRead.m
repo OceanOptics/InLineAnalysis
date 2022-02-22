@@ -154,6 +154,10 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
       % List all files in directory
       l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.csv']);
       filenames = {l.name}';
+    case 'Inlinino_atlasTSG'
+      % List all files in directory
+      l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.csv']);
+      filenames = {l.name}';
     case 'SBE45TSG'
       % List all files in directory
       l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.sbe45']);

@@ -163,8 +163,8 @@ if license('test','MAP_Toolbox')
                 data(~all(isnan(data),2)), ...
                 'filled','MarkerFaceAlpha',1,'MarkerEdgeAlpha',1, ...
                 'MarkerEdgeColor',edgcol, 'Marker', 'o');
-            scm(2).Children.MarkerFaceAlpha = .5; %.75 .3
-            scm(2).Children.MarkerEdgeAlpha = .8; %.15 .05
+            scm(2).Children.MarkerFaceAlpha = .75; %.75 .3 .5
+            scm(2).Children.MarkerEdgeAlpha = .15; %.15 .05 .8
             scm(2).Children.LineWidth = 0.001;
         end
     end

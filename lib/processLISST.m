@@ -34,11 +34,11 @@ if exist('fth', 'var')
     SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
   end
 
-  % interpolate fth.swt onto binned data to fill missing flow data
-  fth_interp = table([tot.dt; fth.dt; filt.dt], 'VariableNames', {'dt'});
+  % interpolate fth.qc.tsw.swt onto binned data to fill missing flow data
+  fth_interp = table([tot.dt; fth.qc.tsw.dt; filt.dt], 'VariableNames', {'dt'});
   [~,b] = sort(fth_interp.dt); % sort dates
   fth_interp.dt = fth_interp.dt(b,:);
-  fth_interp.swt = interp1(fth.dt, fth.swt, fth_interp.dt, 'previous');%, 'linear', 'extrap');
+  fth_interp.swt = interp1(fth.dt, fth.qc.tsw.swt, fth_interp.dt, 'previous');%, 'linear', 'extrap');
   fth_interp.swt = fth_interp.swt > 0;
   % Find switch events from total to filtered
   sel_start = find(fth_interp.swt(1:end-1) == SWITCH_TOTAL & fth_interp.swt(2:end) == SWITCH_FILTERED);
@@ -86,7 +86,8 @@ filt_interp.laser_reference = interp1(filt_avg.dt, filt_avg.laser_reference, fil
 filt_interp.(LASER_POWER_VAR) = interp1(filt_avg.dt, filt_avg.(LASER_POWER_VAR), filt_interp.dt);
 
 if exist('visFlag', 'file') && exist('fth', 'var')
-  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], fth);
+  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), ...
+    [], fth.qc.tsw, fth.view.spd_variable);
   title('Check filter event interpolation, press q to continue', 'FontSize', 14)
   legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
     'AutoUpdate','off', 'FontSize', 12)

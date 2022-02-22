@@ -46,13 +46,8 @@ end
 try
   t = textscan(fid, parser, 'delimiter','\t');
   fclose(fid);
-  spd_col = find(cell2mat(cellfun(@(x) any(x>0), t(end-1:end), 'un', 0)));
-  if size(spd_col, 2) > 1
-    spd_col = find(cell2mat(cellfun(@(x) sum(x>0)>0.1*size(t{end},1), t(end-1:end), 'un', 0)));
-  end
-  if isempty(spd_col); spd_col = 1; end
-  dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{spd_col+5},...
-           'VariableNames', {'dt', 'swt', 'spd'}); % Build table
+  dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{6}, t{7}, ...
+           'VariableNames', {'dt', 'swt', 'spd1','spd2'}); % Build table
 catch
   parser = '%s%d%d%s%s%s%s'; % french format decimal number with comma ',''
   fid=fopen(filename);
@@ -65,13 +60,8 @@ catch
   t{1,5} = str2double(strrep(t{1,5}, ',', '.'));
   t{1,6} = str2double(strrep(t{1,6}, ',', '.'));
   t{1,7} = str2double(strrep(t{1,7}, ',', '.'));
-  spd_col = find(cell2mat(cellfun(@(x) any(x>0), t(end-1:end), 'un', 0)));
-  if size(spd_col, 2) > 1
-    spd_col = find(cell2mat(cellfun(@(x) sum(x>0)>0.1*size(t{end},1), t(end-1:end), 'un', 0)));
-  end
-  if isempty(spd_col); spd_col = 1; end
-  dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{spd_col+5},...
-           'VariableNames', {'dt', 'swt', 'spd'}); % Build table
+  dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{6}, t{7}, ...
+           'VariableNames', {'dt', 'swt', 'spd1','spd2'}); % Build table
 end
 
 % average over duplicates (bug in FlowControl software)
@@ -81,7 +71,8 @@ unidt = unique(dat.dt,'first');
 data = table(unidt, 'VariableNames', {'dt'});
 for i = 1:size(unidt)
   data.swt(i) = mean(dat.swt(unidt(i) == dat.dt), 'omitnan');
-  data.spd(i) = mean(dat.spd(unidt(i) == dat.dt), 'omitnan');
+  data.spd1(i) = mean(dat.spd1(unidt(i) == dat.dt), 'omitnan');
+  data.spd2(i) = mean(dat.spd2(unidt(i) == dat.dt), 'omitnan');
 end
 
 

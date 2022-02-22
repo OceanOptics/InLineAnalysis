@@ -89,7 +89,7 @@ end
 flow.(level).tsw.dt = flow.(level).tsw.dt + datenum(minutes(shift_flow));
 % create filter event duplicate when long period without filter event
 fh = visFlag(instru.raw.tsw, instru.raw.fsw, instru.qc.tsw, [], instru.qc.fsw, [], ...
-  instru.view.varname, instru.view.varcol, instru.raw.bad, flow.qc.tsw);
+  instru.view.varname, instru.view.varcol, instru.raw.bad, flow.qc.tsw, flow.view.spd_variable );
 leg = plot(flow.(level).tsw.dt, flow.(level).tsw.swt, '-k');
 title(['Select filter event to duplicate (press x)' newline 'Select new time slot for filter event duplicated (press s)' newline 'Change switch position to filtered (press f)'  newline 'Change switch position to total (press t)'], ...
   'FontSize', 14)
@@ -166,7 +166,7 @@ for j = 1:size(totalswitch, 1)
       NaN(size(linetoadd_dt, 1), size(popoflow, 2) - 2)], ...
       'VariableNames', flow.(level).tsw.Properties.VariableNames);
   if sum(idx_flow) > 3
-    new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
+    new_flow.(flow.view.spd_variable) = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.(flow.view.spd_variable)(idx_flow), new_flow.dt, 'linear');
   end
   flow.(level).tsw(idx_flow, :) = [];
   flow.(level).tsw = [flow.(level).tsw; new_flow];
@@ -181,8 +181,9 @@ for j = 1:size(filterswitch, 1)
       NaN(size(linetoadd_dt, 1), size(popoflow, 2) - 2)], ...
       'VariableNames', flow.(level).tsw.Properties.VariableNames);
   if sum(idx_flow) > 3
-    new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
+    new_flow.(flow.view.spd_variable) = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.(flow.view.spd_variable )(idx_flow), new_flow.dt, 'linear');
   end
+  new_flow.(flow.view.spd_variable) = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.(flow.view.spd_variable )(idx_flow), new_flow.dt, 'linear');
   flow.(level).tsw(idx_flow, :) = [];
   flow.(level).tsw = [flow.(level).tsw; new_flow];
   % sort by date
@@ -196,7 +197,7 @@ end
 %     new_flow = array2table([linetoadd_dt repmat(closest_position, size(linetoadd_dt, 1), 1) ...
 %       NaN(size(linetoadd_dt, 1), size(popoflow, 2) - 2)], ...
 %       'VariableNames', flow.(level).tsw.Properties.VariableNames);
-%     new_flow.spd = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.spd(idx_flow), new_flow.dt, 'linear');
+%     new_flow.(flow.view.spd_variable) = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.(flow.view.spd_variable )(idx_flow), new_flow.dt, 'linear');
 %     flow.(level).tsw(idx_flow, :) = [];
 %     flow.(level).tsw = [flow.(level).tsw; new_flow];
 %     % sort by date

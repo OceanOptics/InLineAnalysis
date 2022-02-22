@@ -20,21 +20,27 @@ if exist('fth', 'var')
     SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
   end
   
+  if strcmp(filt_method, '25percentil')
+    fth_temp = fth.qc.tsw;
+  elseif strcmp(filt_method, 'exponential_fit')
+    fth_temp = fth.raw.tsw;
+  end
+  
   % sort filt_qc data
   filt_qc = sortrows(filt_qc, 'dt');
-  fth.swt(fth.swt > 0) = 1;
+  fth_temp.swt(fth_temp.swt > 0) = 1;
   % delete duplicats
-  [~, L, ~] = unique(fth.dt,'first');
-  indexToDump = not(ismember(1:numel(fth.dt),L));
-  fth(indexToDump, :) = [];
+  [~, L, ~] = unique(fth_temp.dt,'first');
+  indexToDump = not(ismember(1:numel(fth_temp.dt),L));
+  fth_temp(indexToDump, :) = [];
   
   % merge and sort filt_raw filt_bad data
   if any(~isempty(filt_raw) | ~isempty(filt_bad))
     filt_raw_merged = sortrows([filt_raw; filt_bad], 'dt');
   end
   
-  % interpolate fth.swt onto binned data to fill missing flow data
-  fth_interp = table([tot.dt; fth.dt; filt_qc.dt], 'VariableNames', {'dt'});
+  % interpolate fth_temp.swt onto binned data to fill missing flow data
+  fth_interp = table([tot.dt; fth_temp.dt; filt_qc.dt], 'VariableNames', {'dt'});
   % delete duplicats
   [~, L, ~] = unique(fth_interp.dt,'first');
   indexToDump = not(ismember(1:numel(fth_interp.dt),L));
@@ -42,7 +48,7 @@ if exist('fth', 'var')
   % sort dates
   [~,b] = sort(fth_interp.dt);
   fth_interp.dt = fth_interp.dt(b,:);
-  fth_interp.swt = interp1(fth.dt, fth.swt, fth_interp.dt, 'previous');%, 'linear', 'extrap');
+  fth_interp.swt = interp1(fth_temp.dt, fth_temp.swt, fth_interp.dt, 'previous');%, 'linear', 'extrap');
   fth_interp.swt = fth_interp.swt > 0;
   % Find switch events from total to filtered
   sel_start = find(fth_interp.swt(1:end-1) == SWITCH_TOTAL & fth_interp.swt(2:end) == SWITCH_FILTERED);
@@ -119,7 +125,8 @@ filt_interp.beta = interp1(filt_avg.dt, filt_avg.beta, filt_interp.dt);%, 'linea
 filt_interp.beta_avg_sd = interp1(filt_avg.dt, filt_avg.beta_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
 
 if exist('visFlag', 'file') && exist('fth', 'var')
-  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], fth);
+  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), ...
+    [], fth_temp, fth.view.spd_variable);
   title('Check filter event interpolation, press q to continue', 'FontSize', 14)
   legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
     'AutoUpdate','off', 'FontSize', 12)

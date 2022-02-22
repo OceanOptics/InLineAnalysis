@@ -3,7 +3,7 @@ function [ data ] = importInlininoLISSTcsv( filename, verbose )
 
 if nargin < 2; verbose = false; end
 if verbose
-  foo = strsplit(filename, '/');
+  foo = strsplit(filename, filesep);
   fprintf('Importing %s ... ', foo{end});
 end
 
