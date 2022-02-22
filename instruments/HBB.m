@@ -96,20 +96,20 @@ classdef HBB < Instrument
         switch filt_method
           case '25percentil'
             [obj.prod.p, obj.prod.g] = processHBB(param, obj.qc.tsw, obj.qc.fsw, [], [], ...
-              obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT.qc.tsw, SWT_constants);
+              obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT, SWT_constants);
           case 'exponential_fit'
             [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processHBB(param, obj.qc.tsw, ...
               obj.qc.fsw, obj.raw.fsw, obj.raw.bad, obj.bin.diw, TSG.qc.tsw, ...
-              di_method, filt_method, SWT.raw.tsw, SWT_constants);
+              di_method, filt_method, SWT, SWT_constants);
         end
       else
         switch filt_method
           case '25percentil'
             obj.prod.p = processHBB(param, obj.qc.tsw, obj.qc.fsw, [], [], [], [], [], ...
-              filt_method, SWT.qc.tsw, SWT_constants);
+              filt_method, SWT, SWT_constants);
           case 'exponential_fit'
             [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processHBB(param, obj.qc.tsw, obj.qc.fsw, ...
-              obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT.raw.tsw, SWT_constants);
+              obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT, SWT_constants);
         end
       end
     end

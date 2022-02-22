@@ -33,20 +33,20 @@ classdef BB < ECO
         switch filt_method
           case '25percentil'
             [obj.prod.p, obj.prod.g] = processBB3(param, obj.qc.tsw, obj.qc.fsw, [], [], ...
-              obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT.qc.tsw, SWT_constants);
+              obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT, SWT_constants);
           case 'exponential_fit'
             [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processBB3(param, obj.qc.tsw, ...
               obj.qc.fsw, obj.raw.fsw, obj.raw.bad, obj.bin.diw, TSG.qc.tsw, di_method, ...
-              filt_method, SWT.raw.tsw, SWT_constants);
+              filt_method, SWT, SWT_constants);
         end
       else
         switch filt_method
           case '25percentil'
             obj.prod.p = processBB3(param, obj.qc.tsw, obj.qc.fsw, [], [], [], [], [], ...
-              filt_method, SWT.qc.tsw, SWT_constants);
+              filt_method, SWT, SWT_constants);
           case 'exponential_fit'
             [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processBB3(param, obj.qc.tsw, ...
-              obj.qc.fsw, obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT.raw.tsw, ...
+              obj.qc.fsw, obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT, ...
               SWT_constants);
         end
       end

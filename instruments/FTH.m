@@ -9,6 +9,7 @@ classdef FTH < Instrument
   properties (Hidden=true)
     SWITCH_FILTERED = 1;
     SWITCH_TOTAL = 0;
+    spd_variable = [];
   end
   
   methods
@@ -19,7 +20,16 @@ classdef FTH < Instrument
       obj = obj@Instrument(cfg);
       
       % Post initialization
-      if isempty(obj.logger); obj.logger = 'FlowControl'; end
+      if isempty(cfg.logger)
+        obj.logger = 'FlowControl';
+      else
+        obj.logger = cfg.logger;
+      end
+      if isempty(cfg.view.spd_variable)
+        obj.view.spd_variable = 'spd';
+      else
+        obj.view.spd_variable = cfg.view.spd_variable;
+      end
       
       switch obj.logger
         case 'FlowControl_old'
@@ -62,20 +72,29 @@ classdef FTH < Instrument
         else
           error('Raw data not loaded')
         end
-        % interpolate flow rate data over continuous time vector   
-        interp_spd = interp1(obj.data.dt, obj.data.spd, dt, 'linear');
+        % interpolate flow rate data over continuous time vector
+        spd_var = obj.data.Properties.VariableNames(contains(obj.data.Properties.VariableNames, 'spd'));
+%         interp_spd = interp1(obj.data.dt, obj.data.(obj.view.spd_variable), dt, 'linear');
+        interp_spd = NaN(size(dt,1),2);
+        for j = 1:size(spd_var, 2)
+          interp_spd(:,j) = interp1(obj.data.dt, obj.data.(spd_var{j}), dt, 'linear');
+        end
         % delete interpolated data to keep only 'true' data
         ism = ~ismember(dt, obj.data.dt);
-        interp_spd (ism) = NaN;
+        interp_spd(ism) = NaN;
 
         % Remove existing data from fth
         obj.data(user_selection(i,1) <= obj.data.dt & obj.data.dt <= user_selection(i,2),:) = [];
-
+        
+        % get variable names
+        varnam = obj.data.Properties.VariableNames;
         switch mode
           case 'total'
-            obj.data = [obj.data; table(dt, ones(size(dt)) * obj.SWITCH_TOTAL, interp_spd, 'VariableNames', {'dt', 'swt', 'spd'})];
+            obj.data = [obj.data; array2table([dt ones(size(dt))*obj.SWITCH_TOTAL ...
+              interp_spd], 'VariableNames', varnam)];
           case 'filtered'
-            obj.data = [obj.data; table(dt, ones(size(dt)) * obj.SWITCH_FILTERED, interp_spd, 'VariableNames', {'dt', 'swt', 'spd'})];
+            obj.data = [obj.data; array2table([dt ones(size(dt))*obj.SWITCH_FILTERED ...
+              interp_spd], 'VariableNames', varnam)];
           otherwise
             error('Unknown mode.');
         end

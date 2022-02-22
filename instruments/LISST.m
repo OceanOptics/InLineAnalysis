@@ -118,10 +118,10 @@ classdef LISST < Instrument
       end
       if compute_dissolved
         obj.prod.p = processLISST(param, obj.qc.tsw, obj.qc.fsw, [], ...
-          SWT.qc.tsw, SWT_constants, di_method);
+          SWT, SWT_constants, di_method);
       else
         obj.prod.p = processLISST(param, obj.qc.tsw, obj.qc.fsw, obj.bin.diw, ...
-          SWT.qc.tsw, SWT_constants, di_method);
+          SWT, SWT_constants, di_method);
       end
     end
     
