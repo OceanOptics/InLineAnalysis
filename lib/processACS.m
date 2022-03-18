@@ -74,11 +74,13 @@ filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2), :) = [];
 switch interpolation_method
   case 'CDOM'
     % Require both CDOM & Switch position
-    % Parameters for CDOM signal (in units of cdom.fdom, by default it's counts);
-    param_extrap_threshold = 4;  % counts
-    param_min_variability = 0.001;   % counts
-    filt_avg.cdom = interp1(cdom.dt, cdom.fdom, filt_avg.dt, 'linear');
-    filt_avg.cdom(isnan(filt_avg.cdom)) = interp1(cdom.dt, cdom.fdom, filt_avg.dt(isnan(filt_avg.cdom)), ...
+    % keep only leg data
+    cdom = cdom(cdom.dt >= min([tot.dt; filt.dt]) & cdom.dt <= max([tot.dt; filt.dt]), :);
+    % smooth FDOM data
+    cdom.mv_fdom = movmean(cdom.fdom, 30);
+    % interpolate FDOM onto filt_avg
+    filt_avg.cdom = interp1(cdom.dt, cdom.mv_fdom, filt_avg.dt, 'linear');
+    filt_avg.cdom(isnan(filt_avg.cdom)) = interp1(cdom.dt, cdom.mv_fdom, filt_avg.dt(isnan(filt_avg.cdom)), ...
       'nearest', 'extrap');
     
 % %     % use regressions as interpolation method
@@ -115,56 +117,56 @@ switch interpolation_method
 % %         filt_interp.a = interp1(cdom_fun.dt, cdom_fun.a, filt_interp.dt);%, 'linear', 'extrap');
 % %         filt_interp.c = interp1(cdom_fun.dt, cdom_fun.c, filt_interp.dt);%, 'linear', 'extrap');
 % %         warning('on', 'stats:regress:RankDefDesignMat');
-        
+    
     % Use simple mathematical function to interpolate based on CDOM
     n_periods = size(filt_avg,1)-1;
     filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-    filt_interp.cdom = interp1(cdom.dt, cdom.fdom, tot.dt, 'linear', 'extrap'); % as independent from tot|filt period
+    filt_interp.cdom = interp1(cdom.dt, cdom.mv_fdom, tot.dt, 'linear', 'extrap'); % as independent from tot|filt period
     filt_interp.a = NaN(size(filt_interp,1),size(lambda.a, 2));
     filt_interp.c = NaN(size(filt_interp,1),size(lambda.c, 2));
     % For each period going from t0 to t1, starting and finishing by a filtered time
     for i=1:n_periods
       it0 = i; it1 = i + 1;
       it = filt_avg.dt(it0) <= filt_interp.dt & filt_interp.dt <= filt_avg.dt(it1);
-      var_period = abs(filt_avg.cdom(it1) - filt_avg.cdom(it0));
-      if max(filt_interp.cdom(it)) - min(filt_interp.cdom(it)) > var_period + param_extrap_threshold
-        % If variability during total period is higher than the variability
-        % between the two boundaries, extrapolation in needed 
-        % Processing is ignored for now.
-        filt_interp.a(it,:) = NaN;
-        filt_interp.c(it,:) = NaN;
-  %       fprintf('processACS: interpolation of filtered period requires an extrapolation of the CDOM signals which is not supported.');
-        fprintf('processACS: Unable to interpolate filt %s-%s', datestr(filt_avg.dt(it0)), datestr(filt_avg.dt(it1)));
-      elseif var_period > param_min_variability
-        % Signficant variability in CDOM between 2 filtered periods
-        % Use cdom signal to interpolate filt during tot periods
-%         
-%         figure(); hold on
-%         plot(filt_interp.dt, filt_interp.cdom)
-%         plot(filt_avg.dt, filt_avg.cdom)
-%         plot(tot.dt, tot.a(:,40))
-        
-        Xt = (filt_avg.cdom(it1) - filt_interp.cdom(it)) / (filt_avg.cdom(it1) - filt_avg.cdom(it0));
-%         Xt = (filt_interp.cdom(it0) - filt_avg.cdom(it1)) / (filt_avg.cdom(it1) - filt_interp.cdom(it0)) * ...
-%           abs(filt_avg.cdom(it1) - filt_interp.cdom(it)) / (filt_avg.cdom(it1) - filt_avg.cdom(it0));
+      if any(it)
+        it_filt_interp = filt_interp(it,:);
+  %         figure();
+  %         yyaxis('left')
+  %         hold on
+  %         scatter(filt_interp.dt, filt_interp.cdom, 30, 'filled', 'MarkerFaceColor', 'b','MarkerFaceAlpha', 0.5)
+  %         scatter(filt_avg.dt, filt_avg.cdom, 30, 'filled', 'MarkerFaceColor', 'r', 'MarkerFaceAlpha', 0.5)
+  %         yyaxis('right')
+  %         hold on
+  %         scatter(tot.dt, tot.a(:,40), 30, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5)
 
-%         popo_a = Xt .* filt_avg.a(it0,:) + (1 - Xt) .* filt_avg.a(it1,:);
-%         popo_c = Xt .* filt_avg.c(it0,:) + (1 - Xt) .* filt_avg.c(it1,:);
-%         
-%         figure(); hold on
-%         yyaxis('left')
-%         plot(filt_interp.dt(it), popo_a(:,40), 'linewidth', 1.5)
-%         plot(filt_interp.dt(it), popo_c(:,40), 'linewidth', 1.5)
-%         yyaxis('right')
-%         plot(filt_interp.dt(it), filt_interp.cdom(it), 'linewidth', 1.5)
-        
-          filt_interp.a(it,:) = Xt .* filt_avg.a(it0,:) + (1 - Xt) .* filt_avg.a(it1,:);
-          filt_interp.c(it,:) = Xt .* filt_avg.c(it0,:) + (1 - Xt) .* filt_avg.c(it1,:);
-      else
-        % Variability in CDOM is not significant between 2 filtered periods
-        % Apply linear interpolation to estimate filt during tot period
-        filt_interp.a(it,:) = interp1(filt_avg.dt(it0:it1), filt_avg.a(it0:it1,:), filt_interp.dt(it));
-        filt_interp.c(it,:) = interp1(filt_avg.dt(it0:it1), filt_avg.c(it0:it1,:), filt_interp.dt(it));
+%           Xt = (filt_avg.cdom(it1) - filt_interp.cdom(it)) / (filt_avg.cdom(it1) - filt_avg.cdom(it0));
+%           filt_interp.a(it,:) = Xt .* filt_avg.a(it0,:) + (1 - Xt) .* filt_avg.a(it1,:);
+%           filt_interp.c(it,:) = Xt .* filt_avg.c(it0,:) + (1 - Xt) .* filt_avg.c(it1,:);
+          
+          lin_cdom = interp1(filt_avg.dt(it0:it1,:), filt_avg.cdom(it0:it1,:), it_filt_interp.dt, 'linear');
+          Xt = lin_cdom ./ it_filt_interp.cdom;
+          lin_a = interp1(filt_avg.dt(it0:it1,:), filt_avg.a(it0:it1,:), it_filt_interp.dt, 'linear');
+          lin_c = interp1(filt_avg.dt(it0:it1,:), filt_avg.c(it0:it1,:), it_filt_interp.dt, 'linear');
+          filt_interp.a(it,:) = lin_a ./ Xt;
+          filt_interp.c(it,:) = lin_c ./ Xt;
+
+%           figure()
+%           subplot(1,2,1)
+%           yyaxis('left')
+%           hold on
+%           scatter(it_filt_interp.dt, filt_interp.a(it,40), 30, 'filled', 'MarkerFaceColor', 'b','MarkerFaceAlpha', 0.5)
+%           scatter(filt_avg.dt, filt_avg.a(:,40), 30, 'filled', 'MarkerFaceColor', [255	193	37]/255,'MarkerFaceAlpha', 1)
+%           yyaxis('right')
+%           hold on
+%           scatter(it_filt_interp.dt, it_filt_interp.cdom, 30, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5)
+%           subplot(1,2,2)
+%           yyaxis('left')
+%           hold on
+%           scatter(it_filt_interp.dt, filt_interp.c(it,40), 30, 'filled', 'MarkerFaceColor', 'r','MarkerFaceAlpha', 0.5)
+%           scatter(filt_avg.dt, filt_avg.c(:,40), 30, 'filled', 'MarkerFaceColor', [255	193	37]/255,'MarkerFaceAlpha', 1)
+%           yyaxis('right')
+%           hold on
+%           scatter(it_filt_interp.dt, it_filt_interp.cdom, 30, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5)
       end
     end
   %   % Interpolate a_filt and c_filt based on CDOM timestamp to tot timestamp
@@ -193,9 +195,9 @@ if exist('visFlag', 'file')
   if strcmp(interpolation_method, 'CDOM')
     ax1 = gca;
     ax1.YColor = [0	205	205]/255;
-    scatter(cdom.dt, cdom.fdom, 15, [0	205	205]/255, 'filled')
+    scatter(cdom.dt, cdom.mv_fdom, 15, [0	205	205]/255, 'filled')
     ylabel('FDOM (volts)')
-    legend('Filtered interpolated', 'Total', 'Filtered median', 'FDOM',...
+    legend('Filtered interpolated', 'Total', 'Filtered median', 'smoothed FDOM',...
       'AutoUpdate','off', 'FontSize', 12)
   else
     legend('Filtered interpolated', 'Total', 'Filtered median',...
@@ -261,15 +263,23 @@ p.ap_sd(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
 p.ap(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
 % p.ap(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
 
-% % delete ap spectra when ap430-700 < -0.0015
-% todelete = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
-% if sum(todelete) > 0
-%   fprintf('%.2f%% (%i) spectrum failed auto-QC: ap 430-700 < -0.0015\n', ...
-%     sum(todelete) / size(p, 1) * 100, sum(todelete))
-% end
-% bad = [p(todelete, :) table(repmat({'ap 430-700 < -0.0015'}, ...
-%   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-% p.ap(todelete, :) = NaN;
+% set flag matrix
+flag = array2table(false(size(p,1), 18), 'VariableNames', {'ap430_700_neg',...
+  'cp_neg','cp_over10','noisy600_650','ap460_640_04_450','positive_ap450_570'...
+  'poc_flag','chl_ap676lh_flag','gamma_flag','chl_Halh_flag','HH_mphi_flag',...
+  'HH_G50_flag','chlratio_flag','gamma_suspicious','poc_suspicious',...
+  'chl_ap676lh_suspicious','chl_Halh_suspicious','HH_G50_mphi_suspicious'});
+
+% flag ap spectra when ap430-700 < -0.0015
+toflag = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
+if sum(toflag) > 0
+  fprintf('%.2f%% (%i) spectrum flagged: ap 430-700 < -0.0015\n', ...
+    sum(toflag) / size(p, 1) * 100, sum(toflag))
+end
+flag.ap430_700_neg(toflag) = true;
+bad = [p(toflag, :) table(repmat({'ap 430-700 < -0.0015'}, ...
+  sum(toflag), 1), 'VariableNames', {'QC_failed'})];
+% p.ap(toflag, :) = NaN;
 
 % delete cp spectra when any cp < -0.0015
 todelete = any(p.cp < -0.0015, 2);
@@ -277,21 +287,23 @@ if sum(todelete) > 0
   fprintf('%.2f%% (%i) spectrum failed auto-QC: cp < -0.0015\n', ...
     sum(todelete) / size(p, 1) * 100, sum(todelete))
 end
-% bad = [bad; p(todelete, :) table(repmat({'cp < -0.0015'}, ...
-%   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-bad = [p(todelete, :) table(repmat({'cp < -0.0015'}, ...
+flag.cp_neg(toflag) = true;
+bad = [bad; p(todelete, :) table(repmat({'cp < -0.0015'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+% bad = [p(todelete, :) table(repmat({'cp < -0.0015'}, ...
+%   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 p.cp(todelete, :) = NaN;
 
-% % delete attenuation spectra when cp > 10
-% todelete = any(p.cp > 10, 2);
-% if sum(todelete) > 0
-%   fprintf('%.2f%% (%i) spectrum failed auto-QC: p.cp > 10\n', ...
-%     sum(todelete) / size(p, 1) * 100, sum(todelete))
-% end
-% bad = [bad; p(todelete, :) table(repmat({'p.cp > 10'}, ...
-%   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-% p(todelete, :) = [];
+% flag attenuation spectra when cp > 10
+toflag = any(p.cp > 10, 2);
+if sum(toflag) > 0
+  fprintf('%.2f%% (%i) spectrum flagged: p.cp > 10\n', ...
+    sum(toflag) / size(p, 1) * 100, sum(toflag))
+end
+flag.cp_over10(toflag) = true;
+bad = [bad; p(toflag, :) table(repmat({'p.cp > 10'}, ...
+  sum(toflag), 1), 'VariableNames', {'QC_failed'})];
+% p.cp(toflag, :) = NaN;
 
 % find wavelength below and above which ap and cp are unrealistic and replace by NaNs
 if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
@@ -331,8 +343,8 @@ if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
   fudge_list = (0.1:0.1:10)';
   ndel_spec = NaN(size(fudge_list));
   for i=1:size(fudge_list,1)
-    above_median_d600_ap450 = ratiod600_ap450 > fudge_list(i) * median(ratiod600_ap450, 'omitnan');
-    ndel_spec(i) = sum(above_median_d600_ap450);
+    toflag = ratiod600_ap450 > fudge_list(i) * median(ratiod600_ap450, 'omitnan');
+    ndel_spec(i) = sum(toflag);
   end
   fudge_factor = fudge_list(find(abs(diff(ndel_spec)) == min(abs(diff(ndel_spec))) & ...
     ndel_spec(2:end) < 0.001 * max(ndel_spec), 1,  'first')); % 0.05 threshold on first derivative of number of spectrum deleted
@@ -341,56 +353,59 @@ if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
       ndel_spec(2:end) < 0.01 * max(ndel_spec), 1,  'first')); % 0.05 threshold on first derivative of number of spectrum deleted
   end
   if ~isempty(fudge_factor)
-    above_median_d600_ap450 = ratiod600_ap450 > fudge_factor * median(ratiod600_ap450);
-    if sum(above_median_d600_ap450) > 0
-      fprintf('%.2f%% (%i) spectrum failed auto-QC: sum(abs(d(ap)/d(lambda(600-650)))) / ap450nm\n', ...
-        sum(above_median_d600_ap450) / size(p, 1) * 100, sum(above_median_d600_ap450))
+    toflag = ratiod600_ap450 > fudge_factor * median(ratiod600_ap450);
+    if sum(toflag) > 0
+      fprintf('%.2f%% (%i) spectrum flagged: sum(abs(d(ap)/d(lambda(600-650)))) / ap450nm\n', ...
+        sum(toflag) / size(p, 1) * 100, sum(toflag))
     end
 
   %   delete bad spectrum
-    bad = [bad; p(above_median_d600_ap450, :) ...
-      table(repmat({'sum(abs(d(ap)/d(lambda(600-650)))) / ap_{450nm}'}, sum(above_median_d600_ap450), 1), ...
+    flag.noisy600_650(toflag) = true;
+    bad = [bad; p(toflag, :) ...
+      table(repmat({'sum(abs(d(ap)/d(lambda(600-650)))) / ap_{450nm}'}, sum(toflag), 1), ...
       'VariableNames', {'QC_failed'})];
-    p.ap(above_median_d600_ap450, :) = NaN;
+%     p.ap(toflag, :) = NaN;
   end
 end
 
 % Auto QC when a positive first derivatives of ap over
-% wavelentght between 460 and 640 nm is larger than 0.2 times ap at 450nm
+% wavelentght between 460 and 640 nm is larger than 0.4 times ap at 450nm
 % or second derivatives of ap over wavelentght between 460 and 640 nm is
 % larger than 0.006
 ap_450 = p.ap(:, find(lambda.a >= 450, 1,'first'));
 d460_640 = diff(p.ap(:, lambda.a > 460 & lambda.a <= 640),[],2);
 % delete bad spectrum
-todelete = any(d460_640 > 0.4 * ap_450,2) | any(abs(diff(d460_640,[],2)) > 0.05, 2);
-if sum(todelete)
-  fprintf('%.2f%% (%i) spectrum failed auto-QC: d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)\n', ...
-    sum(todelete) / size(p, 1) * 100, sum(todelete))
+toflag = any(d460_640 > 0.4 * ap_450,2) | any(abs(diff(d460_640,[],2)) > 0.05, 2);
+if sum(toflag)
+  fprintf('%.2f%% (%i) spectrum flagged: d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)\n', ...
+    sum(toflag) / size(p, 1) * 100, sum(toflag))
 end
-bad = [bad; p(todelete, :) table(repmat({'d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)'}, ...
-  sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-p.ap(todelete, :) = NaN;
+flag.ap460_640_04_450(toflag) = true;
+bad = [bad; p(toflag, :) table(repmat({'d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)'}, ...
+  sum(toflag), 1), 'VariableNames', {'QC_failed'})];
+% p.ap(toflag, :) = NaN;
 
 % Auto QC when ap spectrum contains 4 consecutive positive first derivatives of ap over
 % wavelentght between 485 and 570 nm
 d485_570 = diff(p.ap(:, lambda.a > 485 & lambda.a <= 570),[],2);
 pos_d485_570 = d485_570 > 0;
-todelete = false(size(pos_d485_570, 1), 1);
+toflag = false(size(pos_d485_570, 1), 1);
 N = 4; % Required number of consecutive numbers following a first one
-for i = 1:size(todelete,1)
+for i = 1:size(toflag,1)
   t = [false pos_d485_570(i,:) false];
   if any(find(diff(t)==-1)-find(diff(t)==1)>=N) % First t followed by >=N consecutive numbers
-    todelete(i) = true;
+    toflag(i) = true;
   end
 end
-if sum(todelete)
-  fprintf('%.2f%% (%i) spectrum failed auto-QC: 4 consecutive d(ap)/d(lambda485-570) > 0\n', ...
-    sum(todelete) / size(p, 1) * 100, sum(todelete))
+if sum(toflag)
+  fprintf('%.2f%% (%i) spectrum flagged: 4 consecutive d(ap)/d(lambda485-570) > 0\n', ...
+    sum(toflag) / size(p, 1) * 100, sum(toflag))
 end
-bad = [bad; p(todelete, :) table(repmat({'4 consecutive d(ap)/d(lambda485-570) > 0'}, ...
-  sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+flag.positive_ap450_570(toflag) = true;
+bad = [bad; p(toflag, :) table(repmat({'4 consecutive d(ap)/d(lambda485-570) > 0'}, ...
+  sum(toflag), 1), 'VariableNames', {'QC_failed'})];
 bad = sortrows(bad, 'dt');
-p.ap(todelete, :) = NaN;
+% p.ap(toflag, :) = NaN;
 
 % % Auto QC when ap spectrum contains 5 consecutive positive first derivatives of cp over
 % % wavelentght between 485 and 570 nm
@@ -424,7 +439,8 @@ fprintf('Calculating Chl line height, POC & gamma ... ')
 % Gardner, W.D., Mishonov, A., Richardson, M.J., 2006. Global POC concentrations from in-situ and satellite data. Deep Sea Res. II 53, 718?740.
 cp660 = interp1(lambda.c, p.cp',660,'linear')';
 p.poc = cp660.*380;
-p.poc(p.poc < 0) = NaN;
+flag.poc_flag(p.poc < 0) = true;
+% p.poc(p.poc < 0) = NaN;
 
 % Derive Chl (Line heigh at 676 compared to 650 and 715)
 % 	Chlorophyll a (chl) is computed using the particulate absorption line height at 676 nm and the global relationship from Tara Ocean (Boss et al. 2013)
@@ -434,9 +450,11 @@ ap_a = interp1(lambda.a, p.ap',[650 676 715],'linear')';
 p.ap(ap_a(:,1) > ap_a(:,2), :) = NaN; % deleted unrealistic spectra
 ap_a(ap_a(:,1) > ap_a(:,2), :) = NaN; % deleted unrealistic spectra
 p.ap676_lh = ap_a(:,2)-(39/65*ap_a(:,1)+26/65*ap_a(:,3));  % ap_a650-(39/65*ap_a(:,1)+26/65*ap_a(:,3));
+flag.chl_ap676lh_flag(real(p.ap676_lh) ~= p.ap676_lh) = true;
+p.ap676_lh(real(p.ap676_lh) ~= p.ap676_lh) = NaN;
+flag.ap676_lh(p.ap676_lh < 0) = true;
+p.ap676_lh(p.ap676_lh < 0) = NaN;
 p.chl_ap676lh = 157*p.ap676_lh.^1.22;
-p.chl_ap676lh(real(p.chl_ap676lh) ~= p.chl_ap676lh) = NaN;
-p.chl_ap676lh(p.chl_ap676lh < 0) = NaN;
 
 % 3.3 Derive Gamma (does not support NaN values) (Boss et al. 2001)
 % REFERENCES:
@@ -448,7 +466,8 @@ cp_temp_gam = p.cp(~all(isnan(p.cp),2), :);
 sel = ~any(isnan(cp_temp_gam));
 [~,temp_gam] = FitSpectra_HM2(lambda.c(:,sel), cp_temp_gam(:,sel));
 p.gamma(~all(isnan(p.cp),2)) = temp_gam;
-p.gamma(p.gamma < 0) = NaN;
+flag.gamma_flag(p.gamma < 0) = true;
+% p.gamma(p.gamma < 0) = NaN;
 fprintf('Done\n')
 
 fprintf('Calculating chlorophyll from cp (H_alh) ... ')
@@ -456,6 +475,7 @@ fprintf('Calculating chlorophyll from cp (H_alh) ... ')
 % Houskeeper, H.F., Draper, D., Kudela, R.M., Boss, E., 2020. Chlorophyll absorption and phytoplankton size information inferred from hyperspectral particulate beam attenuation. Appl. Opt. 59, 6765. https://doi.org/10.1364/AO.396832
 % First compute hskpr P parameters (put link to github of hkpr do not include in github).
 [p.Halh, Pr] = houskeeperetal2020(lambda.c, p.cp, false);
+flag.chl_Halh_flag(p.Halh < 0) = true;
 p.Halh(p.Halh < 0) = NaN;
 p.chl_Halh = 157*p.Halh.^1.22;
 fprintf('Done\n')
@@ -466,9 +486,22 @@ fprintf('Estimating G50 and mphi (slope of PSD) ... ')
 % (in abundance) (mphi):
 p.HH_G50 = modelG50.predictFcn(Pr');
 p.HH_mphi = modelmphi.predictFcn(Pr');
-p.HH_mphi(p.HH_mphi < 0) = NaN;
+flag.HH_mphi_flag(p.HH_mphi > 0) = true;
+p.HH_mphi(p.HH_mphi > 0) = NaN;
+flag.HH_G50_flag(p.HH_G50 < 0) = true;
 p.HH_G50(p.HH_G50 < 0) = NaN;
 fprintf('Done\n')
+
+% extra flags for QC
+% chlratio_flag
+% gamma_suspicious
+% poc_suspicious
+% chl_ap676lh_suspicious
+% chl_Halh_suspicious
+% HH_G50_mphi_suspicious
+
+% set flag column
+p.flag_bit = set_flagbit(flag);
 
 %% ag & cg
 if ~isempty(di)
@@ -667,8 +700,8 @@ opts = optimset(opts,'TolFun',1e-8);
 % Find Near Infrared & references
 iNIR = 710 <= wl &  wl <= 750;  % spectral srange for optimization (710 to 750nm)
 if isempty(iNIR); error('Unable to perform correction as no wavelength available in NIR.'); end
-% Find nearest wavelength to greater than 715 nm to use as reference for correction
-iref = find(715 <= wl, 1,'first'); % 730
+% Find nearest wavelength to greater than 730 nm to use as reference for correction
+iref = find(730 <= wl, 1,'first'); % 715 730
 % If ACS spectrum does not go up to 730 nm take the closest wavelength to 730 nm
 if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
 

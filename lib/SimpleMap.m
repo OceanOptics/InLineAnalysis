@@ -199,8 +199,10 @@ if ~(~varargin{1} && size(data,2) == 3 && all(~isnan(data),'all') && max(data(:)
     h = colorbar('eastoutside');
 %     set(h, 'ylim', [min(data(:)) max(data(:))]);
     ylabel(h, colorbarlabel)
-    if min(data(data>0)) / max(data(:)) < 0.01 % set logscale if data spans over 3 orders of magnitude
-        set(gca,'ColorScale','log')
+    if min(data(data>0)) / max(data(:)) > 0.01 % set logscale if data spans over 3 orders of magnitude
+      extick = get(h, 'YTick');
+      set(gca,'ColorScale','log')
+      h.Ticks = extick;
     end
     set(gca,'FontSize',20)
 end

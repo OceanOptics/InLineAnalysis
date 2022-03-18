@@ -391,7 +391,7 @@ classdef InLineAnalysis < handle
     
     function visProd_timeseries(obj)
       for i=obj.cfg.instruments2run; i = i{1};
-        if  any(~contains(i, {'FLOW', 'FTH', 'Flow'}))
+        if any(~contains(i, {'FLOW', 'FTH', 'Flow'}))
           fprintf('%s products time series plots\n', i);
           ifieldn = fieldnames(obj.instrument.(i).prod);
           for j=1:size(ifieldn,1)
