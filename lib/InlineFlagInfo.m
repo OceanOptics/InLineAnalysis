@@ -20,6 +20,10 @@ switch instrument
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
     InLineFlag.description{size(InLineFlag,1)} = 'cp < -0.0015';
     
+    InLineFlag.name{size(InLineFlag,1)+1} = 'ap_shape';
+    InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
+    InLineFlag.description{size(InLineFlag,1)} = 'ap640 > ap676';
+    
     InLineFlag.name{size(InLineFlag,1)+1} = 'cp_over10';
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
     InLineFlag.description{size(InLineFlag,1)} = 'cp > 10';

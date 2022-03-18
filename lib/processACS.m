@@ -11,7 +11,35 @@ else
   SWITCH_FILTERED = fth_constants.SWITCH_FILTERED;
   SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
 end
-
+% remove duplicates
+[~, L, ~] = unique(fth.qc.tsw.dt,'first');
+indexToDump = not(ismember(1:numel(fth.qc.tsw.dt), L));
+if sum(indexToDump) > 0
+  fprintf('Warning: %i identical dates in FLOW data => deleted\n', sum(indexToDump))
+  fth.qc.tsw(indexToDump, :) = [];
+end
+% remove duplicates
+[~, L, ~] = unique(tot.dt,'first');
+indexToDump = not(ismember(1:numel(tot.dt), L));
+if sum(indexToDump) > 0
+  fprintf('Warning: %i identical dates in total data => deleted\n', sum(indexToDump))
+%   popo = tot(indexToDump, :);
+%   popo.dt = datetime(popo.dt, 'ConvertFrom', 'datenum');
+%   lolo = tot;
+%   lolo.dt = datetime(lolo.dt, 'ConvertFrom', 'datenum');
+  tot(indexToDump, :) = [];
+end
+% remove duplicates
+[~, L, ~] = unique(filt.dt,'first');
+indexToDump = not(ismember(1:numel(filt.dt), L));
+if sum(indexToDump) > 0
+  fprintf('Warning: %i identical dates in filtered data => deleted\n', sum(indexToDump))
+%   popo = filt(indexToDump, :);
+%   popo.dt = datetime(popo.dt, 'ConvertFrom', 'datenum');
+%   lolo = filt;
+%   lolo.dt = datetime(lolo.dt, 'ConvertFrom', 'datenum');
+  filt(indexToDump, :) = [];
+end
 % interpolate fth.qc.tsw.swt onto binned data to fill missing flow data
 fth_interp = table([tot.dt; fth.qc.tsw.dt; filt.dt], 'VariableNames', {'dt'});
 [~,b] = sort(fth_interp.dt); % sort dates
@@ -74,6 +102,13 @@ filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2), :) = [];
 switch interpolation_method
   case 'CDOM'
     % Require both CDOM & Switch position
+    % remove duplicates
+    [~, L, ~] = unique(cdom.dt,'first');
+    indexToDump = not(ismember(1:numel(cdom.dt), L));
+    if sum(indexToDump) > 0
+      fprintf('Warning: %i identical dates in CDOM data => deleted\n', sum(indexToDump))
+      cdom(indexToDump, :) = [];
+    end
     % keep only leg data
     cdom = cdom(cdom.dt >= min([tot.dt; filt.dt]) & cdom.dt <= max([tot.dt; filt.dt]), :);
     % smooth FDOM data
@@ -264,8 +299,8 @@ p.ap(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
 % p.ap(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
 
 % set flag matrix
-flag = array2table(false(size(p,1), 18), 'VariableNames', {'ap430_700_neg',...
-  'cp_neg','cp_over10','noisy600_650','ap460_640_04_450','positive_ap450_570'...
+flag = array2table(false(size(p,1), 19), 'VariableNames', {'ap430_700_neg',...
+  'cp_neg','ap_shape','cp_over10','noisy600_650','ap460_640_04_450','positive_ap450_570'...
   'poc_flag','chl_ap676lh_flag','gamma_flag','chl_Halh_flag','HH_mphi_flag',...
   'HH_G50_flag','chlratio_flag','gamma_suspicious','poc_suspicious',...
   'chl_ap676lh_suspicious','chl_Halh_suspicious','HH_G50_mphi_suspicious'});
@@ -289,6 +324,19 @@ if sum(todelete) > 0
 end
 flag.cp_neg(toflag) = true;
 bad = [bad; p(todelete, :) table(repmat({'cp < -0.0015'}, ...
+  sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+% bad = [p(todelete, :) table(repmat({'cp < -0.0015'}, ...
+%   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+p.cp(todelete, :) = NaN;
+
+% delete unrealistic data when ap650 > ap676
+todelete = any(p.ap(:, lambda.a >= 640 & lambda.a <= 655) > p.ap(:, lambda.a >= 670 & lambda.a <= 680), 2);
+if sum(todelete) > 0
+  fprintf('%.2f%% (%i) spectrum failed auto-QC: ap650 > ap676\n', ...
+    sum(todelete) / size(p, 1) * 100, sum(todelete))
+end
+flag.ap_shape(toflag) = true;
+bad = [bad; p(todelete, :) table(repmat({'ap650 > ap676'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 % bad = [p(todelete, :) table(repmat({'cp < -0.0015'}, ...
 %   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
@@ -492,7 +540,7 @@ flag.HH_G50_flag(p.HH_G50 < 0) = true;
 p.HH_G50(p.HH_G50 < 0) = NaN;
 fprintf('Done\n')
 
-% extra flags for QC
+% extra flags for QC (TO IMPLEMENT)
 % chlratio_flag
 % gamma_suspicious
 % poc_suspicious
