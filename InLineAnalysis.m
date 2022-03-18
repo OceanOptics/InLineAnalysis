@@ -796,7 +796,7 @@ classdef InLineAnalysis < handle
                     foo = strsplit(channel{end}, '_');
                     if size(foo, 2) == 1
                       level = 'qc';
-                      channel = 'all';
+                      channel = {'all'};
                     elseif size(foo, 2) == 2
                       level = 'qc';
                       channel = foo;

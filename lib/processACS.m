@@ -168,7 +168,9 @@ switch interpolation_method
     % Use simple mathematical function to interpolate based on CDOM
     n_periods = size(filt_avg,1)-1;
     filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-    filt_interp.cdom = interp1(cdom.dt, cdom.mv_fdom, tot.dt, 'linear', 'extrap'); % as independent from tot|filt period
+    filt_interp.cdom = interp1(cdom.dt, cdom.mv_fdom, tot.dt, 'linear');
+    filt_interp.cdom(isnan(filt_interp.cdom)) = interp1(cdom.dt, ...
+      cdom.mv_fdom, tot.dt(isnan(filt_interp.cdom)), 'nearest', 'extrap'); % as independent from tot|filt period
     filt_interp.a = NaN(size(filt_interp,1),size(lambda.a, 2));
     filt_interp.c = NaN(size(filt_interp,1),size(lambda.c, 2));
     % For each period going from t0 to t1, starting and finishing by a filtered time
