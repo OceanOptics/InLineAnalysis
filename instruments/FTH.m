@@ -88,6 +88,11 @@ classdef FTH < Instrument
         
         % get variable names
         varnam = obj.data.Properties.VariableNames;
+        if size(varnam,2) == 3
+          varnam = {'dt','swt','spd1','spd2'};
+          obj.data.spd2 = NaN(size(obj.data.dt));
+          obj.data = renamevars(obj.data, 'spd', 'spd1');
+        end
         switch mode
           case 'total'
             obj.data = [obj.data; array2table([dt ones(size(dt))*obj.SWITCH_TOTAL ...

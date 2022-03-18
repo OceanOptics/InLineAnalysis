@@ -49,11 +49,17 @@ datetick2_doy();
 
 % plot flow right y axis
 if ~strcmp(varname,'par')
-    yyaxis('right'); 
-    if ~isempty(fooflow) && any(~isnan(fooflow.(spd_var)))
-      plot(fooflow.dt, fooflow.(spd_var),'Color',[0 0.8 0]); popo=gca; 
-      ylim([0 max(fooflow.(spd_var))+4]); ylabel('Flow rate (lpm)'); popo.YColor = [0 0.8 0]; % green
-      ylabel('flow rate (lpm)');
+    yyaxis('right');
+    if ~isempty(fooflow)
+      if ~any(strcmp(fooflow.Properties.VariableNames, spd_var))
+        spd_var = fooflow.Properties.VariableNames{contains(fooflow.Properties.VariableNames, 'spd') & ...
+          ~contains(fooflow.Properties.VariableNames, 'avg')};
+      end
+      if any(~isnan(fooflow.(spd_var)))
+        plot(fooflow.dt, fooflow.(spd_var),'Color',[0 0.8 0]); popo=gca; 
+        ylim([0 max(fooflow.(spd_var))+4]); ylabel('Flow rate (lpm)'); popo.YColor = [0 0.8 0]; % green
+        ylabel('flow rate (lpm)');
+      end
     end
 end
 

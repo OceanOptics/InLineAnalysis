@@ -97,7 +97,7 @@ if read_margin
   % Load margin to dataset (calling myself)
   margin = 1/24; % day
   if verbose; fprintf('Reading margin ... \n'); end
-  pre_data = iRead( fun, dirname_in, dirname_out, prefix, dt(1)-margin, ...
+  pre_data = iRead( fun, dirname_in, dirname_out, prefix, dt(1)-1, ...
       software, force, nowrite, verbose, false, postfix, parallel_flag, otherarg1, otherarg2 );
   if ~isempty(pre_data)
     pre_data = pre_data(dt(1)-margin <= pre_data.dt,:);
