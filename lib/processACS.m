@@ -98,6 +98,18 @@ for i=1:size(sel_start, 1)
 end
 filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2), :) = [];
 
+% check if cdom data loaded
+if strcmp(interpolation_method, 'CDOM')
+  if ~isempty(cdom)
+    if ~any(cdom.dt >= min([tot.dt; filt.dt]) & cdom.dt <= max([tot.dt; filt.dt]))
+      fprintf('Warning: CDOM dates do not correspond to ACS dates: interpolation switched to "linear"\n')
+      interpolation_method = 'linear';
+    end
+  else
+    fprintf('Warning: CDOM data not loaded: interpolation switched to "linear"\n')
+    interpolation_method = 'linear';
+  end
+end
 
 switch interpolation_method
   case 'CDOM'
@@ -330,7 +342,8 @@ bad = [bad; p(todelete, :) table(repmat({'cp < -0.0015'}, ...
 p.cp(todelete, :) = NaN;
 
 % delete unrealistic data when ap650 > ap676
-todelete = any(p.ap(:, lambda.a >= 640 & lambda.a <= 655) > p.ap(:, lambda.a >= 670 & lambda.a <= 680), 2);
+todelete = any(mean(p.ap(:, lambda.a >= 640 & lambda.a <= 655), 2, 'omitnan') > ...
+  mean(p.ap(:, lambda.a >= 670 & lambda.a <= 680), 2, 'omitnan'), 2);
 if sum(todelete) > 0
   fprintf('%.2f%% (%i) spectrum failed auto-QC: ap650 > ap676\n', ...
     sum(todelete) / size(p, 1) * 100, sum(todelete))
