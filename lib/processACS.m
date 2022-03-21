@@ -420,14 +420,14 @@ bad = [bad; p(toflag, :) table(repmat({'p.cp > 10'}, ...
 % find wavelength below and above which ap and cp are unrealistic and replace by NaNs
 if size(lambda.a, 2) > 50 % clean only ACS data, not AC9
   % replace unrealistic ap and cp red wavelenght by NaN
-  [~, foo] = min(p.cp(:, lambda.c > 700),[],2);
-  minred_wlc = sum(lambda.c <= 700) + foo;
-  [~, foo] = min(abs(p.ap(:, lambda.a > 700)),[],2);
-  minred_wla = sum(lambda.a <= 700) + foo;
-  p.cp(lambda.c > lambda.c(minred_wlc)' & lambda.c > 710) = NaN;
-  p.cp_sd(lambda.c > lambda.c(minred_wlc)' & lambda.c > 710) = NaN;
-  p.ap(lambda.a > lambda.a(minred_wla)' & lambda.a > wla_700) = NaN;
-  p.ap_sd(lambda.a > lambda.a(minred_wla)' & lambda.a > wla_700) = NaN;
+  [~, foo] = min(p.cp(:, lambda.c > 715),[],2);
+  minred_wlc = sum(lambda.c <= 715) + foo;
+  [~, foo] = min(abs(p.ap(:, lambda.a > 715)),[],2);
+  minred_wla = sum(lambda.a <= 715) + foo;
+  p.cp(lambda.c > lambda.c(minred_wlc)' & lambda.c > 720) = NaN;
+  p.cp_sd(lambda.c > lambda.c(minred_wlc)' & lambda.c > 720) = NaN;
+  p.ap(lambda.a > lambda.a(minred_wla)' & lambda.a > 715) = NaN;
+  p.ap_sd(lambda.a > lambda.a(minred_wla)' & lambda.a > 715) = NaN;
   
   % replace unrealistic ap in blue wavelength by NaN
   blue_wl = p.ap;
@@ -604,13 +604,17 @@ flag.HH_G50_flag(p.HH_G50 < 0) = true;
 p.HH_G50(p.HH_G50 < 0) = NaN;
 fprintf('Done\n')
 
-% extra flags for QC (TO IMPLEMENT)
-% chlratio_flag
+% Extra flags for suspicious data
 % gamma_suspicious
+flag.gamma_suspicious(p.gamma < 0.4) = true;
 % poc_suspicious
+flag.poc_suspicious(p.poc > 1000) = true;
 % chl_ap676lh_suspicious
-% chl_Halh_suspicious
+flag.chl_ap676lh_suspicious(p.chl_ap676lh > 30) = true;
+% chl_Halh_suspicious if ap676_lh is one order of magnitude different from Halh
+flag.chlratio_flag(p.ap676_lh./p.Halh <= 0.1 | p.ap676_lh./p.Halh >= 10) = true;
 % HH_G50_mphi_suspicious
+flag.HH_G50_mphi_suspicious(p.HH_G50 < 0.3) = true;
 
 % set flag column
 p.flag_bit = set_flagbit(flag);
