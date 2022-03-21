@@ -68,7 +68,6 @@ switch instrument
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
     InLineFlag.description{size(InLineFlag,1)} = 'Housekeeper and Haentjens G50 < 0';
     
-    
     InLineFlag.name{size(InLineFlag,1)+1} = 'chlratio_flag';
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
     InLineFlag.description{size(InLineFlag,1)} = 'high variability between the two chlorophyll algorithms';

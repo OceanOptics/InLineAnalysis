@@ -598,10 +598,10 @@ fprintf('Estimating G50 and mphi (slope of PSD) ... ')
 % (in abundance) (mphi):
 p.HH_G50 = modelG50.predictFcn(Pr');
 p.HH_mphi = modelmphi.predictFcn(Pr');
-flag.HH_mphi_flag(p.HH_mphi > 0) = true;
-p.HH_mphi(p.HH_mphi > 0) = NaN;
-flag.HH_G50_flag(p.HH_G50 < 0) = true;
-p.HH_G50(p.HH_G50 < 0) = NaN;
+flag.HH_mphi_flag(p.HH_mphi > 0 | p.HH_mphi < 8) = true;
+p.HH_mphi(p.HH_mphi > 0 | p.HH_mphi < 8) = NaN;
+flag.HH_G50_flag(p.HH_G50 < 0 | p.HH_G50 > 50) = true;
+p.HH_G50(p.HH_G50 < 0 | p.HH_G50 > 50) = NaN;
 fprintf('Done\n')
 
 % Extra flags for suspicious data
@@ -612,9 +612,9 @@ flag.poc_suspicious(p.poc > 1000) = true;
 % chl_ap676lh_suspicious
 flag.chl_ap676lh_suspicious(p.chl_ap676lh > 30) = true;
 % chl_Halh_suspicious if ap676_lh is one order of magnitude different from Halh
-flag.chlratio_flag(p.ap676_lh./p.Halh <= 0.1 | p.ap676_lh./p.Halh >= 10) = true;
+flag.chlratio_flag(p.ap676_lh./p.Halh <= 0.1 | p.ap676_lh./p.Halh >= 10 | p.chl_Halh > 30) = true;
 % HH_G50_mphi_suspicious
-flag.HH_G50_mphi_suspicious(p.HH_G50 < 0.3) = true;
+flag.HH_G50_mphi_suspicious(p.HH_G50 < 0.3 | p.HH_mphi < 5 | p.HH_G50 > 20) = true;
 
 % set flag column
 p.flag_bit = set_flagbit(flag);
