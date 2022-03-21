@@ -181,13 +181,13 @@ for j = 1:length(level)
         if contains(instrument,'AC') && contains(toplot{i, k}, 'a') && ...
             ~strcmp(tabletoplot{i}, 'diw') && ~isempty(data.(level{j}).(tabletoplot{i}).dt(sel))
           hold on
-          zsc = zlim;
+          ap676 = find(abs(data.lambda_a - 676) == min(abs(data.lambda_a - 676)), 1, 'first');
+          zsc = prctile(data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,ap676), [0.01 99.99]);
           ysc = ylim;
-          surf([676 676; 676 676], ...
-            [max(ysc) min(ysc); max(ysc) min(ysc)], ...
-            [zsc(2) zsc(2); zsc(1) zsc(1)], 'FaceColor', [0.2 0.8 0.2], ...
-            'FaceAlpha',0.3, 'EdgeAlpha',0.2)
-          text(676, max(data.(level{j}).(tabletoplot{i}).dt(sel)), zsc(2)-zsc(2)/5, '676 nm')
+          surf([676 676; 676 676], [max(ysc) min(ysc); max(ysc) min(ysc)], ...
+            [zsc(2)+0.05*zsc(2) zsc(2)+0.05*zsc(2); zsc(1)-abs(0.05*zsc(2)) zsc(1)-abs(0.05*zsc(2))], ...
+            'FaceColor', [0.2 0.8 0.2], 'FaceAlpha',0.3, 'EdgeAlpha',0.2)
+          text(676, max(data.(level{j}).(tabletoplot{i}).dt(sel)), zsc(2)+0.05*zsc(2)+0.005, '676 nm')
           hold off
         end
         if any(strcmp(toClean{1}, tabletoplot{i})) && any(strcmp(toClean{2}, toplot{i, k}))

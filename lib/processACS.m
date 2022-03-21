@@ -158,11 +158,17 @@ switch interpolation_method
     filt_interp.a = NaN(size(filt_interp,1),size(lambda.a, 2));
     filt_interp.c = NaN(size(filt_interp,1),size(lambda.c, 2));
     % For each period going from t0 to t1, starting and finishing by a filtered time
-    for i=1:n_periods
+    for i=1:n_periods % 148
       it0 = i; it1 = i + 1;
       it = filt_avg.dt(it0) <= filt_interp.dt & filt_interp.dt <= filt_avg.dt(it1);
       if any(it)
         it_filt_interp = filt_interp(it,:);
+
+%         figure()
+%         scatter(it_filt_interp.cdom, tot.a(it,40), 20, 'filled')
+%         
+%         std(tot.a(it,:),[], 1)'
+
   %         figure();
   %         yyaxis('left')
   %         hold on
@@ -179,10 +185,10 @@ switch interpolation_method
         % linearly interpolate cdom between filter average
         dt_filtavg_it = filt_avg.dt(it0:it1,:);
         cdom_filtavg_it = filt_avg.cdom(it0:it1,:);
-        if sum(isnan(cdom_filtavg_it)) == 1
+        if sum(isnan(cdom_filtavg_it)) == 1 && ~all(isnan(filt_interp.cdom(it,:)))
           foo = it_filt_interp(~isnan(it_filt_interp.cdom),:);
-          cdom_filtavg_it(isnan(cdom_filtavg_it)) = foo.cdom(abs(foo.dt - dt_filtavg_it(isnan(cdom_filtavg_it))) == ...
-            min(abs(foo.dt - dt_filtavg_it(isnan(cdom_filtavg_it)))));
+          cdom_filtavg_it(isnan(cdom_filtavg_it)) = foo.cdom(find(abs(foo.dt - dt_filtavg_it(isnan(cdom_filtavg_it))) == ...
+            min(abs(foo.dt - dt_filtavg_it(isnan(cdom_filtavg_it)))), 1, 'first'));
         end
         lin_cdom = interp1(dt_filtavg_it, cdom_filtavg_it, it_filt_interp.dt, 'linear');
         % get cdom variance to the linear interpolation
@@ -191,6 +197,13 @@ switch interpolation_method
         if any(isnan(Xt))
           foo_Xt = [1; Xt; 1];
           foo_Xt_dt = [dt_filtavg_it(1); it_filt_interp.dt; dt_filtavg_it(2)];
+          % remove duplicates
+          if foo_Xt_dt(1) == foo_Xt_dt(2)
+            foo_Xt_dt(1) = foo_Xt_dt(2) - median(diff(foo_Xt_dt), 'omitnan');
+          end
+          if foo_Xt_dt(end) == foo_Xt_dt(end-1)
+            foo_Xt_dt(end) = foo_Xt_dt(end-1) + median(diff(foo_Xt_dt), 'omitnan');
+          end
           foo_Xt = fillmissing(foo_Xt, 'linear','SamplePoints',foo_Xt_dt);
           Xt = foo_Xt(2:end-1);
         end
