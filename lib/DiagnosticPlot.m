@@ -48,8 +48,8 @@ else
   error('Intrument not supported')
 end
 
-ACsize_to_plot = 10000;
-BBsize_to_plot = 30000;
+ACsize_to_plot = 50000;
+BBsize_to_plot = 90000;
 
 user_selection = [];
 for j = 1:length(level)
@@ -148,7 +148,7 @@ for j = 1:length(level)
 %           sel = data.(level{j}).(tabletoplot{i}).dt >= day_to_plot(1) & ...
 %             data.(level{j}).(tabletoplot{i}).dt <= day_to_plot(2);
         end
-        sel = sel | ~all(isnan(data.(level{j}).(tabletoplot{i}).(toplot{i, k})),2);
+        sel = sel & any(~isnan(data.(level{j}).(tabletoplot{i}).(toplot{i, k})),2);
 %         if strcmp(tabletoplot{i}, 'diw') % if DI plot entire dataset
 %           sel = true(size(data.(level{j}).(tabletoplot{i}).dt));
 %         else

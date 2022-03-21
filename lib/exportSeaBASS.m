@@ -107,6 +107,7 @@ dat = table(datestr(data.dt, 'yyyymmdd'), datestr(data.dt, 'HH:MM:SS'), round(da
   round(data.lon, 4), round(data.t, 4), round(data.s, 4), 'VariableNames', {'Date', 'Time', ...
   'lat', 'lon', 't', 's'});
 var_precision = data.Properties.VariableDescriptions(i_specific_fields);
+var_precision{contains(var_precision, {'%d','%i'})} = '%.0d';
 var_precision = str2num(cell2mat(regexprep(var_precision','\D','')));
 for j=progress(1:size(i_specific_fields,2))
   var = data.Properties.VariableNames{i_specific_fields(j)};
