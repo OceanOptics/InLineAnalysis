@@ -1,8 +1,5 @@
 function exportSeaBASS(filename, meta, data, subfields)
 % EXPORTSEABASS export data to SeaBASS format
-
-if nargin < 4; subfields = {[]}; end
-
 [file_path,file_name,file_ext] = fileparts(filename);
 if isempty(file_ext); file_ext = '.sb'; end
 
@@ -25,8 +22,13 @@ end
 % Find fields to export
 i_specific_fields = find(~(i_dt | i_lat | i_lon | i_t | i_s));
 % Check subfileds (field with multiple columns)
-if size(i_specific_fields,2) ~= size(subfields,2)
-  error('Missing subfields information');
+if nargin < 4
+%   subfields = {[]};
+  subfields = repmat({[]}, 1, size(i_specific_fields,2));
+else
+  if size(i_specific_fields,2) ~= size(subfields,2)
+    error('Missing subfields information');
+  end
 end
 % Generate fieldnames
 k = 1;
@@ -107,7 +109,12 @@ dat = table(datestr(data.dt, 'yyyymmdd'), datestr(data.dt, 'HH:MM:SS'), round(da
   round(data.lon, 4), round(data.t, 4), round(data.s, 4), 'VariableNames', {'Date', 'Time', ...
   'lat', 'lon', 't', 's'});
 var_precision = data.Properties.VariableDescriptions(i_specific_fields);
-var_precision{contains(var_precision, {'%d','%i'})} = '%.0d';
+int = find(contains(var_precision, {'%d','%i'}));
+if any(int)
+  for j = 1:size(int,2)
+    var_precision{int(j)} = '%.0d';
+  end
+end
 var_precision = str2num(cell2mat(regexprep(var_precision','\D','')));
 for j=progress(1:size(i_specific_fields,2))
   var = data.Properties.VariableNames{i_specific_fields(j)};
