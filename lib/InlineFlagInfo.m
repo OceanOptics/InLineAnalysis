@@ -12,10 +12,6 @@ switch instrument
   case {'ACS', 'AC'}
     InLineFlag = table();
     
-    InLineFlag.name{size(InLineFlag,1)+1} = 'ap430_700_neg';
-    InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
-    InLineFlag.description{size(InLineFlag,1)} = 'ap 430-700 < -0.0015';
-    
     InLineFlag.name{size(InLineFlag,1)+1} = 'cp_neg';
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
     InLineFlag.description{size(InLineFlag,1)} = 'cp < -0.0015';
@@ -27,6 +23,14 @@ switch instrument
     InLineFlag.name{size(InLineFlag,1)+1} = 'ap_shape';
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
     InLineFlag.description{size(InLineFlag,1)} = 'ap640 > ap676';
+    
+    InLineFlag.name{size(InLineFlag,1)+1} = 'ap_bubbles';
+    InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
+    InLineFlag.description{size(InLineFlag,1)} = 'abs(d(ap)/d(lambda460-640)) > 3 * median(abs(d(ap)/d(lambda460-640)))';
+    
+    InLineFlag.name{size(InLineFlag,1)+1} = 'ap430_700_neg';
+    InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
+    InLineFlag.description{size(InLineFlag,1)} = 'ap 430-700 < -0.0015';
     
     InLineFlag.name{size(InLineFlag,1)+1} = 'cp_over10';
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
