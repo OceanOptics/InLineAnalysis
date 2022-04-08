@@ -35,7 +35,7 @@ Download and add the packages below in the `packages` folder:
   + [Spectral and XYZ Color Functions](https://www.mathworks.com/matlabcentral/fileexchange/7021-spectral-and-xyz-color-functions?focused=5172034&tab=function)
   + [Progress bar](https://github.com/JAAdrian/MatlabProgressBar)
   + [Scattering in pure seawater betasw_ZHH2009.m](https://github.com/ooici/ion-functions/blob/master/ion_functions/data/matlab_scripts/flort/betasw_ZHH2009.m)
-  + [TOES-10 Toolbox] (https://www.teos-10.org/software.htm)
+  + [TOES-10 Toolbox](https://www.teos-10.org/software.htm)
 
 Install the [JSONlab toolbox](https://www.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files)
 
