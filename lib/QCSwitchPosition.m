@@ -6,9 +6,11 @@ function QCSwitchPosition(instru, flow, level, shift_flow)
 % Date: Jun 2021
 %
 %%
-if strcmp(level, 'raw') && isempty(instru.qc.tsw) || ...
-    isempty(instru.raw.tsw)
-  error('Both raw and qc data must be loaded to process using expenential fit method for filter calibration')
+if strcmp(level, 'raw') && isempty(instru.raw.tsw)
+  error('raw data must be loaded to process using expenential fit method for filter calibration')
+end
+if strcmp(level, 'qc') && isempty(instru.qc.tsw)
+  error('qc data must be loaded for QCSwitchPosition')
 end
 if isempty(instru.(level).tsw)
   error('No %s %s tsw data loaded', instru.model, level)

@@ -125,14 +125,14 @@ switch interpolation_method
     foo_dt = datetime(cdom_base.dt, 'ConvertFrom', 'datenum');
     cdom.dt = (datenum(foo_dt(1):median(diff(foo_dt)):foo_dt(end)))';
     cdom.fdom = interp1(cdom_base.dt, cdom_base.fdom, cdom.dt, 'nearest');
-    cdom.fdom(~ismember(cdom.dt, cdom_base.dt),:) = NaN;
     % keep only leg data
     cdom_base = cdom_base(cdom_base.dt >= min([tot.dt; filt.dt]) & cdom_base.dt <= max([tot.dt; filt.dt]), :);
     cdom = cdom(cdom.dt >= min([tot.dt; filt.dt]) & cdom.dt <= max([tot.dt; filt.dt]), :);
     
     % smooth FDOM data
     cdom_base.mv_fdom = movmean(cdom_base.fdom, 30);
-    cdom.mv_fdom = movmean(cdom.fdom, 30);
+    cdom.mv_fdom = movmean(cdom.fdom, 10);
+%     cdom.fdom(~ismember(cdom.dt, cdom_base.dt),:) = NaN;
     % interpolate FDOM onto filt_avg
     filt_avg.cdom_b = interp1(cdom_base.dt, cdom_base.mv_fdom, filt_avg.dt, 'linear');
     filt_avg.cdom_b(isnan(filt_avg.cdom_b)) = interp1(cdom_base.dt, cdom_base.mv_fdom, filt_avg.dt(isnan(filt_avg.cdom_b)), ...
@@ -148,6 +148,7 @@ switch interpolation_method
 %     scatter(datetime(cdom_base.dt, 'ConvertFrom', 'datenum'), cdom_base.mv_fdom, 20, 'filled', 'r')
 %     scatter(datetime(cdom.dt, 'ConvertFrom', 'datenum'), cdom.fdom, 20, 'filled', 'b')
 %     scatter(datetime(cdom.dt, 'ConvertFrom', 'datenum'), cdom.mv_fdom, 20, 'filled', 'o')
+%     legend('cdom_base.fdom', 'cdom_base.mv_fdom', 'cdom.fdom', 'cdom.mv_fdom')
     
     % Use simple mathematical function to interpolate based on CDOM
     n_periods = size(filt_avg,1)-1;
@@ -215,16 +216,18 @@ switch interpolation_method
           filt_interp.a(it,:) = lin_a;
           filt_interp.c(it,:) = lin_c;
         else
-          if all(lin_a > 0)
-            filt_interp.a(it,:) = lin_a ./ Xt;
-          else
-            filt_interp.a(it,:) = lin_a .* Xt;
-          end
-          if all(lin_c > 0)
-            filt_interp.c(it,:) = lin_c ./ Xt;
-          else
-            filt_interp.c(it,:) = lin_c .* Xt;
-          end
+          filt_interp.a(it,:) = lin_a ./ Xt;
+          filt_interp.c(it,:) = lin_c ./ Xt;
+%           if all(lin_a < 0)
+%             filt_interp.a(it,:) = lin_a ./ Xt;
+%           else
+%             filt_interp.a(it,:) = lin_a .* Xt;
+%           end
+%           if all(lin_c < 0)
+%             filt_interp.c(it,:) = lin_c ./ Xt;
+%           else
+%             filt_interp.c(it,:) = lin_c .* Xt;
+%           end
         end
 
 % %         figure()
@@ -288,7 +291,7 @@ if exist('visFlag', 'file')
     legend('Filtered interpolated', 'Total', 'Filtered median',...
       'AutoUpdate','off', 'FontSize', 12)
   end
-  guiSelectOnTimeSeries(fh);
+%   guiSelectOnTimeSeries(fh);
 end
 
 % Remove lines full of NaNs or with inf data
@@ -349,7 +352,7 @@ p.ap(p.ap < -0.0015 & lambda.a < wla_430) = NaN;
 % p.ap(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
 
 % set flag matrix
-flag = array2table(false(size(p,1), 20), 'VariableNames', {'cp_neg','ap_neg',...
+flag = array2table(false(size(p,1), 21), 'VariableNames', {'cp_neg','ap_neg',...
   'ap_shape','ap_bubbles','ap430_700_neg','cp_over10','noisy600_650',...
   'ap460_640_04_450','positive_ap450_570','poc_flag','chl_ap676lh_flag',...
   'gamma_flag','chl_Halh_flag','HH_mphi_flag','HH_G50_flag','chlratio_flag',...
