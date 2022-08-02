@@ -91,7 +91,7 @@ if exist('fth', 'var')
       %       https://doi.org/10.5194/bgd-6-291-2009
       fprintf('Fitting exponential to filter events ... ')
       [filt_avg, FiltStat] = FiltExpFit(filt_avg, filt_raw_merged, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
-      fprintf('Done\n')
+      fprintf('Done\n')      
       % run 25 percentile method on failed exponential fits
       for i=1:size(sel_start, 1)
         sel_filt = fth_interp.dt(sel_start(i)) <= filt_qc.dt & filt_qc.dt <= fth_interp.dt(sel_end(i));
@@ -169,6 +169,7 @@ sel = ~any(isnan(p.bbp));
 sel(param.lambda < 510 | param.lambda > 650) = false;
 fprintf('Computing Gamma_bbp ... ')
 [~, p.gamma_bbp] = FitSpectra_HM2(param.lambda(sel), p.bbp(:, sel));
+p.gamma_bbp(p.gamma_bbp < -0.5) = NaN;
 fprintf('Done\n')
 
 % Estimate POC and Cphyto from bbp

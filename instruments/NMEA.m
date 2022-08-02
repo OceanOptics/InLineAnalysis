@@ -21,7 +21,7 @@ classdef NMEA < Instrument
     function ReadRaw(obj, days2run, force_import, write)
       switch obj.logger
         case {'Inlinino'}
-            obj.data = iRead(@importInlininoGPSSC701, obj.path.raw, obj.path.wk, 'SC701Tara_',...
+            obj.data = iRead(@importInlininoNMEA, obj.path.raw, obj.path.wk, [obj.model obj.sn '_'],...
                            days2run, 'Inlinino', force_import, ~write, true);
         otherwise
           error('NMEA: Unknown logger.');

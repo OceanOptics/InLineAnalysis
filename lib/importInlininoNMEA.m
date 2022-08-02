@@ -1,13 +1,13 @@
-function [ data ] = importInlininoGPSSC701( filename, verbose )
-% IMPORTINLININO Import GPSSC701 data from csv files
+function [ data ] = importInlininoNMEA( filename, verbose )
+% importInlininoNMEA Import NMEA data from csv files
 % Author: Guillaume Bourdin
-% Date: Dec 2021
+% Date: August 1st, 2022
 %
 % Input:
 %   - filename: <char> filename including full path
 %   - verbose (optional)
 % 
-% Example: [ data, lambda] = importInlininoGPSSC701( filename, verbose )
+% Example: [ data, lambda] = importInlininoNMEA( filename, verbose )
 %%
 if nargin < 2; verbose = false; end
 if verbose
@@ -28,6 +28,7 @@ end
 % Get header
 hd = strip(strsplit(fgetl(fid), ','));
 hd{strcmp(hd, 'time')} = 'dt';
+hd{strcmp(hd, 'datetime')} = 'gps_dt';
 hd{strcmp(hd, 'latitude')} = 'lat';
 hd{strcmp(hd, 'longitude')} = 'lon';
 % get units skipping empty lines (bug in old Inlinino)
@@ -47,17 +48,25 @@ t = textscan(fid, parser, 'delimiter',',');
 fclose(fid);
 
 % remove GPS time
-unit = unit(~strcmp(hd, 'datetime'));
-hd = hd(~strcmp(hd, 'datetime'));
+unit = unit(~strcmp(hd, 'gps_dt'));
+t = t(~strcmp(hd, 'gps_dt'));
+hd = hd(~strcmp(hd, 'gps_dt'));
 
 % Build table
-if all(contains(t{1}, '/'))
-  data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{3}, t{4}, t{5}, ...
-    t{6}, t{7}, t{8}, t{9}, t{10}, t{11}, t{12}, 'VariableNames', hd);
-else
-  data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'), ...
-    t{3}, t{4}, t{5}, t{6}, t{7}, t{8}, t{9}, t{10}, t{11}, t{12}, 'VariableNames', hd);
+dat = [];
+for i = 1:size(hd, 2)
+  if strcmp(hd{i}, 'dt')
+    dat = [dat datenum(t{i}, 'yyyy/mm/dd HH:MM:SS.FFF')];
+  elseif contains(hd{i}, 'swt')
+    foo2 = t{i};
+    foo2(contains(foo2, 'True')) = {'1'};
+    foo2(contains(foo2, 'False')) = {'0'};
+    dat = [dat logical(cell2mat(foo2))];
+  else
+    dat = [dat t{i}];
+  end
 end
+data = array2table(dat, 'VariableNames', hd);
 data.Properties.VariableUnits = unit;
 
 % Remove last line if it's past midnight (bug in old Inlinino)

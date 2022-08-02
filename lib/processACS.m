@@ -23,10 +23,6 @@ end
 indexToDump = not(ismember(1:numel(tot.dt), L));
 if sum(indexToDump) > 0
   fprintf('Warning: %i identical dates in total data => deleted\n', sum(indexToDump))
-%   popo = tot(indexToDump, :);
-%   popo.dt = datetime(popo.dt, 'ConvertFrom', 'datenum');
-%   lolo = tot;
-%   lolo.dt = datetime(lolo.dt, 'ConvertFrom', 'datenum');
   tot(indexToDump, :) = [];
 end
 % remove duplicates
@@ -34,10 +30,6 @@ end
 indexToDump = not(ismember(1:numel(filt.dt), L));
 if sum(indexToDump) > 0
   fprintf('Warning: %i identical dates in filtered data => deleted\n', sum(indexToDump))
-%   popo = filt(indexToDump, :);
-%   popo.dt = datetime(popo.dt, 'ConvertFrom', 'datenum');
-%   lolo = filt;
-%   lolo.dt = datetime(lolo.dt, 'ConvertFrom', 'datenum');
   filt(indexToDump, :) = [];
 end
 % interpolate fth.qc.tsw.swt onto binned data to fill missing flow data
@@ -124,7 +116,7 @@ switch interpolation_method
     cdom = table();
     foo_dt = datetime(cdom_base.dt, 'ConvertFrom', 'datenum');
     cdom.dt = (datenum(foo_dt(1):median(diff(foo_dt)):foo_dt(end)))';
-    cdom.fdom = interp1(cdom_base.dt, cdom_base.fdom, cdom.dt, 'nearest');
+    cdom.fdom = interp1(cdom_base.dt, cdom_base.fdom, cdom.dt, 'linear');
     % keep only leg data
     cdom_base = cdom_base(cdom_base.dt >= min([tot.dt; filt.dt]) & cdom_base.dt <= max([tot.dt; filt.dt]), :);
     cdom = cdom(cdom.dt >= min([tot.dt; filt.dt]) & cdom.dt <= max([tot.dt; filt.dt]), :);
@@ -159,7 +151,7 @@ switch interpolation_method
     filt_interp.a = NaN(size(filt_interp,1),size(lambda.a, 2));
     filt_interp.c = NaN(size(filt_interp,1),size(lambda.c, 2));
     % For each period going from t0 to t1, starting and finishing by a filtered time
-    for i=1:n_periods % 148
+    for i=1:n_periods
       it0 = i; it1 = i + 1;
       it = filt_avg.dt(it0) <= filt_interp.dt & filt_interp.dt <= filt_avg.dt(it1);
       if any(it)
@@ -169,16 +161,16 @@ switch interpolation_method
 %         scatter(it_filt_interp.cdom, tot.a(it,40), 20, 'filled')
 %         
 %         std(tot.a(it,:),[], 1)'
-
-  %         figure();
-  %         yyaxis('left')
-  %         hold on
-  %         scatter(filt_interp.dt, filt_interp.cdom, 30, 'filled', 'MarkerFaceColor', 'b','MarkerFaceAlpha', 0.5)
-  %         scatter(filt_avg.dt, filt_avg.cdom, 30, 'filled', 'MarkerFaceColor', 'r', 'MarkerFaceAlpha', 0.5)
-  %         yyaxis('right')
-  %         hold on
-  %         scatter(tot.dt, tot.a(:,40), 30, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5)
-
+% 
+%           figure();
+%           yyaxis('left')
+%           hold on
+%           scatter(filt_interp.dt, filt_interp.cdom, 30, 'filled', 'MarkerFaceColor', 'b','MarkerFaceAlpha', 0.5)
+%           scatter(filt_avg.dt, filt_avg.cdom, 30, 'filled', 'MarkerFaceColor', 'r', 'MarkerFaceAlpha', 0.5)
+%           yyaxis('right')
+%           hold on
+%           scatter(tot.dt, tot.a(:,40), 30, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5)
+% 
 %           Xt = (filt_avg.cdom(it1) - filt_interp.cdom(it)) / (filt_avg.cdom(it1) - filt_avg.cdom(it0));
 %           filt_interp.a(it,:) = Xt .* filt_avg.a(it0,:) + (1 - Xt) .* filt_avg.a(it1,:);
 %           filt_interp.c(it,:) = Xt .* filt_avg.c(it0,:) + (1 - Xt) .* filt_avg.c(it1,:);
@@ -212,25 +204,41 @@ switch interpolation_method
         lin_a = interp1(dt_filtavg_it, filt_avg.a(it0:it1,:), it_filt_interp.dt, 'linear');
         lin_c = interp1(dt_filtavg_it, filt_avg.c(it0:it1,:), it_filt_interp.dt, 'linear');
         % apply cdom variance to a and c if Xt not NaN
-        if all(isnan(it_filt_interp.cdom))
-          filt_interp.a(it,:) = lin_a;
-          filt_interp.c(it,:) = lin_c;
-        else
-          filt_interp.a(it,:) = lin_a ./ Xt;
-          filt_interp.c(it,:) = lin_c ./ Xt;
-%           if all(lin_a < 0)
-%             filt_interp.a(it,:) = lin_a ./ Xt;
-%           else
-%             filt_interp.a(it,:) = lin_a .* Xt;
-%           end
-%           if all(lin_c < 0)
-%             filt_interp.c(it,:) = lin_c ./ Xt;
-%           else
-%             filt_interp.c(it,:) = lin_c .* Xt;
-%           end
-        end
+%         if any(all(isnan(it_filt_interp.cdom)) | ...
+%             all(1 - min(it_filt_interp.cdom) / max(it_filt_interp.cdom) > 0.3 & ...
+%             sum(1 - min(filt_avg.a(it0:it1,:)) ./ max(filt_avg.a(it0:it1,:)) < 0.005) > size(filt_avg.a, 2)/2))
+%           filt_interp.a(it,:) = lin_a;
+%           filt_interp.c(it,:) = lin_c;
+%         else
+%           filt_interp.a(it,:) = lin_a ./ Xt;
+%           filt_interp.c(it,:) = lin_c ./ Xt;
+%         end
+        
+        foo_interp_a = NaN(size(lin_a));
+        foo_interp_c = NaN(size(lin_c));
+        
+        pos_interp_a = lin_a ./ Xt;
+        pos_interp_c = lin_c ./ Xt;
+        neg_interp_a = lin_a .* Xt;
+        neg_interp_c = lin_c .* Xt;
+        
+        foo_interp_a(lin_a > 0) = pos_interp_a(lin_a > 0);
+        foo_interp_c(lin_c > 0) = pos_interp_c(lin_c > 0);
+        
+        foo_interp_a(lin_a < 0) = neg_interp_a(lin_a < 0);
+        foo_interp_c(lin_c < 0) = neg_interp_c(lin_c < 0);
 
-% %         figure()
+        filt_interp.a(it, :) = foo_interp_a;
+        filt_interp.c(it, :) = foo_interp_c;
+
+%         idl = filt_interp.dt >= min(it_filt_interp.dt) & filt_interp.dt <= max(it_filt_interp.dt);
+%         visProd3D(lambda.a, filt_interp.dt(idl), filt_interp.a(idl,:), false, 'Wavelength', false, 23);
+%         visProd3D(lambda.a, it_filt_interp.dt, lin_a, false, 'Wavelength', false, 24);
+%         idp = tot.dt >= min(it_filt_interp.dt) & tot.dt <= max(it_filt_interp.dt);
+%         figure(25)
+%         scatter(datetime(tot.dt(idp), 'ConvertFrom', 'datenum'), filt_interp.cdom(idp), 20, 'filled')
+
+%         figure()
 %         clf
 %         subplot(1,2,1)
 %         yyaxis('left')
@@ -261,10 +269,16 @@ switch interpolation_method
 %         xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
       end
     end
-
+    
     % Note std is interpolated linearly (not using the cdom function)
     filt_interp.a_avg_sd = interp1(filt.dt, filt.a_avg_sd, filt_interp.dt, 'linear');
     filt_interp.c_avg_sd = interp1(filt.dt, filt.c_avg_sd, filt_interp.dt, 'linear');
+    
+    % remove interpolation when there is no data
+    filt_interp.a_avg_sd(all(isnan(tot.a),2), :) = NaN;
+    filt_interp.a(all(isnan(tot.a),2), :) = NaN;
+    filt_interp.c_avg_sd(all(isnan(tot.c),2), :) = NaN;
+    filt_interp.c(all(isnan(tot.c),2), :) = NaN;
     
   case 'linear'
     % Interpolate filtered on total linearly
@@ -276,6 +290,15 @@ switch interpolation_method
   otherwise
   error('Method not supported.');
 end
+
+% Remove lines full of NaNs or with inf data
+sel2rm = any(~isfinite(tot.a),2) | any(~isfinite(tot.c),2)| all(isnan(tot.a),2) | ...
+         all(isnan(tot.c),2) | all(isnan(filt_interp.a),2) | all(isnan(filt_interp.c),2);
+tot(sel2rm,:) = [];
+filt_interp(sel2rm,:) = [];
+
+% remove cdom interpolation when there is no a and c data
+cdom(~ismember(cdom.dt, filt_interp.dt), :) = [];
 
 if exist('visFlag', 'file')
   fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'a', round(size(tot.a, 2)/2), [], []);
@@ -291,14 +314,8 @@ if exist('visFlag', 'file')
     legend('Filtered interpolated', 'Total', 'Filtered median',...
       'AutoUpdate','off', 'FontSize', 12)
   end
-%   guiSelectOnTimeSeries(fh);
+  guiSelectOnTimeSeries(fh);
 end
-
-% Remove lines full of NaNs or with inf data
-sel2rm = any(~isfinite(tot.a),2) | any(~isfinite(tot.c),2)| all(isnan(tot.a),2) | ...
-         all(isnan(tot.c),2) | all(isnan(filt_interp.a),2) | all(isnan(filt_interp.c),2);
-tot(sel2rm,:) = [];
-filt_interp(sel2rm,:) = [];
 
 % Particulate = Total - FSW
 p = table(tot.dt, 'VariableNames', {'dt'});
@@ -611,8 +628,8 @@ fprintf('Estimating G50 and mphi (slope of PSD) ... ')
 % (in abundance) (mphi):
 p.HH_G50 = modelG50.predictFcn(Pr');
 p.HH_mphi = modelmphi.predictFcn(Pr');
-flag.HH_mphi_flag(p.HH_mphi > 0 | p.HH_mphi < 8) = true;
-p.HH_mphi(p.HH_mphi > 0 | p.HH_mphi < 8) = NaN;
+flag.HH_mphi_flag(p.HH_mphi > 0 | p.HH_mphi < -8) = true;
+p.HH_mphi(p.HH_mphi > 0 | p.HH_mphi < -8) = NaN;
 flag.HH_G50_flag(p.HH_G50 < 0 | p.HH_G50 > 50) = true;
 p.HH_G50(p.HH_G50 < 0 | p.HH_G50 > 50) = NaN;
 fprintf('Done\n')
@@ -627,7 +644,7 @@ flag.chl_ap676lh_suspicious(p.chl_ap676lh > 30) = true;
 % chl_Halh_suspicious if ap676_lh is one order of magnitude different from Halh
 flag.chlratio_flag(p.ap676_lh./p.Halh <= 0.1 | p.ap676_lh./p.Halh >= 10 | p.chl_Halh > 30) = true;
 % HH_G50_mphi_suspicious
-flag.HH_G50_mphi_suspicious(p.HH_G50 < 0.3 | p.HH_mphi < 5 | p.HH_G50 > 20) = true;
+flag.HH_G50_mphi_suspicious(p.HH_G50 < 0.3 | p.HH_mphi < -5 | p.HH_G50 > 20) = true;
 
 % set flag column
 p.flag_bit = set_flagbit(flag);

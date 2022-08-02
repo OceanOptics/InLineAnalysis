@@ -27,6 +27,9 @@ for i = progress(1:nspect)
     foo = filt(sel_filt,:);
     if max(foo.dt) - min(foo.dt) > 0.0007 * 2
       avg_beta = median(foo.beta,2,'omitnan');
+      cut_tail = foo.dt > max(foo.dt(avg_beta == min(avg_beta)));
+      foo(cut_tail,:) = [];
+      avg_beta(cut_tail,:) = [];
       foo(foo.dt < max(foo.dt(avg_beta == max(avg_beta))),:) = [];
       if max(foo.dt) - min(foo.dt) > 0.0007 * 2
         % remove short peaks and smooth signal
@@ -52,6 +55,7 @@ for i = progress(1:nspect)
             [zeros(1, size(foo.beta, 2)); deriv] > 0) = NaN;
           j = j + 1;
         end
+        foo.beta = fillmissing(foo.beta,'linear','SamplePoints', foo.dt);
         beta_temp = NaN(1, size(foo.beta, 2));
         beta_avg_sd_temp = NaN(1, size(foo.beta, 2));
         slope_temp = NaN(1, size(foo.beta, 2));
@@ -66,12 +70,12 @@ for i = progress(1:nspect)
             errfun = @(p) sum(abs(expfun(p, foo.dt) - foo_wl) ./ weig); % define error function: sum_err/std
             [pfit, FVAL, EXITFLAG] = fminsearch(errfun, x0, opts); % run the minimizer
 
-  %           figure(j);  hold on;
-  % %           plot(foo.dt, foo_wl)
-  %           scatter(foo.dt, foo_wl, 10, 'filled')
-  %           vline(filt_st(i), '-g')
-  %           vline(filt_end(i), '-r')
-  %           plot(foo.dt, expfun(pfit, foo.dt), 'r-');
+%             figure(j);  hold on;
+%   %           plot(foo.dt, foo_wl)
+%             scatter(foo.dt, foo_wl, 10, 'filled')
+%             vline(filt_st(i), '-g')
+%             vline(filt_end(i), '-r')
+%             plot(foo.dt, expfun(pfit, foo.dt), 'r-');
 
             % populate table and propagate error
             beta_temp(j) = pfit(3);

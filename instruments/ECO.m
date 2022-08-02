@@ -6,6 +6,7 @@ classdef ECO < Instrument
     varname = '';
     slope = NaN;
     dark = NaN;
+    analog_channel = NaN;
   end
   
   methods
@@ -22,6 +23,7 @@ classdef ECO < Instrument
       if isfield(cfg, 'varname'); obj.varname = cfg.varname; end
       if isfield(cfg, 'slope'); obj.slope = cfg.slope; end
       if isfield(cfg, 'dark'); obj.dark = cfg.dark; end
+      if isfield(cfg, 'analog_channel'); obj.analog_channel = cfg.analog_channel; end
       
       if isempty(obj.logger); obj.logger = 'Inlinino'; end
     end
@@ -46,6 +48,12 @@ classdef ECO < Instrument
         case 'InlininoSUVFSN'
           obj.data = iRead(@importInlininoSUVF, obj.path.raw, obj.path.wk, ['SUVF' obj.sn '_'],...
                          days2run, 'Inlinino', force_import, ~write, true);
+        case 'InlininoADU100'
+          obj.data = iRead(@importInlininoFlowControl, obj.path.raw, obj.path.wk, obj.prefix,...
+                         days2run, 'InlininoADU100', force_import, ~write, true);
+          obj.data.Properties.VariableNames{strcmp(obj.data.Properties.VariableNames, obj.analog_channel)} = ...
+            obj.varname;
+          obj.data(:, ~strcmp(obj.data.Properties.VariableNames, 'dt') & ~strcmp(obj.data.Properties.VariableNames, obj.varname)) = [];
         case 'InlininoPourquoiPas'
           obj.data = iRead(@importInlininoPourquoiPas, obj.path.raw, obj.path.wk, 'Inlinino_',...
                          days2run, 'Inlinino', force_import, ~write, true);

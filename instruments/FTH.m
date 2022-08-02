@@ -45,6 +45,9 @@ classdef FTH < Instrument
         case {'FlowControl', 'FlowControl_old'}
             obj.data = iRead(@importFlowControl, obj.path.raw, obj.path.wk, 'Flow_',...
                        days2run, 'FlowControl', force_import, ~write, true);
+        case 'Inlinino'
+            obj.data = iRead(@importInlininoFlowControl, obj.path.raw, obj.path.wk, [obj.model obj.sn '_'],...
+                       days2run, 'Inlinino', force_import, ~write, true);
         otherwise
           error('FTH: Unknown logger.');
       end

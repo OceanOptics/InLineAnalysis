@@ -1,7 +1,7 @@
 function [ data ] = importFlowControl( filename, verbose )
 %IMPORTFLOWCONTROL import data from Sequoia flow through system
 % return time stamped switch position and flow speed 1
-% 1 is total, 0 is filtered
+% True is filtered, False is total
 % file lines
 % yyyy-mm-dd HH:MM:SS UTC\t<switch position>\t0000\t<freq flowmeter 1>\t<freq flowmeter 2>\t<speed flowmeter 1(L/min)>\t<speed flowmeter 2(L/min)>\n
 % 2017-05-12 17:10:26 UTC	0	0000	12.82	0.00	4.474	0.000

@@ -70,7 +70,7 @@ if contains(instrument, 'AC')
 
   diff_a = [diff(datanorm.a(:, lambda.a > 500 & lambda.a < 600),[],2) NaN(size(datanorm,1),1)];
   diff_c = [diff(datanorm.c(:, lambda.c > 500 & lambda.c < 600),[],2) NaN(size(datanorm,1),1)];
-
+  
   bad_a = max(abs(diff_a(:,wl_a > 560 & wl_a < 600)),[],2)...
     > fudge_factor.a*mean(abs(diff_a(:,wl_a > 500 & wl_a < 550)),2);
   bad_c = max(abs(diff_c(:,wl_c > 560 & wl_c < 600)),[],2)...
@@ -179,65 +179,39 @@ elseif contains(instrument, 'HBB')
   % delete empty rows
   data(all(isnan(data.beta),2), :) = [];
   dup = data;
+  dup.beta = dup.beta + median(dup.beta(:, end), 'omitnan');
   dup.beta = fillmissing(dup.beta, 'movmedian', 30);
+  bad_bb = false(size(dup.beta));
+  
+  % detecting spike
+  movdiff = movmedian(dup.beta, 50);
+  bad_bb(dup.beta > movdiff + movdiff*fudge_factor.bb / 100) = true;
+  
+%   % detecting spike in dimenssion 1
+%   diff_bb = [NaN(size(dup,1),1) diff(dup.beta,[],2)];
+%   bad_bb = diff_bb > fudge_factor.bb * prctile(diff_bb, 95, 2);
+%   
+%   % detecting spike in dimenssion 2
+%   diff_bb = [NaN(1, size(dup.beta, 2)); diff(dup.beta,[],1)];
+%   movdiff = movmean(dup.beta, 10);
+%   bad_bb(diff_bb > movdiff) = true;
+%   
+%   % old method
+%   bad_bb(diff_bb > fudge_factor.bb * abs(median(movdiff, 1, 'omitnan'))) = true;
+  
+  data.beta(bad_bb) = NaN;
+  
 %   visProd3D(lambda.bb, dup.dt, dup.beta, ...
-%     false, 'Wavelength', false, 72); zlabel('beta (m^{-1})'); %, 'Wavelength', true
-  diff_bb = [NaN(size(dup,1),1) diff(dup.beta,[],2)];
-  movdiff = movmean(diff_bb, 20);
+%     false, 'Wavelength', false, 71); zlabel('beta (m^{-1})'); %, 'Wavelength', true
 %   visProd3D(lambda.bb, dup.dt, movdiff, ...
 %     false, 'Wavelength', false, 72); zlabel('beta (m^{-1})'); %, 'Wavelength', true
-  bad_bb = diff_bb > fudge_factor.bb * abs(median(movdiff, 1, 'omitnan'));
+%   visProd3D(lambda.bb, data.dt, diff_bb, ...
+%     false, 'Wavelength', false, 73); zlabel('beta (m^{-1})'); %, 'Wavelength', true
+%   visProd3D(lambda.bb, data.dt, abs(diff_bb), ...
+%     false, 'Wavelength', false, 73); zlabel('beta (m^{-1})'); %, 'Wavelength', true
+%   
 %   visProd3D(lambda.bb, data.dt, data.beta, ...
 %     false, 'Wavelength', false, 72); zlabel('beta (m^{-1})'); %, 'Wavelength', true
-  data.beta(bad_bb) = NaN;
-%   visProd3D(lambda.bb, data.dt, data.beta, ...
-%     false, 'Wavelength', false, 72); zlabel('beta (m^{-1})'); %, 'Wavelength', true
-    
-%   % normalize data to homogenize auto QC
-%   datanorm = data;
-%   datanorm.beta = fillmissing(datanorm.beta, 'linear', 2); % interpolate missing data
-%   datanorm.beta = fillmissing(datanorm.beta, 'linear', 2); % interpolate missing data
-%   datanorm.beta = datanorm.beta - min(datanorm.beta(:)) + 2; % normalise to the min value + 2
-%   
-%   diff_bb = [diff(datanorm.beta,[],2) NaN(size(datanorm,1),1)]; % first derivative over lambda
-%   diff_bb(:,1) = median(diff_bb(:, lambda.bb < 660),2, 'omitnan'); % replace first value
-%   if any(all(isnan(diff_bb),2))
-%     diff_bb(all(isnan(diff_bb),2), :) = repmat(median(diff_bb, 1, 'omitnan'), ...
-%       sum(all(isnan(diff_bb),2)), 1);
-%   end
-%   
-%   diff_neg = diff_bb;
-%   diff_neg(diff_neg > 0) = NaN;
-%   diff_bb_time = [diff(datanorm.beta); NaN(1, size(datanorm.beta,2))] ./ [diff(datanorm.dt); NaN(1, 1)];
-% 
-%   bad_bb_up = false(size(diff_bb));
-%   bad_bb_chl = false(size(diff_bb));
-%   bad_bb_down = false(size(diff_bb));
-
-  % find bad positive derivative over lambda for lambda < 660
-%   bad_bb_up(:,lambda.bb < 660) = diff_bb(:,lambda.bb < 660) > abs(median(diff_neg, 2, 'omitnan'));
-%   % find bad derivative over lambda > 2 * percentile(85) over time for lambda >= 660
-% %   bad_bb_chl(:,lambda.bb >= 660) = abs(diff_bb(:,lambda.bb >= 660)) > ...
-% %     fudge_factor.bb * prctile(abs(diff_bb(:,lambda.bb >= 660)), 95, 1);
-%   bad_bb_chl(:,lambda.bb >= 660) = diff_bb(:,lambda.bb >= 660) > ...
-%     fudge_factor.bb * prctile(diff_bb(:,lambda.bb >= 660), 95, 1) | ...
-%     diff_bb(:,lambda.bb >= 660) < ...
-%     fudge_factor.bb * prctile(diff_bb(:,lambda.bb >= 660), 5, 1);
-%   % find bad negative derivative over lambda < fudge_factor.bb * median(derivative, 2) for lambda >= 660
-% %   bad_bb_down(:,lambda.bb < 660) = diff_bb(:,lambda.bb < 660) < fudge_factor.bb * 2 * ...
-% %     median(diff_neg(:,lambda.bb < 660), 2, 'omitnan');
-%   bad_bb_down(:,lambda.bb < 660) = diff_bb(:,lambda.bb < 660) < fudge_factor.bb * 0.4 *...
-%     prctile(diff_neg(:,lambda.bb < 660), 5, 1);
-%   bad_bb_time = diff_bb_time > fudge_factor.bb * prctile(diff_bb_time, 95, 1) | ...
-%     diff_bb_time < fudge_factor.bb * prctile(diff_bb_time, 5, 1);
-% %   bad_bb_time = abs(diff_bb_time) > fudge_factor.bb * prctile(abs(diff_bb_time), 95, 1);
-  
-%   [sum(bad_bb_up(:)); ...
-%   sum(bad_bb_chl(:)); ...
-%   sum(bad_bb_down(:)); ...
-%   sum(bad_bb_time(:))]
-%   
-%   dt = datetime(data.dt, 'ConvertFrom', 'datenum');
 
   if any(fudge_factor.bb < 3)
     warning('QC threshold might be too low, data might be lost');
@@ -245,7 +219,7 @@ elseif contains(instrument, 'HBB')
 %   bad_bb = bad_bb_up + bad_bb_chl + bad_bb_down + bad_bb_time;
   bad_bb = bad_bb > 0;
   data.beta(bad_bb) = NaN;
-  data(sum(isnan(data.beta), 2) > size(data.beta, 2) /3, :) = [];
+  data(sum(isnan(data.beta), 2) > size(data.beta, 2) / 3, :) = [];
   % count only bad that were not already NaN (interpolation)
   bad_bb(isnan(data.beta)) = false;
   Nbad.bb = sum(bad_bb) / size(data.beta,1) * 100;

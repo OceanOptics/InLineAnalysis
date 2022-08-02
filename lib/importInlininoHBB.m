@@ -6,6 +6,10 @@ function [ data, lambda ] = importInlininoHBB( filename, calfile_plaque, calfile
 % Date : May 2021
 %
 %%
+% filename = '/Volumes/Samsung_T5/Data/TaraMicrobiome/raw/HyperBB8005/HyperBB8005_20220129_221810.csv';
+% filename = '/Volumes/Samsung_T5/Data/TaraMicrobiome/raw/HyperBB8005/HyperBB8005_20220208_161946.csv';
+% verbose = true;
+
 if nargin < 4; verbose = false; end
 if verbose
   foo = strsplit(filename, '/');
@@ -13,36 +17,107 @@ if verbose
 end
 
 p.RemoveMultiplePmtGains = false;
+try
+  % Open file
+  fid=fopen(filename);
+  if fid==-1
+    error('Unable to open file: %s', filename);
+  end
 
-% Set parser
-parser = '%s%f%f%{yyyy/MM/dd}D%{hh:mm:ss}T%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f';
+  % Get header
+  hd = strip(strsplit(fgetl(fid), ','));
+  hd(strcmp(hd, 'time')) = {'dt'};
+  % get units skipping empty lines (bug in Inlinino)
+  unit = fgetl(fid);
+  while isempty(unit)
+      unit = fgetl(fid);
+  end
+  unit = strip(strsplit(unit, ','));
 
-% Open file
-fid=fopen(filename);
-if fid==-1
-  error('Unable to open file: %s', filename);
-end
-
-% Get header
-hd = strip(strsplit(fgetl(fid), ','));
-hd(strcmp(hd, 'time')) = {'dt'};
-% get units skipping empty lines (bug in Inlinino)
-unit = fgetl(fid);
-while isempty(unit)
+  % Set parser & read data
+%   readtable(filename)
+  try
+    parser = '%s%f%f%{yyyy/MM/dd}D%{hh:mm:ss}T%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f';
+    t = textscan(fid, parser, 'delimiter', ',');
+  catch
+    fid=fopen(filename);
+    % Get header
+    hd = strip(strsplit(fgetl(fid), ','));
+    hd(strcmp(hd, 'time')) = {'dt'};
+    % get units skipping empty lines (bug in Inlinino)
     unit = fgetl(fid);
+    while isempty(unit)
+        unit = fgetl(fid);
+    end
+    unit = strip(strsplit(unit, ','));
+    parser = '%s%f%f%s%s%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f';
+    t = textscan(fid, parser, 'delimiter', ',');
+    t{4} = NaT(size(t{1}));
+    t{5} = NaT(size(t{1}));
+  end
+  % Close file
+  fclose(fid);
+
+  % Build table
+  dat = table(datenum(t{1}), t{2}, t{3}, t{6}, t{7}, t{8}, t{9}, t{10}, ...
+    t{11}, t{12}, t{13}, t{14}, t{15}, t{16}, t{17}, t{18}, t{19}, t{20}, ...
+    t{21}, t{22}, t{23}, t{24}, t{25}, t{26}, t{27}, t{28}, t{29}, t{30}, t{31}, ...
+    'VariableNames', hd(~contains(hd, {'Date', 'Time'})));
+catch
+  warning('Error loading %s file\n', filename)
+  % Open file
+  fid=fopen(filename);
+  if fid==-1
+    error('Unable to open file: %s', filename);
+  end
+
+  % Get header
+  hd = strip(strsplit(fgetl(fid), ','));
+  hd(strcmp(hd, 'time')) = {'dt'};
+  % get units skipping empty lines (bug in Inlinino)
+  unit = fgetl(fid);
+  while isempty(unit)
+      unit = fgetl(fid);
+  end
+  unit = strip(strsplit(unit, ','));
+  
+  % get file line by line skipping end of scan count lines (instrument end of scanning cycle)
+  tline = fgetl(fid);
+  
+  t = [];
+  i = 0;
+  while all(~contains(tline, 'Date, TIME, POS, WL, PWR, GAIN, SIG, AVG, STD,') & ~strcmp(tline, '-1'))
+    t = [t; strsplit(tline, ', ')];
+    tline = fgetl(fid);
+    if isnumeric(tline)
+      tline = num2str(tline);
+    end
+    if i >= round(i, -3)
+      warning('%s lines checked ...\n', num2str(i))
+    end
+    i = i + 1;
+  end
+  % Read data
+  tend = textscan(fid, parser, 'delimiter', ',');
+  % Close file
+  fclose(fid);
+  
+  % Build table
+  if ~isempty(t)
+    for i = 1:size(tend, 2)
+      if isnumeric(tend{1, i})
+        tend(1, i) = {[str2double(t(:,i)); tend{1, i}]};
+      else
+        tend(1, i) = {[t(:,i); tend{1, i}]};
+      end
+    end
+  end
+  dat = table(datenum(tend{1}), tend{2}, tend{3}, tend{6}, tend{7}, tend{8}, tend{9}, tend{10}, ...
+    tend{11}, tend{12}, tend{13}, tend{14}, tend{15}, tend{16}, tend{17}, tend{18}, tend{19}, tend{20}, ...
+    tend{21}, tend{22}, tend{23}, tend{24}, tend{25}, tend{26}, tend{27}, tend{28}, tend{29}, tend{30}, tend{31}, ...
+    'VariableNames', hd(~contains(hd, {'Date', 'Time'})));
 end
-unit = strip(strsplit(unit, ','));
-
-% Read data
-t = textscan(fid, parser, 'delimiter', ',');
-% Close file
-fclose(fid);
-
-% Build table
-dat = table(datenum(t{1}), t{2}, t{3}, t{6}, t{7}, t{8}, t{9}, t{10}, ...
-  t{11}, t{12}, t{13}, t{14}, t{15}, t{16}, t{17}, t{18}, t{19}, t{20}, ...
-  t{21}, t{22}, t{23}, t{24}, t{25}, t{26}, t{27}, t{28}, t{29}, t{30}, t{31}, ...
-  'VariableNames', hd(~contains(hd, {'Date', 'Time'})));
+  
 dat(isnan(dat.dt), :) = [];
 dat.Properties.VariableUnits = unit(~contains(hd, {'Date', 'Time'}));
 

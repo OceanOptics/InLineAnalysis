@@ -167,7 +167,7 @@ for j = 1:size(totalswitch, 1)
   new_flow = array2table([linetoadd_dt zeros(size(linetoadd_dt, 1), 1) ...
       NaN(size(linetoadd_dt, 1), size(popoflow, 2) - 2)], ...
       'VariableNames', flow.(level).tsw.Properties.VariableNames);
-  if sum(idx_flow) > 3
+  if sum(idx_flow) >= 2
     new_flow.(flow.view.spd_variable) = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.(flow.view.spd_variable)(idx_flow), new_flow.dt, 'linear');
   end
   flow.(level).tsw(idx_flow, :) = [];
@@ -182,10 +182,16 @@ for j = 1:size(filterswitch, 1)
   new_flow = array2table([linetoadd_dt ones(size(linetoadd_dt, 1), 1) ...
       NaN(size(linetoadd_dt, 1), size(popoflow, 2) - 2)], ...
       'VariableNames', flow.(level).tsw.Properties.VariableNames);
-  if sum(idx_flow) > 3
-    new_flow.(flow.view.spd_variable) = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.(flow.view.spd_variable )(idx_flow), new_flow.dt, 'linear');
+  if sum(idx_flow) >= 2
+    % check for duplicats in flow data and delete
+    [~, L, ~] = unique(flow.(level).tsw.dt,'first');
+    indexToDump = not(ismember(1:numel(flow.(level).tsw.dt),L));
+    if sum(indexToDump) > 0
+      fprintf('Warning: %i identical dates in flow data => deleted\n', sum(indexToDump))
+      flow.(level).tsw(indexToDump, :) = [];
+    end
+    new_flow.(flow.view.spd_variable) = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.(flow.view.spd_variable)(idx_flow), new_flow.dt, 'linear');
   end
-  new_flow.(flow.view.spd_variable) = interp1(flow.(level).tsw.dt(idx_flow), flow.(level).tsw.(flow.view.spd_variable )(idx_flow), new_flow.dt, 'linear');
   flow.(level).tsw(idx_flow, :) = [];
   flow.(level).tsw = [flow.(level).tsw; new_flow];
   % sort by date

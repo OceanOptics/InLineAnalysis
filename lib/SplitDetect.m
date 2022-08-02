@@ -59,10 +59,12 @@ if ~isempty(FTH)
   x = 1:length(oldFTH.dt);
   x(I) = [];
   oldFTH(x,:) = [];
-  int_spd = interp1(oldFTH.dt, oldFTH.spd, FTHdt, 'linear');
-  ism = ~ismember(FTHdt,oldFTH.dt);
-  int_spd (ism) = NaN;
-  FTH = table(FTHdt, zeros(size(FTHdt,1),1), int_spd, 'VariableNames', {'dt', 'swt', 'spd'});
+  spd_variable = contains(oldFTH.Properties.VariableNames, 'spd');
+  int_spd = interp1(oldFTH.dt, table2array(oldFTH), FTHdt, 'linear');
+  ism = ~ismember(FTHdt, oldFTH.dt);
+  int_spd (ism, spd_variable) = NaN;
+  FTH = array2table(int_spd, 'VariableNames', oldFTH.Properties.VariableNames);
+  FTH.swt = zeros(size(FTH.swt));
 else
   FTH = table(data.dt, zeros(size(data.dt,1),1), zeros(size(data.dt,1),1), ...
     'VariableNames', {'dt', 'swt', 'spd'});

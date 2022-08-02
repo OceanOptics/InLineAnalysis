@@ -7,6 +7,7 @@ classdef (Abstract) Instrument < handle
     model = '';
     sn = '';
     logger = '';
+    prefix = '';
     di_cfg = struct('logger', '', 'prefix', '', 'postfix', '');
     
     % Path to data
@@ -62,6 +63,7 @@ classdef (Abstract) Instrument < handle
         % Load optional fields
         if isfield(cfg, 'sn'); obj.sn = cfg.sn; end
         if isfield(cfg, 'logger'); obj.logger = cfg.logger; end
+        if isfield(cfg, 'ila_prefix'); obj.prefix = cfg.ila_prefix; end
         if isfield(cfg, 'view')
           if isfield(cfg.view, 'varname'); obj.view.varname = cfg.view.varname; end
           if isfield(cfg.view, 'varcol'); obj.view.varcol = cfg.view.varcol; end
@@ -317,7 +319,7 @@ classdef (Abstract) Instrument < handle
           if ~any(sel); fprintf('WRITE: %s_%s_%s No data.\n', filename_prefix, level, f); continue; end
           data = obj.(level).(f)(sel,:);
           if ~isfolder(obj.path.wk); mkdir(obj.path.(level)); end
-          save([obj.path.wk filename], 'data');
+          save(fullfile(obj.path.wk, filename), 'data');
         end
 %       else
 %         % One Table at the level
@@ -328,7 +330,7 @@ classdef (Abstract) Instrument < handle
 %         if ~any(sel); fprintf('WRITE: %s_%s No data.\n', filename_prefix, level); return; end
 %         data = obj.(level)(sel,:);
 %         if ~isfolder(obj.path.wk); mkdir(obj.path.(level)); end
-%         save([obj.path.wk filename], 'data');
+%         save(fullfile(obj.path.wk, filename), 'data');
 %       end
     end
     
@@ -343,33 +345,41 @@ classdef (Abstract) Instrument < handle
       end
       if nargin < 4; level = 'prod'; end
       if strcmp(level, 'data')
-        l = dir([obj.path.wk filename_prefix '.mat']);
+        l = dir(fullfile(obj.path.wk, [filename_prefix '.mat']));
       else
-        l = dir([obj.path.wk filename_prefix '_' level '*.mat']);
+        l = dir(fullfile(obj.path.wk, [filename_prefix '_' level '*.mat']));
       end
       if isempty(l)
         fprintf('%s: %s_%s No data.\n', datestr(days2read), filename_prefix, level);
       else
         for f = {l.name}; f = f{1};
           fprintf('\t\t%s', f); tic;
-          load([obj.path.wk f], 'data'); % data variable is created
-          data = sortrows(data, 1);
-          if isempty(data)
+          load(fullfile(obj.path.wk, f), 'data'); % data variable is created
+          data_temp = sortrows(data, 1);
+          if strcmp(obj.model, 'FTH') && size(data_temp, 2) == 7
+            data_temp = renamevars(data_temp, 'spd', 'spd1');
+            data_temp = renamevars(data_temp, 'spd_avg_sd', 'spd1_avg_sd');
+            data_temp = renamevars(data_temp, 'spd_avg_n', 'spd1_avg_n');
+            data_temp.spd2 = NaN(size(data_temp.spd1));
+            data_temp.spd2_avg_sd = NaN(size(data_temp.spd1_avg_sd));
+            data_temp.spd2_avg_n = NaN(size(data_temp.spd1_avg_n));
+          end
+          if isempty(data_temp)
             warning('%s is empty, the file was deleted', f)
-            delete([obj.path.wk f])
+            delete(fullfile(obj.path.wk, f))
           else
-            sel = min(days2read) <= data.dt & data.dt < max(days2read) + 1;
+            sel = min(days2read) <= data_temp.dt & data_temp.dt < max(days2read) + 1;
             fn = strsplit(f, {'_','.'}); fn = fn{end-1};%(1:end-4);
             if strcmp(fn, level)
-              obj.(level)(end+1:end+sum(sel),:) = data(sel,:);
+              obj.(level)(end+1:end+sum(sel),:) = data_temp(sel,:);
             else
               if isfield(obj.(level), fn)
-                obj.(level).(fn)(end+1:end+sum(sel),:) = data(sel,:);
+                obj.(level).(fn)(end+1:end+sum(sel),:) = data_temp(sel,:);
               else
                 if strcmp(level, 'prod')
-                  obj.(level).(fn) = data(sel,:);
+                  obj.(level).(fn) = data_temp(sel,:);
                 else
-                  obj.(level)(end+1:end+sum(sel),:) = data(sel,:);
+                  obj.(level)(end+1:end+sum(sel),:) = data_temp(sel,:);
                 end
               end
             end
@@ -386,7 +396,7 @@ classdef (Abstract) Instrument < handle
 %         sel = min(days2write) <= obj.prod.(f).dt & obj.prod.(f).dt < max(days2write) + 1;
 %         data = obj.prod.(f)(sel,:);
 %         if ~isdir(obj.path.prod); mkdir(obj.path.prod); end
-%         save([obj.path.prod filename], 'data');
+%         save(fullfile(obj.path.prod, filename), 'data');
 %       end
 %     end
     
@@ -394,12 +404,12 @@ classdef (Abstract) Instrument < handle
 %       % For each product type (particulate, dissoved...)
 %       % This will simply add data at the end of the current table
 %       %   (if data was already in memory it could duplicate timestamps)
-%       l = dir([obj.path.prod filename_prefix '_*_prod.mat']);
+%       l = dir(fullfile(obj.path.prod, [filename_prefix '_*_prod.mat']);
 %       if isempty(l)
 %         fprintf('%s: %s No data.\n', datestr(days2read), filename_prefix);
 %       else
 %         for f = {l.name}; f = f{1};
-%           load([obj.path.prod f], 'data'); % data variable is created
+%           load(fullfile(obj.path.prod, f), 'data'); % data variable is created
 %           sel = min(days2read) <= data.dt & data.dt < max(days2read) + 1;
 %           fn = strsplit(f, '_'); fn = fn{end-1};
 %           if isfield(obj.prod, fn)

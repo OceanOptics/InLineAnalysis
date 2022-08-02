@@ -47,10 +47,13 @@ dt = floor(dt);
 gdata = [];
 for i=1:length(dt)
   fn_out = [prefix dt_yyyymmdd(dt(i)) postfix '.mat'];
-  if ~force && exist([dir_out fn_out], 'file')
+  if ~force && exist(fullfile(dir_out, fn_out), 'file')
     if verbose; fprintf('Loading %s... ', fn_out); end
-    load([dir_out fn_out]);
+    load(fullfile(dir_out, fn_out));
     if verbose; fprintf('Done\n'); end
+    if all(size(gdata, 2) ~= size(data, 2) & ~isempty(gdata))
+      error('Number of variables in loaded files must be the same')
+    end
     gdata = [gdata; data];
   else
     % List files matching date and prefix
@@ -64,16 +67,16 @@ for i=1:length(dt)
 %       for j=1:size(l,1)
       parfor (j=1:size(l,1), parallel_flag)
         if isempty(otherarg1) && isempty(otherarg2)
-          foo = fun([dir_in l{j}], verbose);
+          foo = fun(fullfile(dir_in, l{j}), verbose);
         elseif isempty(otherarg2)
-          foo = fun([dir_in l{j}], otherarg1, verbose);
+          foo = fun(fullfile(dir_in, l{j}), otherarg1, verbose);
         else
-          foo = fun([dir_in l{j}], otherarg1, otherarg2, verbose);
+          foo = fun(fullfile(dir_in, l{j}), otherarg1, otherarg2, verbose);
         end
         ddata = [ddata; foo];
       end
       % Keep only data of day
-      sel = dt(i) <= ddata.dt & ddata.dt < dt(i) + 1;
+      sel = ddata.dt >= dt(i) & ddata.dt < dt(i) + 1;
       ddata = ddata(sel,:);
       if ~isempty(ddata)
         % Write data of day
@@ -81,13 +84,16 @@ for i=1:length(dt)
           if ~isfolder(dir_out); mkdir(dir_out); end
           data = ddata;
           if verbose; fprintf('Saving %s... ', fn_out); end
-          save([dir_out fn_out], 'data');
+          save(fullfile(dir_out, fn_out), 'data');
           if verbose; fprintf('Done\n'); end
         end
       else
         fprintf('WARNING: No data found on %s\n', datestr(dt(i)));
       end
       % Add data of day to the global dataset
+      if all(size(gdata, 2) ~= size(ddata, 2) & ~isempty(gdata))
+        error('Number of variables in loaded files must be the same')
+      end
       gdata = [gdata; ddata];
     end
   end
@@ -127,9 +133,9 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
       % List all files in directory
       switch software
         case 'Compass_2.1rc_scheduled_bin'
-          l = dir([dir_in filesep prefix '*' postfix '.bin']);
+          l = dir(fullfile(dir_in, [prefix '*' postfix '.bin']));
         otherwise
-          l = dir([dir_in filesep prefix '*' postfix '.dat']);
+          l = dir(fullfile(dir_in, [prefix '*' postfix '.dat']));
       end
       if ~isempty(l)
         % Get date of all files
@@ -150,53 +156,49 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
         warning(['No files found for ' software]);
         filenames = [];
       end
-    case 'Inlinino'
+    case {'Inlinino', 'Inlinino_atlasTSG', 'InlininoADU100'}
       % List all files in directory
-      l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.csv']);
-      filenames = {l.name}';
-    case 'Inlinino_atlasTSG'
-      % List all files in directory
-      l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.csv']);
+      l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.csv']));
       filenames = {l.name}';
     case 'SBE45TSG'
       % List all files in directory
-      l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.sbe45']);
+      l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.sbe45']));
       filenames = {l.name}';
     case 'matlab_Emmanuel'
       % List all files in directory
-      l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.mat']);
+      l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.mat']));
       filenames = {l.name}';
     case 'FlowControl'
       % List all files in directory
-      l = dir([dir_in filesep prefix dt_yyyydoy(dt) '*' postfix '.log']);
+      l = dir(fullfile(dir_in, [prefix dt_yyyydoy(dt) '*' postfix '.log']));
       filenames = {l.name}';
     case 'DH4PreProc'
       % Get day of data +/- 1 day
-      lp = dir([dir_in filesep prefix dt_doy(dt-1) '*' postfix '.dat']);
-      l = dir([dir_in filesep prefix dt_doy(dt) '*' postfix '.dat']);
-      la = dir([dir_in filesep prefix dt_doy(dt+1) '*' postfix '.dat']);
+      lp = dir(fullfile(dir_in, [prefix dt_doy(dt-1) '*' postfix '.dat']));
+      l = dir(fullfile(dir_in, [prefix dt_doy(dt) '*' postfix '.dat']));
+      la = dir(fullfile(dir_in, [prefix dt_doy(dt+1) '*' postfix '.dat']));
       filenames = {lp.name, l.name, la.name}';
     case 'AtlantisTSG'
       % List all files in directory
-      l = dir([dir_in filesep prefix dt_yymmdd(dt) '*' postfix '.csv']);
+      l = dir(fullfile(dir_in, [prefix dt_yymmdd(dt) '*' postfix '.csv']));
       filenames = {l.name}';
     case 'PourquoiPasTSG'
       % List all files in directory
-      l = dir([dir_in filesep dt_yyyymmdd(dt) '*' postfix '.csv']);
+      l = dir(fullfile(dir_in, [dt_yyyymmdd(dt) '*' postfix '.csv']));
       filenames = {l.name}';
     case 'RRevelleUnderway'
       % List all files in directory
-      l = dir([dir_in filesep prefix dt_yymmdd(dt) '*' postfix '.MET']);
+      l = dir(fullfile(dir_in, [prefix dt_yymmdd(dt) '*' postfix '.MET']));
       filenames = {l.name}';
     case 'MatlabTSG'
       % List all files in directory
-      l = dir([dir_in filesep prefix dt_yyyymmdd(dt) '*' postfix '.txt']);
+      l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.txt']));
       filenames = {l.name}';
     case 'TeraTerm'
       % TeraTerm filenames correspond to the time at which logging started
       % Data from a given day could be in any file preceding that date
       % List all files in directory
-      l = dir([dir_in filesep prefix '*' postfix '.log*']);
+      l = dir(fullfile(dir_in, [prefix '*' postfix '.log*']));
       % Get date of all files
       n = length(prefix);
       l_dt = floor(datenum(cellfun(@(x) x(n+1:n+15), {l.name}, 'UniformOutput', false), 'yyyymmdd_HHMMSS'));
@@ -211,7 +213,7 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
       % ALFA LabView filenames correspond to the time at which logging started
       % Data from a given day could be in any file preceding that date
       % List all files in directory
-      l = dir([dir_in filesep prefix '*' postfix '_m.txt']);
+      l = dir(fullfile(dir_in, [prefix '*' postfix '_m.txt']));
       % Get date of all files
       n = length(prefix);
       l_dt = floor(datenum(cellfun(@(x) x(n+1:n+15), {l.name}, 'UniformOutput', false), 'yyyymmdd_HHMMSS'));
@@ -239,9 +241,9 @@ end
 function [str] = dt_yyyydoy(dt)
 %   str = sprintf('%d%03d',year(dt),datevec2doy(datevec(dt)));
   dtvec = datevec(dt);
-  str = sprintf('%d%03d',dtvec(1),datevec2doy(dtvec));
+  str = sprintf('%d%03d', dtvec(1),datevec2doy(dtvec));
 end
 
 function [str] = dt_doy(dt)
-  str = sprintf('%03d',datevec2doy(datevec(dt)));
+  str = sprintf('%03d', datevec2doy(datevec(dt)));
 end

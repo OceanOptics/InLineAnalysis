@@ -197,12 +197,12 @@ for j = 1:length(level)
         if save_figure
           pause(0.01)
           if ishghandle(fh) && get(fh,'Number') == j*i+k*10
-            if ~isfolder([data.path.prod 'plots'])
-              mkdir([data.path.prod 'plots'])
+            if ~isfolder(fullfile(data.path.prod, 'plots'))
+              mkdir(fullfile(data.path.prod, 'plots'))
             end
-            filename = [data.path.prod 'plots' filesep prefix '_' ...
+            filename = fullfile(data.path.prod, 'plots', [prefix '_' ...
               datestr(day_to_plot(1), 'yyyymmdd') '_' datestr(day_to_plot(2), 'yyyymmdd') '_' ...
-              data.model data.sn '_' level{j} '_' toplot{i, k} '_' tabletoplot{i}];
+              data.model data.sn '_' level{j} '_' toplot{i, k} '_' tabletoplot{i}]);
             savefig(fh, filename, 'compact')
           end
         end

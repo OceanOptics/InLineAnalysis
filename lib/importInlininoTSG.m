@@ -15,6 +15,8 @@ if verbose
   fprintf('Importing %s ... ', foo{end});
 end
 
+% filename = '/Volumes/Samsung_T5/Data/TaraMicrobiome/raw/TSG/SBE38+450091_20220324_150229.csv';
+
 % Get date from filename
 s = strsplit(filename, '_');
 dt_ref = s{end-1};
