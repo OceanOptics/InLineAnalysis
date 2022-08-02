@@ -24,7 +24,7 @@ cfg.meta.measurement_depth = 1.5;
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-PATH_ROOT = '/Users/gui/Documents/Maine/Cours/Inline_workshop/data';
+PATH_ROOT = 'PATH_TO_MAIN_DATA_FOLDER';
 
 %%% TSG %%%
 cfg.instruments.TSG = struct();
