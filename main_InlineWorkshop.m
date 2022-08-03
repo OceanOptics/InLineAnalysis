@@ -4,7 +4,7 @@
 clear
 close all
 
-cd('PATH_TO_SOFTWARE_INLINEANALYSIS_MASTER')
+cd('PATH_TO_INLINEANALYSIS-MASTER_FOLDER')
 
 % Load InLineAnalysis and the configuration
 ila = InLineAnalysis('cfg/InlineWorkshop_cfg.m');
@@ -27,9 +27,9 @@ ila.cfg.days2run = datenum(2022,8,1):datenum(2022,8,1);
 % ila.instrument.(instrument_to_clear).prod.QCfailed = [];
 
 %% 'ALPHA','NMEA','FLOW','ACS298','ACS348','TSG','BB31052','HBB','WSCD859','PAR','SUVF6254','LISST1183','NMEA'
-ila.cfg.instruments2run = {'FLOW', 'TSG36073', 'NMEA'};
+ila.cfg.instruments2run = {'FLOW', 'SBE4536073', 'NMEA'};
 % ila.cfg.instruments2run = {'SUVF6254'};
-ila.cfg.qcref.view = 'TSG36073';
+ila.cfg.qcref.view = 'SBE4536073';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 
@@ -98,7 +98,6 @@ ila.cfg.qcref.remove_old = false; % remove old selection of the same period
 ila.QCRef();
 
 %% 4. Split fsw and tsw
-ila.cfg.split.skip = {'FLOW','TSG','PAR','ALFA','NMEA'};
 ila.Split();
 ila.CheckDataStatus();
 

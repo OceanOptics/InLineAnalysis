@@ -24,21 +24,22 @@ cfg.meta.measurement_depth = 1.5;
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-PATH_ROOT = 'PATH_TO_PARENT_DATA_FILE';
+PATH_ROOT = 'PATH_TO_PARENT_DATA_FOLDER';
 
 %%% TSG %%%
+model = 'SBE45';
 SN = '36073';
-cfg.instruments.(['TSG' SN]) = struct();
-cfg.instruments.(['TSG' SN]).model = 'SBE45';
-cfg.instruments.(['TSG' SN]).boat = 'Tara';
-cfg.instruments.(['TSG' SN]).logger = 'Inlinino'; % TeraTerm Matlab Inlinino
-cfg.instruments.(['TSG' SN]).sn = SN;
-cfg.instruments.(['TSG' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['TSG' SN]),...
-                                  'wk',   fullfile(PATH_ROOT, 'wk', ['TSG' SN]),...
+cfg.instruments.([model SN]) = struct();
+cfg.instruments.([model SN]).model = model;
+cfg.instruments.([model SN]).boat = 'Tara';
+cfg.instruments.([model SN]).logger = 'Inlinino'; % TeraTerm Matlab Inlinino
+cfg.instruments.([model SN]).sn = SN;
+cfg.instruments.([model SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', [model SN]),...
+                                  'wk',   fullfile(PATH_ROOT, 'wk', [model SN]),...
                                   'prod', fullfile(PATH_ROOT, 'prod'),...
-                                  'ui', fullfile(PATH_ROOT, 'ui', ['TSG' SN]));
-cfg.instruments.(['TSG' SN]).view = struct('varname', 't2');
-cfg.instruments.(['TSG' SN]).temperature_variable = 't2';
+                                  'ui', fullfile(PATH_ROOT, 'ui', [model SN]));
+cfg.instruments.([model SN]).view = struct('varname', 't');
+cfg.instruments.([model SN]).temperature_variable = 't';
 
 %%% NMEA %%%
 SN = '2J5055713';
@@ -212,12 +213,14 @@ cfg.instruments.ALFA.view = struct('varname', 'FvFm');
 
 %%% General parameters %%%
 cfg.process.days2run = datenum(2020,12,12):datenum(2021,01,05);
-cfg.process.instruments2run = {'ACS298'}; % 'TSG', 'BB31052', 'WSCD859'
+cfg.process.instruments2run = {'FLOW', 'NMEA', 'ACS298', 'BB31052', 'WSCD859', ...
+  'SBE4536073', 'SUVF6254', 'LISST1183', 'HBB'}; % 'TSG', 'TSG36073', 'BB31052', 'WSCD859'
 cfg.process.write = true;
 cfg.process.force_import = false;
 cfg.process.parallel = Inf; % 0: disable parallel or Inf: as many thread available
 cfg.process.di = struct();
-cfg.process.di.skip = {'FLOW', 'TSG'};
+cfg.process.di.skip = cfg.process.instruments2run(contains(cfg.process.instruments2run, ...
+  {'FLOW','TSG','SBE45','SBE38+45','NMEA','PAR'}));
 cfg.process.di.qc = struct('mode', 'ui',... % ui or load
                            'qc_once_for_all', false,... % true = QC all variables | false = QC variables separately);
                            'remove_old', false); % remove old selection of the same period
@@ -234,7 +237,8 @@ cfg.process.sync.delay.NMEA = 0;
 cfg.process.sync.delay.HBB = 0;
 cfg.process.sync.delay.LISST1183 = 0;
 cfg.process.sync.delay.SUVF6254 = 0;
-cfg.process.sync.skip = {'TSG', 'PAR'};
+cfg.process.sync.skip = cfg.process.instruments2run(contains(cfg.process.instruments2run, ...
+  {'FLOW','TSG','SBE45','SBE38+45','ALFA','NMEA', 'PAR'}));
 
 %%% QC Reference (Flow Control/FLOW) %%%
 cfg.process.qcref = struct();
@@ -255,7 +259,8 @@ cfg.process.split.buffer.WSCD859 = [540, 100];
 cfg.process.split.buffer.SUVF6254 = [100, 50]; % [660, 100]
 cfg.process.split.buffer.HBB = [240, 140]; % [540, 340]
 cfg.process.split.buffer.LISST1183 = [540, 360];
-cfg.process.split.skip = {'FLOW','TSG', 'ALFA','NMEA'};
+cfg.process.split.skip = cfg.process.instruments2run(contains(cfg.process.instruments2run, ...
+  {'FLOW','TSG','SBE45','SBE38+45','ALFA','NMEA', 'PAR'}));
 
 %%% Binning %%%
 cfg.process.bin = struct('bin_size', struct());
@@ -270,7 +275,7 @@ cfg.process.bin.bin_size.ACS298 = 1;
 cfg.process.bin.bin_size.BB31052 = 1;
 cfg.process.bin.bin_size.WSCD859 = 1;
 cfg.process.bin.bin_size.SUVF6254 = 1;
-cfg.process.bin.bin_size.TSG = 1;
+cfg.process.bin.bin_size.SBE4536073 = 1;
 cfg.process.bin.bin_size.NMEA = 1;
 cfg.process.bin.bin_size.HBB = 5;
 cfg.process.bin.bin_size.LISST1183 = 10;
@@ -313,12 +318,12 @@ cfg.process.qc.qc_once_for_all = false;  % true = QC all variables | false = QC 
 cfg.process.qc.remove_old = false; % remove old selection of the same period
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
-cfg.process.qc.global.view = 'ACS298';
-cfg.process.qc.global.apply = {'ACS298', 'BB31052', 'WSCD859', 'TSG', 'LISST1183', 'HBB'};
+cfg.process.qc.global.view = cfg.process.qcref.view;
+cfg.process.qc.global.apply = cfg.process.instruments2run(contains(cfg.process.instruments2run, ...
+  {'FLOW','NMEA', 'PAR'}));
 cfg.process.qc.specific = struct();
 cfg.process.qc.specific.active = true;
-cfg.process.qc.specific.run = {'ACS298', 'BB31052', 'WSCD859', 'TSG', 'LISST1183', ...
-  'NMEA', 'SUVF6254', 'HBB','ALFA'};
+cfg.process.qc.specific.run = cfg.process.qcref.view;
 
 %%% Calibrate %%%
 cfg.process.calibrate = struct();
@@ -341,7 +346,8 @@ cfg.process.calibrate.HBB = struct('compute_dissolved', false, ...
 cfg.process.calibrate.LISST1183 = struct('compute_dissolved', false, ...
                                   'FLOW_source', 'FLOW', ...
                                   'di_method', 'interpolate'); % interpolate constant
-cfg.process.calibrate.skip = {'FLOW', 'TSG', 'ALFA', 'NMEA'};
+cfg.process.calibrate.skip = cfg.process.instruments2run(contains(cfg.process.instruments2run, ...
+  {'FLOW','TSG','SBE45','SBE38+45','ALFA','NMEA'}));
 
 %%% Write %%%
 cfg.process.write = struct();
