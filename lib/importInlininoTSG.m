@@ -49,13 +49,20 @@ t = textscan(fid, parser, 'delimiter',',');
 fclose(fid);
 
 % Build table
-if all(contains(t{1}, '/'))
-  data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{2}, t{3}, t{4}, t{5}, ...
-    t{6}, 'VariableNames', hd);
-else
-  data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'), ...
-    t{2}, t{3}, t{4}, t{5}, t{6}, 'VariableNames', hd);
+dat = [];
+for i = 1:size(hd, 2)
+  if strcmp(hd{i}, 'dt')
+    if all(contains(t{1}, '/'))
+      dat = [dat datenum(t{i}, 'yyyy/mm/dd HH:MM:SS.FFF')];
+    else
+      dat = [dat datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF')];
+    end
+  else
+    dat = [dat t{i}];
+  end
 end
+
+data = array2table(dat, 'VariableNames', hd);
 data.Properties.VariableUnits = unit;
 
 % Remove last line if it's past midnight (bug in old Inlinino)

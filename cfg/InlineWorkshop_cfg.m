@@ -7,11 +7,11 @@ cfg = struct('meta', struct(), 'instruments', struct(), 'process', struct());
 %%%%%%%%%%%%%%
 %% METADATA %%
 %%%%%%%%%%%%%%
-cfg.meta.investigators = 'Emmanuel_Boss,Lee_Karp-Boss,Nils_Haentjens,Guillaume_Bourdin';
+cfg.meta.investigators = 'InlineWorkshop';
 cfg.meta.affiliations = 'University_of_Maine';
 cfg.meta.emails = 'emmanuel.boss@maine.edu';
-cfg.meta.experiment = 'Microbiome';
-cfg.meta.cruise = 'Tara_Microbiome';
+cfg.meta.experiment = 'InlineWorkshop';
+cfg.meta.cruise = 'InlineWorkshop';
 cfg.meta.station = 'NA';
 cfg.meta.documents = 'NA';
 cfg.meta.calibration_files = 'NA';
@@ -24,19 +24,21 @@ cfg.meta.measurement_depth = 1.5;
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-PATH_ROOT = 'PATH_TO_MAIN_DATA_FOLDER';
+PATH_ROOT = 'PATH_TO_PARENT_DATA_FILE';
 
 %%% TSG %%%
-cfg.instruments.TSG = struct();
-cfg.instruments.TSG.model = 'TSG';
-cfg.instruments.TSG.boat = 'Tara';
-cfg.instruments.TSG.logger = 'Inlinino'; % TeraTerm Matlab Inlinino
-cfg.instruments.TSG.path = struct('raw',  fullfile(PATH_ROOT, 'raw', 'TSG'),...
-                                  'wk',   fullfile(PATH_ROOT, 'wk', 'TSG'),...
+SN = '36073';
+cfg.instruments.(['TSG' SN]) = struct();
+cfg.instruments.(['TSG' SN]).model = 'SBE45';
+cfg.instruments.(['TSG' SN]).boat = 'Tara';
+cfg.instruments.(['TSG' SN]).logger = 'Inlinino'; % TeraTerm Matlab Inlinino
+cfg.instruments.(['TSG' SN]).sn = SN;
+cfg.instruments.(['TSG' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['TSG' SN]),...
+                                  'wk',   fullfile(PATH_ROOT, 'wk', ['TSG' SN]),...
                                   'prod', fullfile(PATH_ROOT, 'prod'),...
-                                  'ui', fullfile(PATH_ROOT, 'ui', 'TSG'));
-cfg.instruments.TSG.view = struct('varname', 't2');
-cfg.instruments.TSG.temperature_variable = 't2';
+                                  'ui', fullfile(PATH_ROOT, 'ui', ['TSG' SN]));
+cfg.instruments.(['TSG' SN]).view = struct('varname', 't2');
+cfg.instruments.(['TSG' SN]).temperature_variable = 't2';
 
 %%% NMEA %%%
 SN = '2J5055713';
@@ -250,7 +252,7 @@ cfg.process.split.buffer = struct();
 cfg.process.split.buffer.ACS298 = [180, 60];
 cfg.process.split.buffer.BB31052 = [420, 220];
 cfg.process.split.buffer.WSCD859 = [540, 100];
-cfg.process.split.buffer.SUVF6254 = [240, 100]; % [660, 100]
+cfg.process.split.buffer.SUVF6254 = [100, 50]; % [660, 100]
 cfg.process.split.buffer.HBB = [240, 140]; % [540, 340]
 cfg.process.split.buffer.LISST1183 = [540, 360];
 cfg.process.split.skip = {'FLOW','TSG', 'ALFA','NMEA'};

@@ -82,7 +82,7 @@ classdef InLineAnalysis < handle
           switch cfg.instruments.(i).model
             case {'NMEA','GPSSC701','GPSGP32','19X'}
               obj.instrument.(i) = NMEA(cfg.instruments.(i));
-            case 'TSG'
+            case {'TSG', 'SBE45', 'SBE38+45'}
               obj.instrument.(i) = TSG(cfg.instruments.(i));
             case 'atlasTSG'
               obj.instrument.(i) = atlasTSG(cfg.instruments.(i));

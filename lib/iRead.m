@@ -160,7 +160,7 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
       % List all files in directory
       l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.csv']));
       filenames = {l.name}';
-    case 'SBE45TSG'
+    case 'SBE45software'
       % List all files in directory
       l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.sbe45']));
       filenames = {l.name}';

@@ -62,6 +62,7 @@ fclose(fid);
 unit = unit(~strcmp(hd, 'datetime'));
 hd = hd(~strcmp(hd, 'datetime'));
 
+% Build table
 dat = [];
 for i = 1:size(hd, 2)
   if strcmp(hd{i}, 'dt')

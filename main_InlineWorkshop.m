@@ -4,7 +4,7 @@
 clear
 close all
 
-cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master/')
+cd('PATH_TO_SOFTWARE_INLINEANALYSIS_MASTER')
 
 % Load InLineAnalysis and the configuration
 ila = InLineAnalysis('cfg/InlineWorkshop_cfg.m');
@@ -14,27 +14,27 @@ ila = InLineAnalysis('cfg/InlineWorkshop_cfg.m');
 ila.cfg.days2run = datenum(2022,8,1):datenum(2022,8,1);
 
 %%
-instrument_to_clear = 'ACS298';
-ila.instrument.(instrument_to_clear).data = [];
-ila.instrument.(instrument_to_clear).raw.tsw = [];
-ila.instrument.(instrument_to_clear).raw.fsw = [];
-ila.instrument.(instrument_to_clear).raw.bad = [];
-ila.instrument.(instrument_to_clear).bin.tsw = [];
-ila.instrument.(instrument_to_clear).bin.fsw = [];
-ila.instrument.(instrument_to_clear).qc.tsw = [];
-ila.instrument.(instrument_to_clear).qc.fsw = [];
-ila.instrument.(instrument_to_clear).prod.p = [];
-ila.instrument.(instrument_to_clear).prod.QCfailed = [];
+% instrument_to_clear = 'ACS298';
+% ila.instrument.(instrument_to_clear).data = [];
+% ila.instrument.(instrument_to_clear).raw.tsw = [];
+% ila.instrument.(instrument_to_clear).raw.fsw = [];
+% ila.instrument.(instrument_to_clear).raw.bad = [];
+% ila.instrument.(instrument_to_clear).bin.tsw = [];
+% ila.instrument.(instrument_to_clear).bin.fsw = [];
+% ila.instrument.(instrument_to_clear).qc.tsw = [];
+% ila.instrument.(instrument_to_clear).qc.fsw = [];
+% ila.instrument.(instrument_to_clear).prod.p = [];
+% ila.instrument.(instrument_to_clear).prod.QCfailed = [];
 
 %% 'ALPHA','NMEA','FLOW','ACS298','ACS348','TSG','BB31052','HBB','WSCD859','PAR','SUVF6254','LISST1183','NMEA'
-ila.cfg.instruments2run = {'FLOW', 'ACS298'};
+ila.cfg.instruments2run = {'FLOW', 'TSG36073', 'NMEA'};
 % ila.cfg.instruments2run = {'SUVF6254'};
-ila.cfg.qcref.view = 'ACS298';
+ila.cfg.qcref.view = 'TSG36073';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 
 %% 1. Import | Load raw data
-ila.cfg.force_import = false;
+ila.cfg.force_import = true;
 ila.ReadRaw();
 ila.CheckDataStatus();
 
@@ -45,42 +45,42 @@ ila.Read('qc');
 ila.Read('prod');
 
 %% 2. Synchronise instruments
-% % Independent of flow rate (for now)
-% % If flow rate varies use the Strech method
-% % Play with delay of synchronisation
-% % TSG is assumed to be set at zero
-% % No noticeable difference was observed between the TSG of EXPORTS and the BB3
-% % ila.instrument.FLOW.Sync(30);
-ila.instrument.TSG.Sync(0);
-ila.instrument.SUVF.Sync(0);
-ila.instrument.ACS57.Sync(0);
-ila.instrument.HBB.Sync(0);
-ila.instrument.BB31502.Sync(0);
-ila.instrument.LISST1183.Sync(0);
-ila.instrument.WSCD859.Sync(0);
-ila.instrument.ALFA.Sync(0); 
-% % Quick visualizzation to sync with TSG
-% fig(30, 'sync TSG');
-% yyaxis('left'); plot(ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t); ylabel('Temperature (^o C)');
-% % yyaxis('right'); plot(ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,2)); ylabel('\beta (m^{-1} sr^{-1})'); ylim([80 300]);
-% % datetick2_doy();
-% visSync(ila.instrument.BB3.data, ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t, 'Temp (C)');
-visSync(ila.instrument.FLOW.data, ila.instrument.SUVF.data.dt, ila.instrument.SUVF.data.fdom, 'FDOM (counts)');
-visSync(ila.instrument.FLOW.data, ila.instrument.ACS57.data.dt, ila.instrument.ACS57.data.a(:,20), 'a (m^{-1})');
-visSync(ila.instrument.FLOW.data, ila.instrument.ACS57.data.dt, ila.instrument.ACS57.data.c(:,40), 'c (m^{-1})');
-visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB.data.beta(:,14), '\beta (counts)');
-visSync(ila.instrument.FLOW.data, ila.instrument.BB31052.data.dt, ila.instrument.BB31502.data.beta(:,1), '\beta (counts)');
-visSync(ila.instrument.FLOW.data, ila.instrument.LISST1183.data.dt, ila.instrument.LISST1183.data.beta(:,10), '\beta (counts)');
-visSync(ila.instrument.FLOW.data, ila.instrument.WSCD859.data.dt, ila.instrument.WSCD859.data.fdom, 'FDOM (counts)');
-visSync(ila.instrument.FLOW.data, ila.instrument.ALFA.data.dt, ila.instrument.ALFA.data.Chlb, 'chlb');yyaxis('left'); ylim([0 2]);
-% % 
-% % % xlim([datenum(2018,08,14,9,55,0) datenum(2018,08,14,11,05,0)]);
-% % % ylim([-0.1 0.2]);
-% % % Once settings are good set them in the configuration file.
-% % % The software is now doing the same with one line of code.
-% ila.Sync()
-% % % ila.instrument.BB31502.Sync(-90);
-% % % ila.instrument.BB31502.Sync(-10);
+% % % Independent of flow rate (for now)
+% % % If flow rate varies use the Strech method
+% % % Play with delay of synchronisation
+% % % TSG is assumed to be set at zero
+% % % No noticeable difference was observed between the TSG of EXPORTS and the BB3
+% % % ila.instrument.FLOW.Sync(30);
+% ila.instrument.TSG.Sync(0);
+% ila.instrument.SUVF.Sync(0);
+% ila.instrument.ACS57.Sync(0);
+% ila.instrument.HBB.Sync(0);
+% ila.instrument.BB31502.Sync(0);
+% ila.instrument.LISST1183.Sync(0);
+% ila.instrument.WSCD859.Sync(0);
+% ila.instrument.ALFA.Sync(0); 
+% % % Quick visualizzation to sync with TSG
+% % fig(30, 'sync TSG');
+% % yyaxis('left'); plot(ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t); ylabel('Temperature (^o C)');
+% % % yyaxis('right'); plot(ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,2)); ylabel('\beta (m^{-1} sr^{-1})'); ylim([80 300]);
+% % % datetick2_doy();
+% % visSync(ila.instrument.BB3.data, ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t, 'Temp (C)');
+% visSync(ila.instrument.FLOW.data, ila.instrument.SUVF.data.dt, ila.instrument.SUVF.data.fdom, 'FDOM (counts)');
+% visSync(ila.instrument.FLOW.data, ila.instrument.ACS57.data.dt, ila.instrument.ACS57.data.a(:,20), 'a (m^{-1})');
+% visSync(ila.instrument.FLOW.data, ila.instrument.ACS57.data.dt, ila.instrument.ACS57.data.c(:,40), 'c (m^{-1})');
+% visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB.data.beta(:,14), '\beta (counts)');
+% visSync(ila.instrument.FLOW.data, ila.instrument.BB31052.data.dt, ila.instrument.BB31502.data.beta(:,1), '\beta (counts)');
+% visSync(ila.instrument.FLOW.data, ila.instrument.LISST1183.data.dt, ila.instrument.LISST1183.data.beta(:,10), '\beta (counts)');
+% visSync(ila.instrument.FLOW.data, ila.instrument.WSCD859.data.dt, ila.instrument.WSCD859.data.fdom, 'FDOM (counts)');
+% visSync(ila.instrument.FLOW.data, ila.instrument.ALFA.data.dt, ila.instrument.ALFA.data.Chlb, 'chlb');yyaxis('left'); ylim([0 2]);
+% % % 
+% % % % xlim([datenum(2018,08,14,9,55,0) datenum(2018,08,14,11,05,0)]);
+% % % % ylim([-0.1 0.2]);
+% % % % Once settings are good set them in the configuration file.
+% % % % The software is now doing the same with one line of code.
+% % ila.Sync()
+% % % % ila.instrument.BB31502.Sync(-90);
+% % % % ila.instrument.BB31502.Sync(-10);
 
 %% 2. Auto-synchronise: automatic detection of filter events for AC and BB sensors
 % ila.cfg.qcref.MinFiltPeriod = 60; % filter even period in minute % ACS: 55 % BB3: 60
@@ -223,7 +223,7 @@ ila.CheckDataStatus();
 save_figures = true;
 
 %%% AC or BB 3D plots %%%
-ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
+ila.DiagnosticPlot('AC', {'prod'}, save_figures); % AC or BB
 
 %%% ACS BB3 TSG PAR WSCD SUVF ALFA LISST final product visualisation %%%
 ila.visProd_timeseries()

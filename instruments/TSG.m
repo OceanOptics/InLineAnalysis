@@ -40,8 +40,8 @@ classdef TSG < Instrument
             case {'TeraTerm', 'teraterm', 'TERATERM'}
               obj.data = iRead(@importTSGTeraTerm, obj.path.raw, obj.path.wk, 'TeraTerm_tsg_',...
                              days2run, 'TeraTerm', force_import, ~write, true);
-            case {'Inlinino'}
-              obj.data = iRead(@importInlininoTSG, obj.path.raw, obj.path.wk, 'SBE38+45*_',...
+            case {'Inlinino','inlinino'}
+              obj.data = iRead(@importInlininoTSG, obj.path.raw, obj.path.wk, [obj.model obj.sn '_'],...
                              days2run, 'Inlinino', force_import, ~write, true);
 %               obj.data = renamevars(obj.data, obj.temperature_variable, 'sst');
 %               if strcmp(obj.view.varname, obj.temperature_variable)
@@ -69,9 +69,9 @@ classdef TSG < Instrument
                          days2run, 'MatlabTSG', force_import, ~write, true);
         case 'JCook'
           switch obj.logger
-            case {'SBE45TSG'}
+            case {'SBE45software'}
               obj.data = iRead(@importSBEformatTSG, obj.path.raw, obj.path.wk, '',...
-                             days2run, 'SBE45TSG', force_import, ~write, true);
+                             days2run, 'SBE45software', force_import, ~write, true);
             case {'matlab_Emmanuel'}
               obj.data = iRead(@importJCookTSG, obj.path.raw, obj.path.wk, '',...
                              days2run, 'matlab_Emmanuel', force_import, ~write, true,...
