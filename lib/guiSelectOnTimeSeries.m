@@ -27,10 +27,14 @@ hp = pan();
 hp.Motion = 'horizontal';
 % check data in Z axis and set proper data cursor function
 all_obj = findobj(figure_handler, '-property', 'XData','YData','ZData');
-if isempty(all_obj(end).ZData)
-  set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
+if isempty(all_obj)
+  if isempty(all_obj(end).ZData)
+    set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
+  else
+    set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date_y);
+  end
 else
-  set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date_y);
+  set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
 end
 hc = datacursormode();
 % Set Select (user select a chunk of data)
