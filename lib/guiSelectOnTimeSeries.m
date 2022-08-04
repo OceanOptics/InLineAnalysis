@@ -27,7 +27,7 @@ hp = pan();
 hp.Motion = 'horizontal';
 % check data in Z axis and set proper data cursor function
 all_obj = findobj(figure_handler, '-property', 'XData','YData','ZData');
-if isempty(all_obj)
+if ~isempty(all_obj)
   if isempty(all_obj(end).ZData)
     set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
   else
