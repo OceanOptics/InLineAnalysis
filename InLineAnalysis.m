@@ -582,6 +582,9 @@ classdef InLineAnalysis < handle
     function Flag(obj)
       % Automatic selection of good and bad data
       % Note: Run all days loaded (independent of days2run)
+      % add all instrument from instrument2run into the skip so that flag
+      % never bugs
+      obj.cfg.flag.skip = [obj.cfg.flag.skip obj.cfg.instruments2run];
       for i=obj.cfg.instruments2run; i = i{1};
         if  any(strcmp(i,obj.cfg.flag.skip))
           fprintf('FLAG: Skip %s (copy data to next level)\n', i);

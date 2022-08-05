@@ -63,17 +63,21 @@ catch
   dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{6}, t{7}, ...
            'VariableNames', {'dt', 'swt', 'spd1','spd2'}); % Build table
 end
-
-% average over duplicates (bug in FlowControl software)
-unidt = unique(dat.dt,'first');
-% [~, L, ~] = unique(dat.dt,'first');
-% indexToDump = not(ismember(1:numel(dat.dt),L));
-data = table(unidt, 'VariableNames', {'dt'});
-for i = 1:size(unidt)
-  data.swt(i) = mean(dat.swt(unidt(i) == dat.dt), 'omitnan');
-  data.spd1(i) = mean(dat.spd1(unidt(i) == dat.dt), 'omitnan');
-  data.spd2(i) = mean(dat.spd2(unidt(i) == dat.dt), 'omitnan');
+% remove duplicates (bug in FlowControl software)
+[~, L, ~] = unique(dat.dt,'first');
+indexToDump = not(ismember(1:numel(dat.dt), L));
+if sum(indexToDump) > 0
+  fprintf('Warning: %i identical dates in filtered data => deleted\n', sum(indexToDump))
 end
+data = dat(~indexToDump, :);
+% if ~isempty(any(duplicates))
+%   data = table(unidt, 'VariableNames', {'dt'});
+%   for i = 1:size(duplicates)
+%     data.swt(duplicates(i)) = mean(dat.swt(unidt(duplicates(i)) == dat.dt), 'omitnan');
+%     data.spd1(duplicates(i)) = mean(dat.spd1(unidt(duplicates(i)) == dat.dt), 'omitnan');
+%     data.spd2(duplicates(i)) = mean(dat.spd2(unidt(duplicates(i)) == dat.dt), 'omitnan');
+%   end
+% end
 
 
 % % Read file line by line (slow)
