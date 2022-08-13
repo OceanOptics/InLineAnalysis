@@ -159,6 +159,9 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
     case {'Inlinino', 'Inlinino_atlasTSG', 'InlininoADU100'}
       % List all files in directory
       l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.csv']));
+      if isempty(l)
+        l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.raw']));
+      end
       filenames = {l.name}';
     case 'SBE45software'
       % List all files in directory

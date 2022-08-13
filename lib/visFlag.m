@@ -1,7 +1,9 @@
 function fh = visFlag(raw_tot, raw_filt, bin_tot_good, bin_tot_suspect, bin_filt_good, ...
-                      bin_filt_bad, varname, varindex, raw_bad, fooflow, spd_var)
+                      bin_filt_bad, varname, varindex, raw_bad, fooflow, spd_var, autoscale)
 if nargin < 9; raw_bad = []; end
-
+if nargin < 10; fooflow = []; end
+if nargin < 11; spd_var = 'spd'; end
+if nargin < 12; autoscale = false; end
 % Define constants
 ColorSet = lines(5);
 % . raw | o bin 
@@ -35,13 +37,15 @@ if ~isempty(bin_filt_bad); plot(bin_filt_bad.dt, bin_filt_bad.(varname)(:,varind
 %   plot(bb3_filt_flag.dt(sel_filt_target), bb3_filt_flag.beta(sel_filt_target,1), 'o', 'MarkerEdgeColor', col_target);  legend('pass 2', 'flag 16 & 32');
 
 % set y limit to binned data in priority
-if isempty(bin_tot_good) && ~isempty(bin_filt_good)
-  ylim([min(bin_filt_good.(varname)(:,varindex)) max(bin_filt_good.(varname)(:,varindex))]); 
-elseif ~isempty(bin_tot_good) && isempty(bin_filt_good)
-  ylim([min(bin_tot_good.(varname)(:,varindex)) max(bin_tot_good.(varname)(:,varindex))]);
-elseif ~isempty(bin_tot_good) && ~isempty(bin_filt_good)
-  ylim([min([bin_tot_good.(varname)(:,varindex); bin_filt_good.(varname)(:,varindex)]) ...
-    max([bin_tot_good.(varname)(:,varindex); bin_filt_good.(varname)(:,varindex)])]);
+if ~autoscale
+  if isempty(bin_tot_good) && ~isempty(bin_filt_good)
+    ylim([min(bin_filt_good.(varname)(:,varindex)) max(bin_filt_good.(varname)(:,varindex))]); 
+  elseif ~isempty(bin_tot_good) && isempty(bin_filt_good)
+    ylim([min(bin_tot_good.(varname)(:,varindex)) max(bin_tot_good.(varname)(:,varindex))]);
+  elseif ~isempty(bin_tot_good) && ~isempty(bin_filt_good)
+    ylim([min([bin_tot_good.(varname)(:,varindex); bin_filt_good.(varname)(:,varindex)]) ...
+      max([bin_tot_good.(varname)(:,varindex); bin_filt_good.(varname)(:,varindex)])]);
+  end
 end
 
 ylabel(varname);

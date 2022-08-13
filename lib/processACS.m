@@ -297,8 +297,10 @@ sel2rm = any(~isfinite(tot.a),2) | any(~isfinite(tot.c),2)| all(isnan(tot.a),2) 
 tot(sel2rm,:) = [];
 filt_interp(sel2rm,:) = [];
 
-% remove cdom interpolation when there is no a and c data
-cdom(~ismember(cdom.dt, filt_interp.dt), :) = [];
+if strcmp(interpolation_method, 'CDOM')
+  % remove cdom interpolation when there is no a and c data
+  cdom(~ismember(cdom.dt, filt_interp.dt), :) = [];
+end
 
 if exist('visFlag', 'file')
   fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'a', round(size(tot.a, 2)/2), [], []);
@@ -411,7 +413,7 @@ bad = [bad; p(todelete, :) table(repmat({'ap 430-700 < -0.01'}, ...
   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
 % bad = [p(todelete, :) table(repmat({'cp < -0.0015'}, ...
 %   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-p.ap(todelete, :) = NaN;
+% p.ap(todelete, :) = NaN;
 
 % delete unrealistic data when ap650 > ap676
 todelete = any(mean(p.ap(:, lambda.a >= 640 & lambda.a <= 655), 2, 'omitnan') > ...
@@ -629,9 +631,9 @@ fprintf('Estimating G50 and mphi (slope of PSD) ... ')
 p.HH_G50 = modelG50.predictFcn(Pr');
 p.HH_mphi = modelmphi.predictFcn(Pr');
 flag.HH_mphi_flag(p.HH_mphi > 0 | p.HH_mphi < -8) = true;
-p.HH_mphi(p.HH_mphi > 0 | p.HH_mphi < -8) = NaN;
+% p.HH_mphi(p.HH_mphi > 0 | p.HH_mphi < -8) = NaN;
 flag.HH_G50_flag(p.HH_G50 < 0 | p.HH_G50 > 50) = true;
-p.HH_G50(p.HH_G50 < 0 | p.HH_G50 > 50) = NaN;
+% p.HH_G50(p.HH_G50 < 0 | p.HH_G50 > 50) = NaN;
 fprintf('Done\n')
 
 % Extra flags for suspicious data

@@ -80,9 +80,9 @@ classdef InLineAnalysis < handle
         % Initialize each instrument
         for i = fieldnames(cfg.instruments)'; i = i{1};
           switch cfg.instruments.(i).model
-            case {'NMEA','GPSSC701','GPSGP32','19X'}
+            case {'NMEA','SC701','GP32','SC701Tara','GP32Tara','19X'}
               obj.instrument.(i) = NMEA(cfg.instruments.(i));
-            case {'TSG', 'SBE45', 'SBE38+45'}
+            case {'TSG', 'SBE45', 'SBE3845'}
               obj.instrument.(i) = TSG(cfg.instruments.(i));
             case 'atlasTSG'
               obj.instrument.(i) = atlasTSG(cfg.instruments.(i));
@@ -100,6 +100,8 @@ classdef InLineAnalysis < handle
 %               obj.instrument.(i) = WSCD(cfg.instruments.(i));
             case 'LISST'
               obj.instrument.(i) = LISST(cfg.instruments.(i));
+            case {'LISSTTau', 'LISSTTAU', 'TAU'}
+              obj.instrument.(i) = LISSTTau(cfg.instruments.(i));
             case 'ECO'
               obj.instrument.(i) = ECO(cfg.instruments.(i));
             case 'FL'
@@ -128,8 +130,13 @@ classdef InLineAnalysis < handle
     function ReadRaw(obj)
       % Read was renamed to ReadRaw on Oct 19, 2018
       for i=obj.cfg.instruments2run; i = i{1};
-        fprintf('READ RAW: %s\n', i);
-            obj.instrument.(i).ReadRaw(obj.cfg.days2run, obj.cfg.force_import, true);
+        if ~isfield(obj.instrument, i)
+          error('Instrument2run "%s" does not match any instrument name in the cfg file:  %s', ...
+            i, strjoin(fieldnames(obj.instrument), ' / '))
+        else
+          fprintf('READ RAW: %s\n', i);
+          obj.instrument.(i).ReadRaw(obj.cfg.days2run, obj.cfg.force_import, true);
+        end
       end
     end
     
@@ -584,7 +591,7 @@ classdef InLineAnalysis < handle
       % Note: Run all days loaded (independent of days2run)
       % add all instrument from instrument2run into the skip so that flag
       % never bugs
-      obj.cfg.flag.skip = [obj.cfg.flag.skip obj.cfg.instruments2run];
+      obj.cfg.flag.skip = [obj.cfg.flag.skip; obj.cfg.instruments2run(:)];
       for i=obj.cfg.instruments2run; i = i{1};
         if  any(strcmp(i,obj.cfg.flag.skip))
           fprintf('FLAG: Skip %s (copy data to next level)\n', i);
@@ -1008,7 +1015,7 @@ classdef InLineAnalysis < handle
           obj.instrument.(i).prod.a = obj.instrument.(i).qc.tsw;
         else
           fprintf('CALIBRATE: %s\n', i);
-          if contains(i, 'AC')
+          if contains(i, {'AC','LISSTTau','LISSTTAU','LISST-Tau','TAU','CSTAR'})
             if isempty(obj.cfg.calibrate.(i).CDOM_source)
               cdom_source = [];
             else
@@ -1042,6 +1049,12 @@ classdef InLineAnalysis < handle
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
                                            obj.cfg.calibrate.(i).di_method)
+            case {'LISSTTau','LISSTTAU','LISST-Tau','TAU'}
+              obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
+                                           obj.cfg.calibrate.(i).interpolation_method,...
+                                           cdom_source,...
+                                           obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
+                                           obj.cfg.calibrate.(i).di_method);
             otherwise
               obj.instrument.(i).Calibrate()
           end

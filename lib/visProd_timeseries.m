@@ -254,12 +254,17 @@ switch instrument
     set(gca, 'ZScale', 'log', 'XScale', 'log');
     zlabel(['PSD (' data.Properties.VariableUnits{strcmp(data.Properties.VariableNames, 'PSD')} ')']);
     xlabel('Diameters \mum');
-    ylabel('time');
+    ylabel('Time');
     visProd3D(data.Properties.UserData.diameters, data.dt, data.betap, false, 'Intensity', false, 102);
     set(gca, 'ZScale', 'log', 'XScale', 'log');
     zlabel(['VSF (' data.Properties.VariableUnits{strcmp(data.Properties.VariableNames, 'betap')} ')']);
-    xlabel('angle [degree]');
-    ylabel('time');
+    xlabel('Angle [degree]');
+    ylabel('Time');
+  case {'LISSTTau', 'LISSTTAU', 'TAU'}
+    fig(110);
+    clf
+    scatter(data.dt, data.Beamcp, 6, 'filled'); ylabel('c_p [m^{-1}]');
+    xlim([min(data.dt) max(data.dt)]);
   otherwise
     warning('%s not supported for product visualisation', instrument)
 end
