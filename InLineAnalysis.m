@@ -429,6 +429,10 @@ classdef InLineAnalysis < handle
     end
     
     function QCRef(obj)
+      if isempty(obj.instrument.(obj.cfg.qcref.view).data.dt)
+        error('%s data table is empty, make sure to view the instrument you are trying to process or load your data before running QCref', ...
+          obj.cfg.qcref.view)
+      end
       switch obj.cfg.qcref.mode
         case 'ui'
           %% create new FTH data for missing data
@@ -533,6 +537,9 @@ classdef InLineAnalysis < handle
     function Split(obj)
        % Note: Run all days loaded (independent of days2run)
       for i=obj.cfg.instruments2run; i = i{1};
+        if isempty(obj.instrument.(i).data)
+          error('%s data table is empty', i)
+        end
         if  any(strcmp(i,obj.cfg.split.skip))
           fprintf('SPLIT: Skip %s (copy data to next level)\n', i);
           obj.instrument.(i).raw.tsw = obj.instrument.(i).data;
