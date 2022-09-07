@@ -661,14 +661,14 @@ classdef InLineAnalysis < handle
               if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
               if contains(i, 'AC')
                 channel = {'a', 'c'};
-              elseif contains(i, {'TSG', 'SBE45', 'SBE38+45'})
+              elseif contains(i, {'TSG', 'SBE45', 'SBE3845'})
                 if ~strcmp(foo.qc.tsw.Properties.VariableNames, 's')
                   channel = {foo.temperature_variable, 'c'};
                 else
                   channel = {foo.temperature_variable, 's'};
                 end
               end
-              if contains(i, {'AC', 'TSG', 'SBE45', 'SBE38+45'}) && ~obj.cfg.qc.qc_once_for_all
+              if contains(i, {'AC', 'TSG', 'SBE45', 'SBE3845'}) && ~obj.cfg.qc.qc_once_for_all
                 for j = channel
                   fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                              foo.qc.fsw, foo.suspect.fsw, j{:}, foo.view.varcol,...
