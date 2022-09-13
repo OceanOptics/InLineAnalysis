@@ -26,7 +26,6 @@ cfg.meta.measurement_depth = 1.5;
 
 PATH_ROOT = 'PATH_TO_DATA_PARENT_DIRECTORY';
 
-
 %%% TSG %%%
 model = 'SBE3845';
 SN = '0091';
@@ -311,11 +310,11 @@ for i = 1:size(cfg.process.instruments2run)
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [180, 60]; % [180, 60] for AC meters
   elseif any(contains(cfg.process.instruments2run{i}, {'BB', 'BB'}) & ~contains(cfg.process.instruments2run{i}, {'HyperBB','HBB','hbb'}))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [420, 220]; % [420, 220] for ECO-BB
-  elseif any(strcmp(cfg.process.instruments2run{i}, 'WSCD'))
+  elseif any(contains(cfg.process.instruments2run{i}, 'WSCD'))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [540, 100]; % [540, 100] for ECO-fluo
-  elseif any(strcmp(cfg.process.instruments2run{i}, 'WS3S'))
+  elseif any(contains(cfg.process.instruments2run{i}, 'WS3S'))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [420, 220]; % [420, 220] for ECO-fluo
-  elseif any(strcmp(cfg.process.instruments2run{i}, 'SUVF'))
+  elseif any(contains(cfg.process.instruments2run{i}, 'SUVF'))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [240, 100]; % [240, 100] for Seapoint fluo
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [240, 140]; % [240, 140] for HyperBB
@@ -356,11 +355,11 @@ for i = 1:size(cfg.process.instruments2run)
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for AC meters
   elseif any(contains(cfg.process.instruments2run{i}, {'BB', 'BB'}) & ~contains(cfg.process.instruments2run{i}, {'HyperBB','HBB','hbb'}))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for ECO-BB
-  elseif any(strcmp(cfg.process.instruments2run{i}, 'WSCD'))
+  elseif any(contains(cfg.process.instruments2run{i}, 'WSCD'))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for ECO-fluo
-  elseif any(strcmp(cfg.process.instruments2run{i}, 'WS3S'))
+  elseif any(contains(cfg.process.instruments2run{i}, 'WS3S'))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for ECO-fluo
-  elseif any(strcmp(cfg.process.instruments2run{i}, 'SUVF'))
+  elseif any(contains(cfg.process.instruments2run{i}, 'SUVF'))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for Seapoint fluo
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 5; % 5 min for HyperBB
@@ -368,7 +367,7 @@ for i = 1:size(cfg.process.instruments2run)
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 10; % 10 min for LISST
   elseif any(contains(cfg.process.instruments2run{i}, {'LISSTTAU','LISSTTau','LISST-TAU'}))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for LISST-Tau
-  elseif any(strcmp(cfg.process.instruments2run{i}(1:3), 'ALFA'))
+  elseif any(contains(cfg.process.instruments2run{i}(1:3), 'ALFA'))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 10; % 10 min for ALFA
   end
 end
