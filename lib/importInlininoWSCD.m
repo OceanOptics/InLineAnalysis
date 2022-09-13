@@ -22,13 +22,11 @@ end
 
 % Get header
 hd = strip(strsplit(fgetl(fid), ','));
-% Skip empty lines (bug in Inlinino)
-foo = fgetl(fid);
-while ~isempty(foo)
-    foo = fgetl(fid);
+% get units skipping empty lines (bug in old Inlinino)
+unit = fgetl(fid);
+while isempty(unit)
+    unit = fgetl(fid);
 end
-% get units and lambda
-unit = strip(strsplit(fgetl(fid), ','));
 
 % Read data
 t = textscan(fid, parser, 'delimiter',',');
