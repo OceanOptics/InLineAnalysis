@@ -20,10 +20,16 @@ if exist('fth', 'var')
     if isempty(fth.qc.tsw)
       error('No FLOW qc data loaded, when "filt_method == 25percentil", FLOW qc data level should be loaded')
     end
+    if isempty(filt_qc)
+      error('No BB3 qc data loaded, when "filt_method == 25percentil", BB3 qc data level should be loaded')
+    end
     fth_temp = fth.qc.tsw;
   elseif strcmp(filt_method, 'exponential_fit')
     if isempty(fth.raw.tsw)
       error('No FLOW raw data loaded, when "filt_method == exponential_fit", FLOW raw data level should be loaded')
+    end
+    if isempty(filt_raw)
+      error('No BB3 raw data loaded, when "filt_method == exponential_fit", BB3 raw data level should be loaded')
     end
     fth_temp = fth.raw.tsw;
   end
