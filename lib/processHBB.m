@@ -35,9 +35,7 @@ if exist('fth', 'var')
   fth_temp(indexToDump, :) = [];
   
   % merge and sort filt_raw filt_bad data
-  if any(~isempty(filt_raw) | ~isempty(filt_bad))
-    filt_raw_merged = sortrows([filt_raw; filt_bad], 'dt');
-  end
+  filt_raw_merged = sortrows([filt_raw; filt_bad], 'dt');
   
   % interpolate fth_temp.swt onto binned data to fill missing flow data
   fth_interp = table([tot.dt; fth_temp.dt; filt_qc.dt], 'VariableNames', {'dt'});

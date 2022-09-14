@@ -17,8 +17,14 @@ if exist('fth', 'var')
     SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
   end
   if strcmp(filt_method, '25percentil')
+    if isempty(fth.qc.tsw)
+      error('No FLOW qc data loaded, when "filt_method == 25percentil", FLOW qc data level should be loaded')
+    end
     fth_temp = fth.qc.tsw;
   elseif strcmp(filt_method, 'exponential_fit')
+    if isempty(fth.raw.tsw)
+      error('No FLOW raw data loaded, when "filt_method == exponential_fit", FLOW raw data level should be loaded')
+    end
     fth_temp = fth.raw.tsw;
   end
   
@@ -31,9 +37,7 @@ if exist('fth', 'var')
   fth_temp(indexToDump, :) = [];
   
   % merge and sort filt_raw filt_bad data
-  if any(~isempty(filt_raw) | ~isempty(filt_bad))
-    filt_raw_merged = sortrows([filt_raw; filt_bad], 'dt');
-  end
+  filt_raw_merged = sortrows([filt_raw; filt_bad], 'dt');
   
   % interpolate fth_temp.swt onto binned data to fill missing flow data
   fth_interp = table([tot.dt; fth_temp.dt; filt_qc.dt], 'VariableNames', {'dt'});
