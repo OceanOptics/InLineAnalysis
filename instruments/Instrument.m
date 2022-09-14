@@ -356,13 +356,32 @@ classdef (Abstract) Instrument < handle
           fprintf('\t\t%s', f); tic;
           load(fullfile(obj.path.wk, f), 'data'); % data variable is created
           data_temp = sortrows(data, 1);
-          if strcmp(obj.model, 'FTH') && size(data_temp, 2) == 7
-            data_temp = renamevars(data_temp, 'spd', 'spd1');
-            data_temp = renamevars(data_temp, 'spd_avg_sd', 'spd1_avg_sd');
-            data_temp = renamevars(data_temp, 'spd_avg_n', 'spd1_avg_n');
-            data_temp.spd2 = NaN(size(data_temp.spd1));
-            data_temp.spd2_avg_sd = NaN(size(data_temp.spd1_avg_sd));
-            data_temp.spd2_avg_n = NaN(size(data_temp.spd1_avg_n));
+          % add column of spd to make sure all files have equal number of colums
+          if strcmp(obj.model, 'FTH')
+            foospd = {'spd1', 'spd2'};
+            if strcmp(level, 'raw')
+              if size(data_temp, 2) < 4
+                data_temp = renamevars(data_temp, 'spd', obj.view.spd_variable);
+                data_temp.(foospd{~strcmp(foospd, obj.view.spd_variable)}) = ...
+                  NaN(size(data_temp.(obj.view.spd_variable)));
+                data_temp = movevars(data_temp,'spd2','After','spd1');
+              end
+            else
+              if size(data_temp, 2) < 7
+                data_temp = renamevars(data_temp, 'spd', obj.view.spd_variable);
+                data_temp = renamevars(data_temp, 'spd_avg_sd', [obj.view.spd_variable '_avg_sd']);
+                data_temp = renamevars(data_temp, 'spd_avg_n', [obj.view.spd_variable '_avg_n']);
+                data_temp.(foospd{~strcmp(foospd, obj.view.spd_variable)}) = ...
+                  NaN(size(data_temp.(obj.view.spd_variable)));
+                data_temp.([foospd{~strcmp(foospd, obj.view.spd_variable)} '_avg_sd']) = ...
+                  NaN(size(data_temp.(obj.view.spd_variable)));
+                data_temp.([foospd{~strcmp(foospd, obj.view.spd_variable)} '_avg_n']) = ...
+                  NaN(size(data_temp.(obj.view.spd_variable)));
+                data_temp = movevars(data_temp,'spd2','After','spd1_avg_n');
+                data_temp = movevars(data_temp,'spd2_avg_sd','After','spd2');
+                data_temp = movevars(data_temp,'spd2_avg_n','After','spd2_avg_sd');
+              end
+            end
           end
           if isempty(data_temp)
             warning('%s is empty, the file was deleted', f)
