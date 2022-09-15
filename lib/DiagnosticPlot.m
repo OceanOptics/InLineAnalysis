@@ -49,7 +49,7 @@ else
 end
 
 ACsize_to_plot = 50000;
-BBsize_to_plot = 90000;
+BBsize_to_plot = 120000;
 
 user_selection = [];
 for j = 1:length(level)
