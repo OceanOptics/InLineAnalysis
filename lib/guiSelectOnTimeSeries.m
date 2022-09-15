@@ -27,7 +27,7 @@ hp = pan();
 hp.Motion = 'horizontal';
 % check data in Z axis and set proper data cursor function
 all_obj = findobj(figure_handler, '-property', 'XData','YData','ZData');
-if ~isempty(all_obj)
+if isempty(all_obj)
   if isempty(all_obj(end).ZData)
     set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
   else
@@ -48,6 +48,8 @@ hold('on'); % to overlay area
 % User Interaction
 fprintf('User Interface Modes:\n');
 fprintf('\t [z] unconstrained zoom\n');
+fprintf('\t [+] zoom in\n');
+fprintf('\t [-] zoom out\n');
 fprintf('\t [h] horizontal zoom\n');
 fprintf('\t [v] vertical zoom\n');
 fprintf('\t [p] pan\n');
@@ -55,7 +57,7 @@ fprintf('\t [c] cursor\n');
 fprintf('\t [t] select red (total/trash)\n');
 fprintf('\t [f] select green (filtered)\n');
 fprintf('\t [s] select time point (clean)\n');
-fprintf('\t [d] delete selected point\n');
+fprintf('\t [d] delete selected point(s)\n');
 fprintf('\t [x] select filter event to duplicate\n');
 fprintf('\t [q] save & quit\n');
 k='';
@@ -66,28 +68,36 @@ while ~strcmp(k, 'q')
   if w
     k = get(gcf, 'CurrentCharacter'); 
     switch k
-%       case 'z'
-%         if strcmp(hz.Enable, 'on')
-%           hz.Enable = 'off';
-%         else
-%           hz.Enable = 'on';
-%         end
+      case '+'
+        hz.Direction = 'in';
+        if strcmp(hz.Enable, 'on')
+          hz.Enable = 'off';
+        else
+          hz.Enable = 'on';
+        end
+      case '-'
+        hz.Direction = 'out';
+        if strcmp(hz.Enable, 'on')
+          hz.Enable = 'off';
+        else
+          hz.Enable = 'on';
+        end
       case 'z'
-          hz.Motion = 'both';
+        hz.Motion = 'both';
         if strcmp(hz.Enable, 'on')
           hz.Enable = 'off';
         else
           hz.Enable = 'on';
         end
       case 'h'
-          hz.Motion = 'horizontal';
+        hz.Motion = 'horizontal';
         if strcmp(hz.Enable, 'on')
           hz.Enable = 'off';
         else
           hz.Enable = 'on';
         end
       case 'v'
-          hz.Motion = 'vertical';
+        hz.Motion = 'vertical';
         if strcmp(hz.Enable, 'on')
           hz.Enable = 'off';
         else
