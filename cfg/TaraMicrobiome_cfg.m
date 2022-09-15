@@ -133,9 +133,9 @@ cfg.instruments.(['BB3' SN]).model = 'BB';
 cfg.instruments.(['BB3' SN]).sn = SN;
 cfg.instruments.(['BB3' SN]).ila_prefix = 'BB3';
 cfg.instruments.(['BB3' SN]).logger = 'InlininoBB3SN';
-cfg.instruments.(['BB3' SN]).lambda = [473,541,646];
-cfg.instruments.(['BB3' SN]).theta = 124;
-cfg.instruments.(['BB3' SN]).slope = [1.09e-05, 7.24e-06, 8.69e-06]; % factory TaraPacific [1.066e-05, 7.076e-06, 3.569e-06] Emmanuel cal Nov2019 [1.066e-05, 6.89e-06, 8.55e-06]
+cfg.instruments.(['BB3' SN]).lambda = [472.9,541.3,651];
+cfg.instruments.(['BB3' SN]).theta = 120; % Zhang et al. (2021) theta: 120 (factory 124)
+cfg.instruments.(['BB3' SN]).slope = [1.15E-05, 7.54E-06, 9.84E-06]; % PRE CAL 11-2019 [1.09E-05, 7.24E-06, 8.69E-06] POSTCAL 08-2021 [1.2025E-05, 7.8376E-06, 1.0982E-05] average CAL [1.15E-05, 7.54E-06, 9.84E-06]
 cfg.instruments.(['BB3' SN]).dark = [50, 44, 46];
 cfg.instruments.(['BB3' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['BB3' SN]),...
                                   'di',  fullfile(PATH_ROOT, 'raw', ['BB3' SN]),...
