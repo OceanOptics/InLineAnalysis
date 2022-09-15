@@ -42,9 +42,6 @@ if exist('fth', 'var')
   indexToDump = not(ismember(1:numel(fth_temp.dt),L));
   fth_temp(indexToDump, :) = [];
   
-  % merge and sort filt_raw filt_bad data
-  filt_raw_merged = sortrows([filt_raw; filt_bad], 'dt');
-  
   % interpolate fth_temp.swt onto binned data to fill missing flow data
   fth_interp = table([tot.dt; fth_temp.dt; filt_qc.dt], 'VariableNames', {'dt'});
   % delete duplicats
@@ -96,7 +93,7 @@ if exist('fth', 'var')
       %       to optical backscattering in the open ocean. Biogeosciences Discuss 6, 291–340. 
       %       https://doi.org/10.5194/bgd-6-291-2009
       fprintf('Fitting exponential to filter events ... \n')
-      [filt_avg, FiltStat] = FiltExpFit(filt_avg, filt_raw_merged, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
+      [filt_avg, FiltStat] = FiltExpFit(filt_avg, filt_raw, filt_bad, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
       fprintf('Done\n')
       % run 25 percentile method on failed exponential fits
       for i=1:size(sel_start, 1)
@@ -155,10 +152,13 @@ p.betap = tot.beta - filt_interp.beta;
 p.betap = param.slope .* p.betap; % Dark independent
 
 % Interpolate X_p with values from Sullivan et al. 2013
-% theta_ref = 90:10:170;
-% X_p_ref = [0.684 0.858 1.000 1.097 1.153 1.167 1.156 1.131 1.093];
-% X_p = interp1(theta_ref, X_p_ref, theta, 'spline');
-X_p = 1.076; % Specific to ECO-BB3 with a scattering angle of 124
+if param.theta ~= 124
+  theta_ref = 90:10:170;
+  X_p_ref = [0.684 0.858 1.000 1.097 1.153 1.167 1.156 1.131 1.093];
+  X_p = interp1(theta_ref, X_p_ref, param.theta, 'spline');
+else
+  X_p = 1.076; % Specific to ECO-BB3 with a scattering angle of 124
+end
 
 % Compute backscattering
 p.bbp = 2 * pi * X_p .* p.betap;

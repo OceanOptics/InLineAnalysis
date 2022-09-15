@@ -46,9 +46,6 @@ if exist('fth', 'var')
   indexToDump = not(ismember(1:numel(fth_temp.dt),L));
   fth_temp(indexToDump, :) = [];
   
-  % merge and sort filt_raw filt_bad data
-  filt_raw_merged = sortrows([filt_raw; filt_bad], 'dt');
-  
   % interpolate fth_temp.swt onto binned data to fill missing flow data
   fth_interp = table([tot.dt; fth_temp.dt; filt_qc.dt], 'VariableNames', {'dt'});
   % delete duplicats
@@ -100,7 +97,7 @@ if exist('fth', 'var')
       %       to optical backscattering in the open ocean. Biogeosciences Discuss 6, 291–340. 
       %       https://doi.org/10.5194/bgd-6-291-2009
       fprintf('Fitting exponential to filter events ... ')
-      [filt_avg, FiltStat] = FiltExpFit(filt_avg, filt_raw_merged, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
+      [filt_avg, FiltStat] = FiltExpFit(filt_avg, filt_raw, filt_bad, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
       fprintf('Done\n')      
       % run 25 percentile method on failed exponential fits
       for i=1:size(sel_start, 1)
