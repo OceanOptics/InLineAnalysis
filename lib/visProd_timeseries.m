@@ -136,7 +136,7 @@ switch instrument
       hold off
     end
       
-  case {'BB', 'HBB'}
+  case {'BB', 'HBB', 'HyperBB'}
     if size(lambda, 1) > size(lambda, 2); lambda = lambda'; end
     lambda_orig = lambda;
     if any(contains(data.Properties.VariableNames, 'betap'))

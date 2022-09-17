@@ -175,7 +175,7 @@ elseif contains(instrument, 'BB3')
   data.beta(bad_bb) = NaN;
   data(all(isnan(data.beta), 2),:) = [];
   
-elseif contains(instrument, 'HBB')
+elseif any(contains(instrument, {'HBB', 'HyperBB'}))
   % delete empty rows
   data(all(isnan(data.beta),2), :) = [];
   dup = data;
