@@ -48,37 +48,37 @@ if size(sel_start,1) ~= size(sel_end,1); error('Inconsistent fth data'); end
 
 % Compute filtered period median
 filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
-filt_avg.Tr = NaN(size(filt_avg,1), 1);
+filt_avg.Tau = NaN(size(filt_avg,1), 1);
 filt_avg.Beamc = NaN(size(filt_avg,1), 1);
-filt_avg.Tr_avg_sd = NaN(size(filt_avg,1), 1);
+filt_avg.Tau_avg_sd = NaN(size(filt_avg,1), 1);
 filt_avg.Beamc_avg_sd = NaN(size(filt_avg,1), 1);
-filt_avg.Tr_avg_n = NaN(size(filt_avg,1), 1);
+filt_avg.Tau_avg_n = NaN(size(filt_avg,1), 1);
 filt_avg.Beamc_avg_n = NaN(size(filt_avg,1), 1);
 for i=1:size(sel_start, 1)
   sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
   foo = filt(sel_filt,:);
   if sum(sel_filt) == 1
-    filt_avg.Tr(i,:) = foo.Tr;
+    filt_avg.Tau(i,:) = foo.Tau;
     filt_avg.Beamc(i,:) = foo.Beamc;
-    filt_avg.Tr_avg_sd(i,:) = foo.Tr_avg_sd;
+    filt_avg.Tau_avg_sd(i,:) = foo.Tau_avg_sd;
     filt_avg.Beamc_avg_sd(i,:) = foo.Beamc_avg_sd;
-    filt_avg.Tr_avg_n(i) = foo.Tr_avg_n;
+    filt_avg.Tau_avg_n(i) = foo.Tau_avg_n;
     filt_avg.Beamc_avg_n(i) = foo.Beamc_avg_n;
   else
-    foo.Tr_avg_sd(foo.Tr < prctile(foo.Tr, 75, 1)) = NaN;
+    foo.Tau_avg_sd(foo.Tau < prctile(foo.Tau, 75, 1)) = NaN;
     foo.Beamc_avg_sd(foo.Beamc > prctile(foo.Beamc, 25, 1)) = NaN;
-    foo.Tr(foo.Tr < prctile(foo.Tr, 75, 1)) = NaN;
+    foo.Tau(foo.Tau < prctile(foo.Tau, 75, 1)) = NaN;
     foo.Beamc(foo.Beamc > prctile(foo.Beamc, 25, 1)) = NaN;
     % compute average of all values smaller than 25th percentile for each filter event
-    filt_avg.Tr(i,:) = mean(foo.Tr, 1, 'omitnan');
+    filt_avg.Tau(i,:) = mean(foo.Tau, 1, 'omitnan');
     filt_avg.Beamc(i,:) = mean(foo.Beamc, 1, 'omitnan');
-    filt_avg.Tr_avg_sd(i,:) = mean(foo.Tr_avg_sd, 1, 'omitnan');
+    filt_avg.Tau_avg_sd(i,:) = mean(foo.Tau_avg_sd, 1, 'omitnan');
     filt_avg.Beamc_avg_sd(i,:) = mean(foo.Beamc_avg_sd, 1, 'omitnan');
-    filt_avg.Tr_avg_n(i) = sum(foo.Tr_avg_n(any(~isnan(foo.Tr), 2)), 'omitnan');
+    filt_avg.Tau_avg_n(i) = sum(foo.Tau_avg_n(any(~isnan(foo.Tau), 2)), 'omitnan');
     filt_avg.Beamc_avg_n(i) = sum(foo.Beamc_avg_n(any(~isnan(foo.Beamc), 2)), 'omitnan');
   end
 end
-filt_avg(all(isnan(filt_avg.Tr), 2) | all(isnan(filt_avg.Beamc), 2), :) = [];
+filt_avg(all(isnan(filt_avg.Tau), 2) | all(isnan(filt_avg.Beamc), 2), :) = [];
 
 % check if cdom data loaded
 if strcmp(interpolation_method, 'CDOM')
@@ -129,7 +129,7 @@ switch interpolation_method
     filt_interp.cdom = interp1(cdom.dt, cdom.mv_fdom, tot.dt, 'linear');
     filt_interp.cdom(isnan(filt_interp.cdom)) = interp1(cdom.dt, ...
       cdom.mv_fdom, tot.dt(isnan(filt_interp.cdom)), 'nearest', 'extrap'); % as independent from tot|filt period
-    filt_interp.Tr = NaN(size(filt_interp,1), 1);
+    filt_interp.Tau = NaN(size(filt_interp,1), 1);
     filt_interp.Beamc = NaN(size(filt_interp,1), 1);
     % For each period going from t0 to t1, starting and finishing by a filtered time
     for i=1:n_periods
@@ -164,51 +164,51 @@ switch interpolation_method
           Xt = foo_Xt(2:end-1);
         end
         % linearly interpolate a and c
-        lin_Tr = interp1(dt_filtavg_it, filt_avg.Tr(it0:it1,:), it_filt_interp.dt, 'linear');
+        lin_Tau = interp1(dt_filtavg_it, filt_avg.Tau(it0:it1,:), it_filt_interp.dt, 'linear');
         lin_Beamc = interp1(dt_filtavg_it, filt_avg.Beamc(it0:it1,:), it_filt_interp.dt, 'linear');
-        foo_interp_Tr = NaN(size(lin_Tr));
+        foo_interp_Tau = NaN(size(lin_Tau));
         foo_interp_Beamc = NaN(size(lin_Beamc));
         
-        pos_interp_Tr = lin_Tr ./ Xt;
+        pos_interp_Tau = lin_Tau ./ Xt;
         pos_interp_Beamc = lin_Beamc ./ Xt;
-        neg_interp_Tr = lin_Tr .* Xt;
+        neg_interp_Tau = lin_Tau .* Xt;
         neg_interp_Beamc = lin_Beamc .* Xt;
         
-        foo_interp_Tr(lin_Tr < 0) = pos_interp_Tr(lin_Tr < 0);
+        foo_interp_Tau(lin_Tau < 0) = pos_interp_Tau(lin_Tau < 0);
         foo_interp_Beamc(lin_Beamc > 0) = pos_interp_Beamc(lin_Beamc > 0);
         
-        foo_interp_Tr(lin_Tr > 0) = neg_interp_Tr(lin_Tr > 0);
+        foo_interp_Tau(lin_Tau > 0) = neg_interp_Tau(lin_Tau > 0);
         foo_interp_Beamc(lin_Beamc < 0) = neg_interp_Beamc(lin_Beamc < 0);
 
-        filt_interp.Tr(it, :) = foo_interp_Tr;
+        filt_interp.Tau(it, :) = foo_interp_Tau;
         filt_interp.Beamc(it, :) = foo_interp_Beamc;
       end
     end
     
     % Note std is interpolated linearly (not using the cdom function)
-    filt_interp.Tr_avg_sd = interp1(filt.dt, filt.Tr_avg_sd, filt_interp.dt, 'linear');
+    filt_interp.Tau_avg_sd = interp1(filt.dt, filt.Tau_avg_sd, filt_interp.dt, 'linear');
     filt_interp.Beamc_avg_sd = interp1(filt.dt, filt.Beamc_avg_sd, filt_interp.dt, 'linear');
     
     % remove interpolation when there is no data
-    filt_interp.Tr_avg_sd(all(isnan(tot.Tr),2), :) = NaN;
-    filt_interp.Tr(all(isnan(tot.Tr),2), :) = NaN;
+    filt_interp.Tau_avg_sd(all(isnan(tot.Tau),2), :) = NaN;
+    filt_interp.Tau(all(isnan(tot.Tau),2), :) = NaN;
     filt_interp.Beamc_avg_sd(all(isnan(tot.Beamc),2), :) = NaN;
     filt_interp.Beamc(all(isnan(tot.Beamc),2), :) = NaN;
     
   case 'linear'
     % Interpolate filtered on total linearly
     filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-    filt_interp.Tr = interp1(filt_avg.dt, filt_avg.Tr, filt_interp.dt, 'linear');
+    filt_interp.Tau = interp1(filt_avg.dt, filt_avg.Tau, filt_interp.dt, 'linear');
     filt_interp.Beamc = interp1(filt_avg.dt, filt_avg.Beamc, filt_interp.dt, 'linear');
-    filt_interp.Tr_avg_sd = interp1(filt_avg.dt, filt_avg.Tr_avg_sd, filt_interp.dt, 'linear');
+    filt_interp.Tau_avg_sd = interp1(filt_avg.dt, filt_avg.Tau_avg_sd, filt_interp.dt, 'linear');
     filt_interp.Beamc_avg_sd = interp1(filt_avg.dt, filt_avg.Beamc_avg_sd, filt_interp.dt, 'linear');
   otherwise
   error('Method not supported.');
 end
 
 % Remove lines full of NaNs or with inf data
-sel2rm = any(~isfinite(tot.Tr),2) | any(~isfinite(tot.Beamc),2)| all(isnan(tot.Tr),2) | ...
-         all(isnan(tot.Beamc),2) | all(isnan(filt_interp.Tr),2) | all(isnan(filt_interp.Beamc),2);
+sel2rm = any(~isfinite(tot.Tau),2) | any(~isfinite(tot.Beamc),2)| all(isnan(tot.Tau),2) | ...
+         all(isnan(tot.Beamc),2) | all(isnan(filt_interp.Tau),2) | all(isnan(filt_interp.Beamc),2);
 tot(sel2rm,:) = [];
 filt_interp(sel2rm,:) = [];
 
@@ -218,7 +218,7 @@ if strcmp(interpolation_method, 'CDOM')
 end
 
 if exist('visFlag', 'file')
-  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'Tr', round(size(tot.Tr, 2)/2), [], [], [], true);
+  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'Beamc', round(size(tot.Tau, 2)/2), [], [], [], true);
   title('Check filter event interpolation, press q to continue', 'FontSize', 14)
   if strcmp(interpolation_method, 'CDOM')
     ax1 = gca;
@@ -236,19 +236,19 @@ end
 
 % Particulate = Total - FSW
 p = table(tot.dt, 'VariableNames', {'dt'});
-p.Tr = tot.Tr;
+p.Tau = tot.Tau + filt_interp.Tau;
 p.Beamcp = tot.Beamc - filt_interp.Beamc;
 
 % Propagate error (using geometric mean of measurement errors)
 %   Note: Error is not propagated through Scattering & Residual temperature
 %         correction as required by SeaBASS
-p.Tr_sd = sqrt(tot.Tr_avg_sd.^2 + filt_interp.Tr_avg_sd.^2);
+p.Tau_sd = sqrt(tot.Tau_avg_sd.^2 + filt_interp.Tau_avg_sd.^2);
 p.Beamcp_sd = sqrt(tot.Beamc_avg_sd.^2 + filt_interp.Beamc_avg_sd.^2);
-p.Tr_n = tot.Tr_avg_n;
+p.Tau_n = tot.Tau_avg_n;
 p.Beamcp_n = tot.Beamc_avg_n;
 
 % % delete ap spectrum full of NaNs
-% p(all(isnan(p.Trp),2),:) = [];
+% p(all(isnan(p.Taup),2),:) = [];
 % p(all(isnan(p.Beamcp),2),:) = [];
 
 %% ag & cg
@@ -257,7 +257,7 @@ if ~isempty(di)
     % select DIW with lowest a or c values between 550-650nm
     di_orig = di;
     di_dt = datetime(di_orig.dt, 'ConvertFrom', 'datenum');
-    best_di_Tr = NaN(size(di_orig,1), 1);
+    best_di_Tau = NaN(size(di_orig,1), 1);
     best_di_Beamc = NaN(size(di_orig,1), 1);
     for i = 1:size(di_orig,1)
       if i == 1 || i == size(di_orig,1)
@@ -265,41 +265,41 @@ if ~isempty(di)
       else
         iddi = abs(di_dt(i) - di_dt) < hours(36);
       end
-      highest_di_Tr = di_orig.Tr == max(di_orig.Tr(iddi, :), [], 1);
+      highest_di_Tau = di_orig.Tau == max(di_orig.Tau(iddi, :), [], 1);
       lowest_di_Beamc = di_orig.Beamc == min(di_orig.Beamc(iddi, :), [], 1);
-      foo_Tr = find(sum(highest_di_Tr, 2) == max(sum(highest_di_Tr, 2)));
+      foo_Tau = find(sum(highest_di_Tau, 2) == max(sum(highest_di_Tau, 2)));
       foo_Beamc = find(sum(lowest_di_Beamc, 2) == max(sum(lowest_di_Beamc, 2)));
-      di.Tr(i, :) = di_orig.Tr(foo_Tr, :);
+      di.Tau(i, :) = di_orig.Tau(foo_Tau, :);
       di.Beamc(i, :) = di_orig.Beamc(foo_Beamc, :);
-      di.Tr_avg_sd(i, :) = di_orig.Tr_avg_sd(foo_Tr, :);
+      di.Tau_avg_sd(i, :) = di_orig.Tau_avg_sd(foo_Tau, :);
       di.Beamc_avg_sd(i, :) = di_orig.Beamc_avg_sd(foo_Beamc, :);
       
-      best_di_Tr(i) = foo_Tr(1);
+      best_di_Tau(i) = foo_Tau(1);
       best_di_Beamc(i) = foo_Beamc(1);
     end
   end
   
   % remove when a and c are full of NaNs
-  filt_avg(all(isnan(filt_avg.Tr), 2) & all(isnan(filt_avg.Beamc), 2),:) = [];
+  filt_avg(all(isnan(filt_avg.Tau), 2) & all(isnan(filt_avg.Beamc), 2),:) = [];
   
   % Interpolate filtered on Total
   di_interp = table(filt_avg.dt, 'VariableNames', {'dt'});
-  di_interp.Tr = interp1(di.dt, di.Tr, di_interp.dt, 'linear', 'extrap');
+  di_interp.Tau = interp1(di.dt, di.Tau, di_interp.dt, 'linear', 'extrap');
   di_interp.Beamc = interp1(di.dt, di.Beamc, di_interp.dt, 'linear', 'extrap');
-  di_interp.Tr_avg_sd = interp1(di.dt, di.Tr_avg_sd, di_interp.dt, 'linear', 'extrap');
+  di_interp.Tau_avg_sd = interp1(di.dt, di.Tau_avg_sd, di_interp.dt, 'linear', 'extrap');
   di_interp.Beamc_avg_sd = interp1(di.dt, di.Beamc_avg_sd, di_interp.dt, 'linear', 'extrap');
 
   % Dissolved = Filtered - DI
   g = table(filt_avg.dt, 'VariableNames', {'dt'});
-  g.Trg = filt_avg.Tr - di_interp.Tr;
+  g.Taug = filt_avg.Tau - di_interp.Tau;
   g.Beamcg = filt_avg.Beamc - di_interp.Beamc;
 
   % Propagate error
   %   Note: Error is not propagated through Scattering & Residual temperature
   %         correction as required by SeaBASS
-  g.Trg_sd = sqrt(filt_avg.Tr_avg_sd.^2 + di_interp.Tr_avg_sd.^2);
+  g.Taug_sd = sqrt(filt_avg.Tau_avg_sd.^2 + di_interp.Tau_avg_sd.^2);
   g.Beamcg_sd = sqrt(filt_avg.Beamc_avg_sd.^2 + di_interp.Beamc_avg_sd.^2);
-  g.Trg_n = filt_avg.Tr_avg_n;
+  g.Taug_n = filt_avg.Tau_avg_n;
   g.Beamcg_n = filt_avg.Beamc_avg_n;
   
 else
