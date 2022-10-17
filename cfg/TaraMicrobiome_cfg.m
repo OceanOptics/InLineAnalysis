@@ -24,7 +24,11 @@ cfg.meta.measurement_depth = 1.5;
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-PATH_ROOT = 'PATH_TO_DATA_PARENT_DIRECTORY';
+if ispc
+  PATH_ROOT = 'D:\Data\TaraMicrobiome\';
+elseif ismac
+  PATH_ROOT = '/Volumes/Samsung_T5/Data/TaraMicrobiome/';
+end
 
 %%% TSG %%%
 model = 'SBE3845';
@@ -67,7 +71,7 @@ cfg.instruments.FLOW.path = struct('raw',  fullfile(PATH_ROOT, 'raw', 'FlowContr
                                   'wk',   fullfile(PATH_ROOT, 'wk', 'FlowControl'),...
                                   'prod', fullfile(PATH_ROOT, 'prod'),...
                                   'ui', fullfile(PATH_ROOT, 'ui', 'FlowControl'));
-cfg.instruments.FLOW.view = struct('varname', 'swt','spd_variable','spd1'); % spd1 spd2
+cfg.instruments.FLOW.view = struct('varname', 'swt','spd_variable','spd2'); % spd1 spd2
 
 %%% ACS57 %%%
 SN = '57';
@@ -204,7 +208,26 @@ cfg.instruments.(['LISSTTau' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw
                                   'wk',   fullfile(PATH_ROOT, 'wk', ['LISSTTau' SN]),...
                                   'prod', fullfile(PATH_ROOT, 'prod'),...
                                   'ui', fullfile(PATH_ROOT, 'ui', ['LISSTTau' SN]));
-cfg.instruments.(['LISSTTau' SN]).view = struct('varname', 'Beamc', 'varcol', 1); % Beamc Tr
+cfg.instruments.(['LISSTTau' SN]).view = struct('varname', 'Beamc', 'varcol', 1); % Beamc Tau
+
+
+%%% LISST200X %%%
+SN = '2002';
+cfg.instruments.(['LISST200X' SN]) = struct();
+cfg.instruments.(['LISST200X' SN]).di = struct();
+cfg.instruments.(['LISST200X' SN]).di.prefix = ['DIW_LISST200X' SN '_'];
+cfg.instruments.(['LISST200X' SN]).di.postfix = '';
+cfg.instruments.(['LISST200X' SN]).model = 'LISST200X';
+cfg.instruments.(['LISST200X' SN]).sn = SN;
+cfg.instruments.(['LISST200X' SN]).ila_prefix = ['LISST200X' SN '_'];
+cfg.instruments.(['LISST200X' SN]).logger = 'internal_logger';
+cfg.instruments.(['LISST200X' SN]).inversion = 'spherical'; % spherical irregular
+cfg.instruments.(['LISST200X' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['LISST200X' SN]),...
+                                  'wk',   fullfile(PATH_ROOT, 'wk', ['LISST200X' SN]),...
+                                  'prod', fullfile(PATH_ROOT, 'prod'),...
+                                  'ui', fullfile(PATH_ROOT, 'ui', ['LISST200X' SN]));
+cfg.instruments.(['LISST200X' SN]).view = struct('varname', 'LaserTransmission', 'varcol', 1);
+
 
 %%% LISST %%%
 SN = '1183';
@@ -286,6 +309,7 @@ end
 % cfg.process.sync.delay.LISST1183 = 0;
 % cfg.process.sync.delay.LISSTTau1002G = 0;
 % cfg.process.sync.delay.SUVF6244 = 0;
+cfg.process.sync.delay.LISST200X2002 = -90;
 
 %%% QC Reference (Flow Control/FLOW) %%%
 cfg.process.qcref = struct();
@@ -318,8 +342,10 @@ for i = 1:size(cfg.process.instruments2run)
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [240, 100]; % [240, 100] for Seapoint fluo
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [240, 140]; % [240, 140] for HyperBB
-  elseif any(contains(cfg.process.instruments2run{i}, 'LISST') & ~contains(cfg.process.instruments2run{i}, {'TAU','tau','Tau'}))
+  elseif any(contains(cfg.process.instruments2run{i}, 'LISST') & ~contains(cfg.process.instruments2run{i}, {'TAU','tau','Tau','200X','200x'}))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [540, 360]; % [540, 360] for LISST
+  elseif any(contains(cfg.process.instruments2run{i}, {'LISST200X', 'LISST200x'}))
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [180, 60]; % [540, 360] for LISST
   elseif any(contains(cfg.process.instruments2run{i}, {'LISSTTAU','LISSTTau','LISST-TAU'}))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [180, 60]; % [180, 60] for LISST-Tau
   end
@@ -363,8 +389,10 @@ for i = 1:size(cfg.process.instruments2run)
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for Seapoint fluo
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 5; % 5 min for HyperBB
-  elseif any(contains(cfg.process.instruments2run{i}, 'LISST') & ~contains(cfg.process.instruments2run{i}, {'TAU','tau','Tau'}))
+  elseif any(contains(cfg.process.instruments2run{i}, 'LISST') & ~contains(cfg.process.instruments2run{i}, {'TAU','tau','Tau','200X','200x'}))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 10; % 10 min for LISST
+  elseif any(contains(cfg.process.instruments2run{i}, 'LISST200X'))
+    cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for LISST
   elseif any(contains(cfg.process.instruments2run{i}, {'LISSTTAU','LISSTTau','LISST-TAU'}))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for LISST-Tau
   elseif any(contains(cfg.process.instruments2run{i}(1:3), 'ALFA'))
@@ -455,9 +483,14 @@ for i = 1:size(cfg.process.instruments2run)
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'SW_scattering', ... % interpolate constant SW_scattering
                                       'filt_method', 'exponential_fit'); % 25percentil exponential_fit
-  % LISST options
+  % LISST100X options
   elseif any(contains(cfg.process.instruments2run{i}, 'LISST') & ~contains(cfg.process.instruments2run{i}, {'TAU','tau','Tau'}))
-    cfg.process.calibrate.LISST1183 = struct('compute_dissolved', false, ...
+    cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
+                                      'FLOW_source', 'FLOW', ...
+                                      'di_method', 'interpolate'); % interpolate constant
+  % LISST200X options
+  elseif any(contains(cfg.process.instruments2run{i}, {'LISST200X', 'LISST200x'}))
+    cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'interpolate'); % interpolate constant
   % LISST-Tau options

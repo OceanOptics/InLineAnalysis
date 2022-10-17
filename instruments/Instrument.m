@@ -391,14 +391,18 @@ classdef (Abstract) Instrument < handle
             fn = strsplit(f, {'_','.'}); fn = fn{end-1};%(1:end-4);
             if strcmp(fn, level)
               obj.(level)(end+1:end+sum(sel),:) = data_temp(sel,:);
+              obj.(level).Properties.CustomProperties = data_temp.Properties.CustomProperties;
             else
               if isfield(obj.(level), fn)
                 obj.(level).(fn)(end+1:end+sum(sel),:) = data_temp(sel,:);
+                obj.(level).(fn).Properties.CustomProperties = data_temp.Properties.CustomProperties;
               else
                 if strcmp(level, 'prod')
                   obj.(level).(fn) = data_temp(sel,:);
+                  obj.(level).(fn).Properties.CustomProperties = data_temp.Properties.CustomProperties;
                 else
                   obj.(level)(end+1:end+sum(sel),:) = data_temp(sel,:);
+                  obj.(level).Properties.CustomProperties = data_temp.Properties.CustomProperties;
                 end
               end
             end

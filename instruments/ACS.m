@@ -99,7 +99,7 @@ classdef ACS < Instrument
 %         fprintf('WARNING: DI Postfix set to "_DI" \n'); DEPRECATED with Inlinino
 %         obj.di_cfg.postfix = '_DI'; DEPRECATED with Inlinino
       end
-      if isempty(obj.di_cfg.prefix); obj.di_cfg.prefix = ['acs' obj.sn '_']; end
+      if isempty(obj.di_cfg.prefix); obj.di_cfg.prefix = ['DIW_ACS' obj.sn '_']; end
       switch obj.di_cfg.logger
         case 'InlininoACScsv'
           obj.raw.diw = iRead(@importInlininoACScsv, obj.path.di, obj.path.wk, obj.di_cfg.prefix, ...

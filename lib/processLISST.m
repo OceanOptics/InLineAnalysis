@@ -143,7 +143,7 @@ end
 % % %               .* zsc_laser_reference ./ (tot.laser_reference(i).*ones(1,32)); % standard deviation (same units)
 % % % end
 
-[p, pbin_size] = compute_product(tot, filt_interp, param, phi, path_length, LASER_POWER_VAR);
+[p, pbin_size] = compute_product_LISST100X(tot, filt_interp, param, phi, path_length, LASER_POWER_VAR);
 
 % % Code updated on Jan 16, 2019
 % %   dcal is independent of zsc so removed zsc from code and normalize directly to FSW
@@ -235,19 +235,19 @@ if nargout > 2 && ~isempty(di)
     otherwise
       error('Method not supported.');
   end
-  [g, gbin_size] = compute_product(filt_avg, di_pp, param, phi, path_length, LASER_POWER_VAR);
+  [g, gbin_size] = compute_product_LISST100X(filt_avg, di_pp, param, phi, path_length, LASER_POWER_VAR);
 else
   g = table();
 end
 end
 
 
-function [prod, bin_size] = compute_product(tot, filt_interp, param, phi, path_length, LASER_POWER_VAR)
+function [prod, bin_size] = compute_product_LISST100X(tot, filt_interp, param, phi, path_length, LASER_POWER_VAR)
 % Set output table
 prod = table(tot.dt, 'VariableNames', {'dt'});
 
 % Code updated on Jan 16, 2019
-%   dcal is independent of zsc so removed zsc from code and normalize directly to FSW
+% dcal is independent of zsc so removed zsc from code and normalize directly to FSW
 % Capture change in laser reference
 r = filt_interp.(LASER_POWER_VAR) ./ filt_interp.laser_reference;
 tau = tot.(LASER_POWER_VAR) ./ tot.laser_reference ./ r;

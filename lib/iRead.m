@@ -64,8 +64,8 @@ for i=1:length(dt)
     else
       % Import data from selection
       ddata = [];
-%       for j=1:size(l,1)
-      parfor (j=1:size(l,1), parallel_flag)
+      for j=1:size(l,1)
+%       parfor (j=1:size(l,1), parallel_flag)
         if isempty(otherarg1) && isempty(otherarg2)
           foo = fun(fullfile(dir_in, l{j}), verbose);
         elseif isempty(otherarg2)
@@ -76,8 +76,10 @@ for i=1:length(dt)
         ddata = [ddata; foo];
       end
       % Keep only data of day
-      sel = ddata.dt >= dt(i) & ddata.dt < dt(i) + 1;
-      ddata = ddata(sel,:);
+      if ~any(strcmp(software, {'internal_logger', 'TeraTerm', 'WetView', 'Compass_2.1rc'}))
+        sel = ddata.dt >= dt(i) & ddata.dt < dt(i) + 1;
+        ddata = ddata(sel,:);
+      end
       if ~isempty(ddata)
         % Write data of day
         if ~nowrite
@@ -196,6 +198,10 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
     case 'MatlabTSG'
       % List all files in directory
       l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.txt']));
+      filenames = {l.name}';
+    case 'internal_logger'
+      % List all files in directory
+      l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.RBN']));
       filenames = {l.name}';
     case 'TeraTerm'
       % TeraTerm filenames correspond to the time at which logging started

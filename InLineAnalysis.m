@@ -102,6 +102,8 @@ classdef InLineAnalysis < handle
               obj.instrument.(i) = LISST(cfg.instruments.(i));
             case {'LISSTTau', 'LISSTTAU', 'TAU'}
               obj.instrument.(i) = LISSTTau(cfg.instruments.(i));
+            case 'LISST200X'
+              obj.instrument.(i) = LISST200X(cfg.instruments.(i));
             case 'ECO'
               obj.instrument.(i) = ECO(cfg.instruments.(i));
             case 'FL'
@@ -112,7 +114,7 @@ classdef InLineAnalysis < handle
               obj.instrument.(i) = CD(cfg.instruments.(i));
             case 'ALFA'
               obj.instrument.(i) = ALFA(cfg.instruments.(i));
-           case 'PAR'
+            case 'PAR'
               obj.instrument.(i) = PAR(cfg.instruments.(i));
             otherwise
               error('Instrument not supported: %s.', cfg.instruments.(i).model);
@@ -1052,7 +1054,7 @@ classdef InLineAnalysis < handle
                                            obj.cfg.calibrate.(i).filt_method)
             case 'CD'
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved)
-            case 'LISST'
+            case {'LISST', 'LISST100X', 'LISST100x', 'LISST200X', 'LISST200x'}
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
                                            obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
                                            obj.cfg.calibrate.(i).di_method)
@@ -1137,6 +1139,17 @@ classdef InLineAnalysis < handle
               end
             otherwise
               error('Unknow loading mode.');
+          end
+          % extract custom properties
+          non_empty = find(structfun(@(x) ~isempty(x), obj.instrument.(i).(level)));
+          fnam = fieldnames(obj.instrument.(i).(level));
+          if ~isempty(non_empty)
+            cprop = fieldnames(obj.instrument.(i).(level).(fnam{non_empty(1)}).Properties.CustomProperties);
+            if ~isempty(cprop)
+              for j = 1:size(cprop, 1)
+                obj.instrument.(i).(cprop{j}) = obj.instrument.(i).(level).(fnam{non_empty(1)}).Properties.CustomProperties.(cprop{j});
+              end
+            end
           end
         end
       end
