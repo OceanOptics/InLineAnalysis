@@ -91,13 +91,13 @@ if exist('visFlag', 'file') && exist('fth', 'var')
   title('Check filter event interpolation, press q to continue', 'FontSize', 14)
   legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
     'AutoUpdate','off', 'FontSize', 12)
-  guiSelectOnTimeSeries(fh);
+%   guiSelectOnTimeSeries(fh);
 elseif exist('visFlag', 'file')
   fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], []);
   title('Check filter event interpolation, press q to continue', 'FontSize', 14)
   legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
     'AutoUpdate','off', 'FontSize', 12)
-  guiSelectOnTimeSeries(fh);
+%   guiSelectOnTimeSeries(fh);
 end
 
 % % Set output table

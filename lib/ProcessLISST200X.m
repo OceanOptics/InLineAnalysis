@@ -134,13 +134,13 @@ if ~isempty(filt)
     title('Check filter event interpolation, press q to continue', 'FontSize', 14)
     legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
       'AutoUpdate','off', 'FontSize', 12)
-    guiSelectOnTimeSeries(fh);
+%     guiSelectOnTimeSeries(fh);
   elseif exist('visFlag', 'file')
     fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'LaserTransmission', round(size(tot.LaserTransmission, 2)/2), [], []);
     title('Check filter event interpolation, press q to continue', 'FontSize', 14)
     legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
       'AutoUpdate','off', 'FontSize', 12)
-    guiSelectOnTimeSeries(fh);
+%     guiSelectOnTimeSeries(fh);
   end
 else
   warning('Filtered measurements not provided files, instrument zscat was used.')
@@ -221,9 +221,9 @@ LaserRatio = zsc.LaserTransmission ./ zsc.LaserReference;                       
 prod.Transmission = zsc.LaserTransmission ./ LaserRatio ./ zsc.LaserReference;  % compute optical transmission, taking the eventual drift in laser power into account
 prod.Beamc = -log(prod.Transmission) ./ (param.config.effPath / 1000);
 
-scat = ringData ./ prod.Transmission;                                                  % correct for attenuation
-scat = scat - zsc.RingValues .* zsc.LaserReference ./ zsc.LaserReference;  % subtract the background
-cscat = scat .* repmat(param.dcal, size(zsc.RingValues, 1), 1);                                       % apply ring area file
+scat = ringData ./ prod.Transmission;                                           % correct for attenuation
+scat = scat - zsc.RingValues .* zsc.LaserReference ./ zsc.LaserReference;       % subtract the background
+cscat = scat .* repmat(param.dcal, size(zsc.RingValues, 1), 1);                 % apply ring area file
 [angles, prod.VSF] = getVSF_L200X(cscat, param.config, zsc.LaserReference);     % calculate uncalibrated VSF
 cscat = cscat .* repmat(param.fzs(40) ./ zsc.LaserReference, 1, 36);            % normilize to factory LREF
 cscat = cscat ./ param.config.VCC;                                              % apply concentration calibration
