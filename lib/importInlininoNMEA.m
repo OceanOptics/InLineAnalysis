@@ -27,47 +27,71 @@ end
 
 % Get header
 hd = strip(strsplit(fgetl(fid), ','));
-hd{strcmp(hd, 'time')} = 'dt';
-hd{strcmp(hd, 'datetime')} = 'gps_dt';
-hd{strcmp(hd, 'latitude')} = 'lat';
-hd{strcmp(hd, 'longitude')} = 'lon';
-% get units skipping empty lines (bug in old Inlinino)
-unit = fgetl(fid);
-while isempty(unit)
+if strcmp(hd{2}, 'packet')
+  t = fileread(filename);
+  tab_sz = count(t,'$GPRMC');
+  
+  % get units skipping empty lines (bug in old Inlinino)
+  unit = fgetl(fid);
+  while isempty(unit)
     unit = fgetl(fid);
-end
-% get units and lambda
-unit = strip(strsplit(unit, ','));
-
-% Set parser
-parser = ['%s%s' repmat('%f', 1, size(hd,2)-2)];
-
-% Read data
-t = textscan(fid, parser, 'delimiter',',');
-% Close file
-fclose(fid);
-
-% remove GPS time
-unit = unit(~strcmp(hd, 'gps_dt'));
-t = t(~strcmp(hd, 'gps_dt'));
-hd = hd(~strcmp(hd, 'gps_dt'));
-
-% Build table
-dat = [];
-for i = 1:size(hd, 2)
-  if strcmp(hd{i}, 'dt')
-    dat = [dat datenum(t{i}, 'yyyy/mm/dd HH:MM:SS.FFF')];
-  elseif contains(hd{i}, 'swt')
-    foo2 = t{i};
-    foo2(contains(foo2, 'True')) = {'1'};
-    foo2(contains(foo2, 'False')) = {'0'};
-    dat = [dat logical(cell2mat(foo2))];
-  else
-    dat = [dat t{i}];
   end
+  % get units and lambda
+  unit = strip(strsplit(unit, ','));
+  
+  % preallocate table
+  dat = table(NaT(tab_sz, 1), NaT(tab_sz, 1), NaN(tab_sz, 1), NaN(tab_sz, 1), ...
+    'VariableNames', {'dt', 'gps_dt', 'lat', 'lon'});
+  for i = progress(1:size(dat, 1))
+    lin = fgetl(fid);
+    if contains(lin, '$GPRMC')
+      [dat.dt(i), dat.gps_dt(i), dat.lat(i), dat.lon(i)] = parseGPRMC(lin);
+    end
+  end
+  dat(all(isnat(dat.dt) & isnat(dat.gps_dt) & isnan(dat.lat) & isnan(dat.lon), 2), :) = [];
+else
+  hd{strcmp(hd, 'time')} = 'dt';
+  hd{strcmp(hd, 'datetime')} = 'gps_dt';
+  hd{strcmp(hd, 'latitude')} = 'lat';
+  hd{strcmp(hd, 'longitude')} = 'lon';
+  % get units skipping empty lines (bug in old Inlinino)
+  unit = fgetl(fid);
+  while isempty(unit)
+      unit = fgetl(fid);
+  end
+  % get units and lambda
+  unit = strip(strsplit(unit, ','));
+
+  % Set parser
+  parser = ['%s%s' repmat('%f', 1, size(hd,2)-2)];
+
+  % Read data
+  t = textscan(fid, parser, 'delimiter',',');
+  % Close file
+  fclose(fid);
+
+  % remove GPS time
+  unit = unit(~strcmp(hd, 'gps_dt'));
+  t = t(~strcmp(hd, 'gps_dt'));
+  hd = hd(~strcmp(hd, 'gps_dt'));
+
+  % Build table
+  dat = [];
+  for i = 1:size(hd, 2)
+    if strcmp(hd{i}, 'dt')
+      dat = [dat datenum(t{i}, 'yyyy/mm/dd HH:MM:SS.FFF')];
+    elseif contains(hd{i}, 'swt')
+      foo2 = t{i};
+      foo2(contains(foo2, 'True')) = {'1'};
+      foo2(contains(foo2, 'False')) = {'0'};
+      dat = [dat logical(cell2mat(foo2))];
+    else
+      dat = [dat t{i}];
+    end
+  end
+  data = array2table(dat, 'VariableNames', hd);
+  data.Properties.VariableUnits = unit;
 end
-data = array2table(dat, 'VariableNames', hd);
-data.Properties.VariableUnits = unit;
 
 % Remove last line if it's past midnight (bug in old Inlinino)
 if ~isempty(data) && size(data,1) > 1
@@ -77,6 +101,14 @@ if ~isempty(data) && size(data,1) > 1
 end
 
 if verbose; fprintf('Done\n'); end
+end
 
-
-
+function [dt, gps_dt, lat, lon] = parseGPRMC(sentence)
+  foo = strsplit(sentence, ',');
+  dt = datetime(foo{1}, 'InputFormat', 'yyyy/MM/dd HH:mm:ss.SSS');
+  gps_dt = datetime([foo{11} foo{3}], 'InputFormat', 'ddMMyyHHmmss.SSS');
+  lat = str2double(foo{5}(1:2)) + str2double(foo{5}(3:end))/100;
+  if strcmp(foo{6}, 'S'); lat = -lat; end
+  lon = str2double(foo{7}(1:3)) + str2double(foo{7}(4:end))/100;
+  if strcmp(foo{8}, 'W'); lon = -lon; end
+end

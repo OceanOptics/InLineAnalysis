@@ -19,6 +19,19 @@ classdef atlasTSG < Instrument
       % Post initialization
       if isfield(cfg, 'TSseparated'); obj.TSseparated = cfg.TSseparated;
       else; error('Missing field "TSseparated".'); end
+      if isfield(cfg, 'prefix')
+        obj.prefix = cfg.prefix;
+      else
+        if obj.TSseparated
+          warning('Missing field "prefix": default "ATLAS".');
+          obj.prefix = 'ATLAS';
+        else
+          warning('Missing field "prefix": default "ATLASECRTD".');
+          obj.prefix = 'ATLASECRTD';
+        end
+      end
+      if isfield(cfg, 'sn'); obj.sn = cfg.sn;
+      else; error('Missing field serial number "sn".'); end
       if isfield(cfg, 'coef'); obj.coef = cfg.coef;
       else; error('Missing field "coef": Strucutre containing calibration coefficients.'); end
       
@@ -30,14 +43,14 @@ classdef atlasTSG < Instrument
       switch obj.logger
         case {'Inlinino', 'Inlinino_atlasTSG'}
           if obj.TSseparated
-            obj.data = iRead(@importInlinino_atlasTSG, obj.path.raw, obj.path.wk, 'AST01_',...
+            obj.data = iRead(@importInlinino_atlasTSG, obj.path.raw, obj.path.wk, [obj.prefix 'EC'],...
                            days2run, 'Inlinino_atlasTSG', force_import, ~write, true);
-            foo = iRead(@importInlinino_atlasTSG, obj.path.raw, obj.path.wk, 'ASC01_',...
+            foo = iRead(@importInlinino_atlasTSG, obj.path.raw, obj.path.wk, [obj.prefix 'RTD'],...
                            days2run, 'Inlinino_atlasTSG', force_import, ~write, true);
             % interpolate C onto T table and merge
             obj.data.C = interp1(foo.dt, foo.C, obj.data.dt, 'linear', 'extrap'); % extrap needed for first minute of data
           else
-            obj.data = iRead(@importInlinino_atlasTSG, obj.path.raw, obj.path.wk, 'AS_',...
+            obj.data = iRead(@importInlinino_atlasTSG, obj.path.raw, obj.path.wk, obj.prefix,...
                            days2run, 'Inlinino_atlasTSG', force_import, ~write, true);
           end
         otherwise

@@ -126,6 +126,7 @@ classdef InLineAnalysis < handle
           obj.cfg.instruments2run = fieldnames(obj.instrument)';
         end
       end
+      fprintf('%s config file loaded in ILA structure\n', cfg_file_name)
     end
     
     % Pre-Process

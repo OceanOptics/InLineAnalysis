@@ -66,7 +66,7 @@ while ~strcmp(k, 'q')
 %   k = input('>','s');
   w = waitforbuttonpress();
   if w
-    k = get(gcf, 'CurrentCharacter'); 
+    k = get(gcf, 'CurrentCharacter');
     switch k
       case '+'
         hz.Direction = 'in';

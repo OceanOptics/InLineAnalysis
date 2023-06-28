@@ -100,11 +100,11 @@ figure('WindowState', 'maximize'); hold on
 set(gca, 'Visible', 'off')
 
 % wrap longitude over 360°
-if all(any(station_info.lon(:) < 0) & any(station_info.lon(:) > 0) & ...
-  sum(station_info.lon(:) < -90 | station_info.lon(:) > 90) > ...
-  sum(station_info.lon(:) > -90 & station_info.lon(:) < 90))
-  station_info.lon(station_info.lon < 0) = station_info.lon(station_info.lon < 0) + 360;
-end
+% if all(any(station_info.lon(:) < 0) & any(station_info.lon(:) > 0) & ...
+%   sum(station_info.lon(:) < -90 | station_info.lon(:) > 90) > ...
+%   sum(station_info.lon(:) > -90 & station_info.lon(:) < 90))
+%   station_info.lon(station_info.lon < 0) = station_info.lon(station_info.lon < 0) + 360;
+% end
 % station_info.lon(station_info.lon < 0) = station_info.lon(station_info.lon < 0) + 360;
 % get lat/lon limits
 latlim = [min(station_info.lat) - (0.05 * (max(station_info.lat) - min(station_info.lat))) ...

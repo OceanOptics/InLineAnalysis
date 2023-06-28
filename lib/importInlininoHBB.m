@@ -119,7 +119,7 @@ catch
 end
   
 dat(isnan(dat.dt), :) = [];
-dat.Properties.VariableUnits = unit(~contains(hd, {'Date', 'Time'}));
+% dat.Properties.VariableUnits = unit(~contains(hd, {'Date', 'Time'}));
 
 for ks = unique(dat.ScanIdx')
   scanSel = dat.ScanIdx==ks;

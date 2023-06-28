@@ -19,9 +19,10 @@ classdef FL < ECO
       
     end
 
-    function Calibrate(obj)
-      param = struct('slope', obj.slope);
-      obj.prod.p = processFL(param, obj.qc.tsw, obj.qc.fsw);
+    function Calibrate(obj, SWT)
+      SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
+      param = struct('slope', obj.slope, 'dark', obj.dark);
+      obj.prod.p = processFL(param, obj.qc.tsw, obj.qc.fsw, SWT, SWT_constants);
     end
   end
 end

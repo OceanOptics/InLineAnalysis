@@ -13,6 +13,12 @@ classdef NMEA < Instrument
       obj = obj@Instrument(cfg);
       
       % Post initialization
+      if isfield(cfg, 'prefix')
+        obj.prefix = cfg.prefix;
+      else
+        obj.prefix = [obj.model obj.sn];
+        warning('Missing field "prefix": Default used "[model serial_number]".');
+      end
       
       % Change default Split method
       obj.split.mode = 'None';
@@ -21,7 +27,7 @@ classdef NMEA < Instrument
     function ReadRaw(obj, days2run, force_import, write)
       switch obj.logger
         case {'Inlinino'}
-            obj.data = iRead(@importInlininoNMEA, obj.path.raw, obj.path.wk, [obj.model obj.sn '_'],...
+            obj.data = iRead(@importInlininoNMEA, obj.path.raw, obj.path.wk, [obj.prefix '_'],...
                            days2run, 'Inlinino', force_import, ~write, true);
         otherwise
           error('NMEA: Unknown logger.');
