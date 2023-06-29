@@ -110,7 +110,7 @@ ila.CheckDataStatus();
 
 %% 5.1. Diagnostic Plot
 % check raw spectrums AC | BB | LISST sensors
-ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
+ila.DiagnosticPlot('LISST',{'raw'}); % AC or BB
 
 %% 5.2. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:
@@ -173,7 +173,7 @@ ila.CheckDataStatus();
 
 %% 8.2. Diagnostic Plot
 % check QCed spectrums AC | BB | LISST sensors
-ila.DiagnosticPlot('BB',{'qc'});
+ila.DiagnosticPlot('LISST',{'qc'});
 
 %% 8.3. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:
@@ -187,7 +187,7 @@ ila.DiagnosticPlot('BB',{'qc'});
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.DiagnosticPlot('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
 % ila.DiagnosticPlot('AC',{'qc'}, false, {'fsw','a'});
-ila.DiagnosticPlot('AC',{'qc'}, false, {'fsw','c'});
+ila.DiagnosticPlot('LISST',{'qc'}, false, {'fsw','c'});
 
 %% 9. QC Switch position
 % QC switch position to make sure each filter event is separated by a
@@ -207,7 +207,7 @@ ila.CheckDataStatus();
 save_figures = true;
 
 %%% AC or BB 3D plots %%%
-ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
+ila.DiagnosticPlot('LISST', {'prod'}, save_figures); % AC or BB
 
 %%% ACS BB3 TSG PAR WSCD SUVF ALFA LISST final product visualisation %%%
 ila.visProd_timeseries()
@@ -223,7 +223,7 @@ ila.visProd_timeseries()
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.DiagnosticPlot('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
-ila.DiagnosticPlot('AC',{'prod'}, false, {'p','ap'});
+ila.DiagnosticPlot('LISST',{'prod'}, false, {'p','ap'});
 
 %% 11.1. Load previous qc pick selection at prod level
 ila.cfg.qc.mode = 'load';  % load or ui
