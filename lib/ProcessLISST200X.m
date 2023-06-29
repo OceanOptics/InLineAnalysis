@@ -179,17 +179,10 @@ if nargout > 2 && ~isempty(di)
 else
   g = table();
 end
-
-
-
-
-
-
 end
 
 
 function [prod, bin_size] = compute_product_LISST200X(tot, filt_interp, param)
-
 % if no filtered data, use instrument zscat
 if isempty(filt_interp)
   zsc = table();
@@ -199,7 +192,6 @@ if isempty(filt_interp)
 else
   zsc = filt_interp;
 end
-
 % Set output table
 prod = table(tot.dt, 'VariableNames', {'dt'});
 

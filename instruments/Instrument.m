@@ -43,7 +43,7 @@ classdef (Abstract) Instrument < handle
   
   methods
     % Constructor
-    function obj = Instrument(cfg, instrument_id)
+    function obj = Instrument(cfg, ~)
       
       % Object Initilization
       % obj = obj@handle();
@@ -63,12 +63,16 @@ classdef (Abstract) Instrument < handle
         % Load optional fields
         if isfield(cfg, 'sn'); obj.sn = cfg.sn; end
         if isfield(cfg, 'logger'); obj.logger = cfg.logger; end
-        if isfield(cfg, 'ila_prefix'); obj.prefix = cfg.ila_prefix; end
+        if isfield(cfg, 'ila_prefix'); obj.prefix = cfg.ila_prefix;
+        else; obj.prefix = [obj.model obj.sn '_']; end
+        if isempty(obj.prefix); obj.prefix = [obj.model obj.sn '_']; end
+
         if isfield(cfg, 'view')
           if isfield(cfg.view, 'varname'); obj.view.varname = cfg.view.varname; end
           if isfield(cfg.view, 'varcol'); obj.view.varcol = cfg.view.varcol; end
         end
         if isfield(cfg, 'di')
+          if isfield(cfg.di, 'prefix'); obj.di_cfg.prefix = cfg.di.prefix; end
           if isfield(cfg.di, 'prefix'); obj.di_cfg.prefix = cfg.di.prefix; end
           if isfield(cfg.di, 'postfix'); obj.di_cfg.postfix = cfg.di.postfix; end
 %           if isfield(cfg.di, 'logger'); obj.di_cfg.logger = cfg.di.logger; end

@@ -30,6 +30,8 @@ classdef LISST < Instrument
       % Post initialization
       if isfield(cfg, 'zsc'); obj.zsc = cfg.zsc;
       else; error('Missing field zsc.'); end
+      if isfield(cfg, 'zsc'); obj.zsc = cfg.zsc;
+      else; error('Missing field zsc.'); end
       if isfield(cfg, 'dcal'); obj.dcal = cfg.dcal;
       else; error('Missing field dcal.'); end
       if isfield(cfg, 'type'); obj.type = cfg.type;

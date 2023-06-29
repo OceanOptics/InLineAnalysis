@@ -311,17 +311,17 @@ for i = 1:size(cfg.process.instruments2run)
   if any(contains(cfg.process.instruments2run{i}, {'ACS', 'AC9'}))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [180, 60]; % [180, 60] for AC meters
   elseif any(contains(cfg.process.instruments2run{i}, {'BB', 'BB'}) & ~contains(cfg.process.instruments2run{i}, {'HyperBB','HBB','hbb'}))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [420, 220]; % [420, 220] for ECO-BB
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [200, 100]; % [420, 220] for ECO-BB
   elseif any(contains(cfg.process.instruments2run{i}, 'WSCD'))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [540, 100]; % [540, 100] for ECO-fluo
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [200, 100]; % [540, 100] for ECO-fluo
   elseif any(contains(cfg.process.instruments2run{i}, 'WS3S'))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [420, 220]; % [420, 220] for ECO-fluo
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [200, 150]; % [420, 220] for ECO-fluo
   elseif any(contains(cfg.process.instruments2run{i}, 'SUVF'))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [240, 100]; % [240, 100] for Seapoint fluo
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [200, 100]; % [240, 100] for Seapoint fluo
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [240, 140]; % [240, 140] for HyperBB
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [200, 100]; % [240, 140] for HyperBB
   elseif any(contains(cfg.process.instruments2run{i}, 'LISST') & ~contains(cfg.process.instruments2run{i}, {'TAU','tau','Tau','200X','200x'}))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [540, 360]; % [540, 360] for LISST
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [180, 60]; % [540, 360] for LISST
   elseif any(contains(cfg.process.instruments2run{i}, {'LISST200X', 'LISST200x'}))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [180, 60]; % [540, 360] for LISST
   elseif any(contains(cfg.process.instruments2run{i}, {'LISSTTAU','LISSTTau','LISST-TAU'}))
