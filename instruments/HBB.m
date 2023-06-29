@@ -3,8 +3,8 @@ classdef HBB < Instrument
   %   Detailed explanation goes here
   
   properties
-    calfile_plaque = '';
-    calfile_temp = '';
+    PlaqueCal = '';
+    TemperatureCal = '';
     lambda = [];
     theta = [];
 %     muFactors = [];
@@ -22,30 +22,36 @@ classdef HBB < Instrument
       
       % Post initialization
       if isempty(obj.view.varname); obj.view.varname = 'beta'; end
-      if isfield(cfg, 'calfile_plaque'); obj.calfile_plaque = cfg.calfile_plaque;
-      else; error('Missing field calfile_plaque.'); end
-      if isfield(cfg, 'calfile_temp'); obj.calfile_temp = cfg.calfile_temp;
-      else; error('Missing field calfile_temp.'); end
+
+      % Load HBB calibration files and lambda
+      if isfield(cfg, 'PlaqueCal')
+        % obj.PlaqueCal = cfg.PlaqueCal;
+        load(cfg.PlaqueCal, 'cal');
+        obj.PlaqueCal = cal;
+      else
+        error('Missing field PlaqueCal.')
+      end
+
+      if isfield(cfg, 'TemperatureCal')
+        load(cfg.TemperatureCal, 'cal_temp');
+        obj.TemperatureCal = cal_temp;
+        obj.lambda = cal_temp.wl;
+      else
+        error('Missing field TemperatureCal.');
+      end
+    
       if isfield(cfg, 'theta'); obj.theta = cfg.theta;
       else; error('Missing field theta.'); end
 %       if isfield(cfg, 'muFactors'); obj.muFactors = cfg.muFactors;
 %       else; error('Missing field muFactors.'); end
-
       if isempty(obj.logger)
         fprintf('WARNING: Logger set to InlininoHBB.\n');
         obj.logger = 'InlininoHBB';
       end
     end
     
-    function ReadHBBCalFiles(obj)
-      % Load HBB lambda from Calibration files
-      load(obj.calfile_temp, 'cal_temp');
-      obj.lambda = cal_temp.wl;
-    end
-    
     function ReadRaw(obj, days2run, force_import, write)
       % Get wavelengths from calibration file
-      obj.ReadHBBCalFiles()
       % create wk directory if doesn't exist
       if ~isfolder(obj.path.wk); mkdir(obj.path.wk); end
       % Read raw data
@@ -53,7 +59,7 @@ classdef HBB < Instrument
         case 'InlininoHBB'
           obj.data = iRead(@importInlininoHBB, obj.path.raw, obj.path.wk, ['HyperBB' obj.sn '_'],...
                          days2run, 'Inlinino', force_import, ~write, true, true, '', Inf, ...
-                         obj.calfile_plaque, obj.calfile_temp);
+                         obj.PlaqueCal, obj.TemperatureCal);
         otherwise
           error('HBB: Unknown logger.');
       end
@@ -61,7 +67,6 @@ classdef HBB < Instrument
     
     function ReadRawDI(obj, days2run, force_import, write)
       % Get wavelengths from calibration file
-      obj.ReadHBBCalFiles()
       % Set default parameters
       if isempty(obj.path.di)
         fprintf('WARNING: DI Path is same as raw.\n');
@@ -81,7 +86,7 @@ classdef HBB < Instrument
         case 'InlininoHBB'
           obj.raw.diw = iRead(@importInlininoHBB, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
                          days2run, 'Inlinino', force_import, ~write, true, true, ...
-                         obj.di_cfg.postfix, Inf, obj.calfile_plaque, obj.calfile_temp);
+                         obj.di_cfg.postfix, Inf, obj.PlaqueCal, obj.TemperatureCal);
         otherwise
           error('HBB: Unknown logger.');
       end

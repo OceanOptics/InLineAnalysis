@@ -340,8 +340,6 @@ classdef (Abstract) Instrument < handle
       %   (if data was already in memory it could duplicate timestamps)
       if contains(obj.model, 'AC')
         obj.ReadDeviceFile()
-      elseif contains(obj.model, 'HBB')
-        obj.ReadHBBCalFiles()
       end
       if nargin < 4; level = 'prod'; end
       if strcmp(level, 'data')

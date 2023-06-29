@@ -134,13 +134,13 @@ if ~isempty(filt)
     title('Check filter event interpolation, press q to continue', 'FontSize', 14)
     legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
       'AutoUpdate','off', 'FontSize', 12)
-%     guiSelectOnTimeSeries(fh);
+    guiSelectOnTimeSeries(fh);
   elseif exist('visFlag', 'file')
     fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'LaserTransmission', round(size(tot.LaserTransmission, 2)/2), [], []);
     title('Check filter event interpolation, press q to continue', 'FontSize', 14)
     legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
       'AutoUpdate','off', 'FontSize', 12)
-%     guiSelectOnTimeSeries(fh);
+    guiSelectOnTimeSeries(fh);
   end
 else
   warning('Filtered measurements not provided files, instrument zscat was used.')

@@ -389,7 +389,7 @@ classdef InLineAnalysis < handle
             end
             % Save user selection
             if strcmp(toClean{1}, 'diw')
-              filename = fullfile(obj.instrument.(i).path.ui, [i '_QCDI_pickSpecific_UserSelection.mat']);
+              filename = fullfile(obj.instrument.(i).path.ui, [i '_QCDI_Specific_UserSelection.mat']);
             else
               filename = fullfile(obj.instrument.(i).path.ui, [i '_QCpickSpecific_UserSelection.mat']);
             end
@@ -626,19 +626,18 @@ classdef InLineAnalysis < handle
             else
               fooflow = obj.instrument.FLOW.qc.tsw;
             end
-
             fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                        foo.qc.fsw, foo.suspect.fsw, foo.view.varname, foo.view.varcol,...
                        foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
             title('Global QC: Trash section pressing t (q to save)');
             user_selection = guiSelectOnTimeSeries(fh);
             % For each instrument 
-            for i=obj.cfg.qc.global.apply; i = i{1};
+            for i=obj.cfg.qc.global.apply(:)'; i = i{1};
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               % Apply user selection
               obj.instrument.(i).DeleteUserSelection(user_selection);
               % Save user selection
-              filename = fullfile(fileparts(fileparts(obj.instrument.(i).path.ui)), 'QCGlobal_UserSelection.mat');
+              filename = fullfile(fileparts(obj.instrument.(i).path.ui), 'QCGlobal_UserSelection.mat');
               if ~isfolder(fileparts(fileparts(obj.instrument.(i).path.ui)))
                 mkdir(fileparts(fileparts(obj.instrument.(i).path.ui)));
               end
@@ -647,7 +646,7 @@ classdef InLineAnalysis < handle
           end
           if obj.cfg.qc.specific.active
             % For each instrument
-            for i=obj.cfg.qc.specific.run; i = i{1};
+            for i=obj.cfg.qc.specific.run(:)'; i = i{1};
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
               % Display interactive figure
               foo = obj.instrument.(i);
@@ -683,7 +682,7 @@ classdef InLineAnalysis < handle
                   obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', ['tsw' j]);
                   obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', ['fsw' j]);
                   % Save user selection
-                  filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
+                  filename = fullfile(obj.instrument.(i).path.ui, [i '_QCSpecific_UserSelection.mat']);
                   obj.update_userselection_bad(filename, user_selection, obj.cfg.qc.remove_old, ...
                           'qc', ['tsw' j]);
                   obj.update_userselection_bad(filename, user_selection, obj.cfg.qc.remove_old, ...
@@ -709,7 +708,7 @@ classdef InLineAnalysis < handle
                   % Apply user selection
                   obj.instrument.(i).DeleteUserSelection(user_selection, 'qc', ['tsw' j]);
                   % Save user selection
-                  filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
+                  filename = fullfile(obj.instrument.(i).path.ui, [i '_QCSpecific_UserSelection.mat']);
                   obj.update_userselection_bad(filename, user_selection, obj.cfg.qc.remove_old, ...
                           'qc', ['tsw' j]);
                   clf(52)
@@ -725,13 +724,13 @@ classdef InLineAnalysis < handle
                              foo.view.varname, foo.view.varcol, foo.raw.bad, fooflow,...
                              obj.instrument.FLOW.view.spd_variable);
                 end
-                title([i ' QC all' newline 'Trash full section pressing t (q to save)']);
+                title([i ' specific QC all' newline 'Trash full section pressing t (q to save)']);
                 fprintf('Trash section pressing t (q to save)\n');
                 user_selection = guiSelectOnTimeSeries(fh);
                 % Apply user selection
                 obj.instrument.(i).DeleteUserSelection(user_selection);
                 % Save user selection
-                filename = [obj.instrument.(i).path.ui i '_QCSpecific_UserSelection.mat'];
+                filename = fullfile(obj.instrument.(i).path.ui, [i '_QCSpecific_UserSelection.mat']);
                 obj.update_userselection_bad(filename, user_selection, obj.cfg.qc.remove_old);
               end
             end
@@ -742,16 +741,17 @@ classdef InLineAnalysis < handle
         case 'load'
           % Load previous QC files and apply them
           if obj.cfg.qc.global.active
-            for i=obj.cfg.qc.global.apply; i = i{1};
+            for i=obj.cfg.qc.global.apply(:)'; i = i{1};
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
-              fprintf('QC LOAD Global: %s\n', i);
-              filename = fullfile(fileparts(fileparts(obj.instrument.(i).path.ui)), 'QCGlobal_UserSelection.mat');
+              fprintf('QC LOAD Global selection: %s ... ', i);
+              filename = fullfile(fileparts(obj.instrument.(i).path.ui), 'QCGlobal_UserSelection.mat');
               if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
                 file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
                 save(filename, 'file_selection')
               end
               if isfile(filename)
                 load(filename, 'file_selection');
+                fprintf('done\n')
                 obj.instrument.(i).DeleteUserSelection(file_selection.bad);
               else
                 fprintf(['Warning: ' filename ' not found\n'])
@@ -759,21 +759,22 @@ classdef InLineAnalysis < handle
             end
           end
           if obj.cfg.qc.specific.active
-            for i=obj.cfg.qc.specific.run; i = i{1};
+            for i=obj.cfg.qc.specific.run(:)'; i = i{1};
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
-              fprintf('QC LOAD Specific: %s\n', i);
+              fprintf('QC LOAD Specific slection: %s ... ', i);
               filename = fullfile(obj.instrument.(i).path.ui, [i '_QCSpecific_UserSelection.mat']);
               if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
                 file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
                 save(filename, 'file_selection')
               end
               if isfile(filename)
+                fprintf('done\n')
                 load(filename, 'file_selection');
                 sel_toload = fieldnames(file_selection);
                 for j = 1:size(sel_toload, 1)
                   % Keep only selection of the day2run
-                  file_selection.(sel_toload{j})(~any(min(obj.cfg.days2run) < file_selection.(sel_toload{j}) & ...
-                    file_selection.(sel_toload{j}) < max(obj.cfg.days2run), 2)) = [];
+                  file_selection.(sel_toload{j})(any(file_selection.(sel_toload{j}) < min(obj.cfg.days2run) | ...
+                    file_selection.(sel_toload{j}) > max(obj.cfg.days2run)+1, 2)) = [];
                   if ~isempty(file_selection.(sel_toload{j}))
                     if contains(i, 'AC')
                       channel = strsplit(sel_toload{j}, 'bad_');
@@ -798,6 +799,7 @@ classdef InLineAnalysis < handle
               else
                 fprintf(['Warning: ' filename ' not found\n'])
               end
+              fprintf('QC LOAD Specific pick selection: %s ... ', i);
               filename = fullfile(obj.instrument.(i).path.ui, [i '_QCpickSpecific_UserSelection.mat']);
               if all(isfile(strrep(filename, '.mat', '.json')) & ~isfile(filename))
                 file_selection = json_to_mat(strrep(filename, '.mat', '.json'));
@@ -805,12 +807,13 @@ classdef InLineAnalysis < handle
               end
               if isfile(filename)
                 % load hand picked bad values
+                fprintf('done\n')
                 load(filename, 'file_selection');
                 sel_picktoload = fieldnames(file_selection);
                 for j = progress(1:size(sel_picktoload, 1))
                   % Keep only selection of the day2run
-                  file_selection.(sel_picktoload{j})(~any(min(obj.cfg.days2run) < file_selection.(sel_picktoload{j}) & ...
-                    file_selection.(sel_picktoload{j}) < max(obj.cfg.days2run), 2)) = [];
+                  file_selection.(sel_picktoload{j})(any(file_selection.(sel_picktoload{j}) < min(obj.cfg.days2run) | ...
+                    file_selection.(sel_picktoload{j}) > max(obj.cfg.days2run)+1, 2)) = [];
                   if ~isempty(file_selection.(sel_picktoload{j}))
                     channel = strsplit(sel_picktoload{j}, 'bad_');
                     foo = strsplit(channel{end}, '_');

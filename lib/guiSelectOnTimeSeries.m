@@ -26,28 +26,25 @@ hz = zoom();
 hp = pan();
 hp.Motion = 'horizontal';
 % check data in Z axis and set proper data cursor function
-try
-  all_obj = findobj(figure_handler, '-property', 'XData','YData','ZData');
-  if isempty(all_obj)
-    if isempty(all_obj(end).ZData)
-      set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
-    else
-      set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date_y);
-    end
-  else
-    set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
-  end
-catch
-  all_obj = figure_handler.Children.Children;
-  if isempty(all_obj(1).ZData)
-    if isempty(all_obj(1).ZData)
-      set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
-    else
-      set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date_y);
-    end
-  else
-    set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
-  end
+% before matlab 2023
+  % all_obj = findobj(figure_handler, '-property', 'XData','YData','ZData');
+  % if isempty(all_obj)
+  %   if isempty(all_obj(end).ZData)
+  %     set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
+  %   else
+  %     set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date_y);
+  %   end
+  % else
+  %   set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
+  % end
+% after 2023
+all_ax = findobj(figure_handler, 'type', 'axes');
+all_obj = arrayfun(@(A) findobj(A, '-property', 'XData','YData','ZData'), all_ax, 'uniform', 0);
+while iscell(all_obj); all_obj= all_obj{1}; end
+if isempty(all_obj)
+  set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
+else
+  set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date_y);
 end
 
 hc = datacursormode();
@@ -135,7 +132,7 @@ while ~strcmp(k, 'q')
         if ~isdatetime(x_lim)
             dt_sel_t = foo(:,1)';
         else
-            ax = gca; xdate = num2ruler(foo,ax.XAxis); dt_sel_t = xdate(:,1)';
+            ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_t = xdate(:,1)';
         end
         user_selection_t = [user_selection_t; dt_sel_t];
         fprintf('%s - %s\n', datestr(dt_sel_t(1)), datestr(dt_sel_t(2)));
@@ -148,7 +145,7 @@ while ~strcmp(k, 'q')
         if ~isdatetime(x_lim)
             dt_sel_f = foo(:,1)';
         else
-            ax = gca; xdate = num2ruler(foo,ax.XAxis); dt_sel_f = xdate(:,1)';
+            ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_f = xdate(:,1)';
         end
         user_selection_f = [user_selection_f; dt_sel_f];
         fprintf('%s - %s\n', datestr(dt_sel_f(1)), datestr(dt_sel_f(2)));
@@ -161,7 +158,7 @@ while ~strcmp(k, 'q')
         if ~isdatetime(x_lim)
             dt_sel_x = foo(:,1)';
         else
-            ax = gca; xdate = num2ruler(foo,ax.XAxis); dt_sel_x = xdate(:,1)';
+            ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_x = xdate(:,1)';
         end
         user_selection_x = [user_selection_x; dt_sel_x];
         fprintf('%s - %s\n', datestr(dt_sel_x(1)), datestr(dt_sel_x(2)));
@@ -174,7 +171,7 @@ while ~strcmp(k, 'q')
         if ~isdatetime(x_lim)
             dt_sel_s = foo(:,1)';
         else
-            ax = gca; xdate = num2ruler(foo,ax.XAxis); dt_sel_s = xdate(:,1)';
+            ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_s = xdate(:,1)';
         end
         user_selection_s = [user_selection_s; dt_sel_s];
         fprintf('%s\n', datestr(dt_sel_s));
@@ -206,6 +203,5 @@ while ~strcmp(k, 'q')
   end
 end
 fprintf('Saved selection\n');
-
 end
 

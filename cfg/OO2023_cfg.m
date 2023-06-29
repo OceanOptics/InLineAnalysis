@@ -1,6 +1,6 @@
-% Tara Breizh Bloom Configuration file
+% OO2023 Configuration file
 % author: Guilaume Bourdin
-% created: Jan 05, 2021
+% created: June 27, 2023
 
 cfg = struct('meta', struct(), 'instruments', struct(), 'process', struct());
 
@@ -150,8 +150,8 @@ cfg.instruments.(['HyperBB' SN]).sn = SN;
 cfg.instruments.(['HyperBB' SN]).ila_prefix = ['HyperBB' SN];
 cfg.instruments.(['HyperBB' SN]).logger = 'InlininoHBB';
 cfg.instruments.(['HyperBB' SN]).theta = 135;
-cfg.instruments.(['HyperBB' SN]).calfile_plaque = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Plaque_20230606_120731.mat');
-cfg.instruments.(['HyperBB' SN]).calfile_temp = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Temp_20230601_145659.mat');
+cfg.instruments.(['HyperBB' SN]).PlaqueCal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Plaque_20230606_120731.mat');
+cfg.instruments.(['HyperBB' SN]).TemperatureCal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Temp_20230601_145659.mat');
 cfg.instruments.(['HyperBB' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN]),...
                                   'di',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN], 'DI'),...
                                   'wk',   fullfile(PATH_ROOT, 'wk', ['HyperBB' SN]),...
@@ -427,7 +427,7 @@ cfg.process.qc.remove_old = false; % remove old selection of the same period
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
 cfg.process.qc.global.view = cfg.process.qcref.view;
-cfg.process.qc.global.apply = cfg.process.instruments2run(contains(cfg.process.instruments2run, ...
+cfg.process.qc.global.apply = cfg.process.instruments2run(~contains(cfg.process.instruments2run, ...
   {'FLOW','NMEA', 'PAR'}));
 cfg.process.qc.specific = struct();
 cfg.process.qc.specific.active = true;
