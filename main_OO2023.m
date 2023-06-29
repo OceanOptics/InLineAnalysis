@@ -13,22 +13,9 @@ ila = InLineAnalysis('cfg/OO2023_cfg.m');
 %% set the date to process
 ila.cfg.days2run = datenum(2023,6,27):datenum(2023,6,27);
 
-%%
-% instrument_to_clear = 'ACS412';
-% ila.instrument.(instrument_to_clear).data = [];
-% ila.instrument.(instrument_to_clear).raw.tsw = [];
-% ila.instrument.(instrument_to_clear).raw.fsw = [];
-% ila.instrument.(instrument_to_clear).raw.bad = [];
-% ila.instrument.(instrument_to_clear).bin.tsw = [];
-% ila.instrument.(instrument_to_clear).bin.fsw = [];
-% ila.instrument.(instrument_to_clear).qc.tsw = [];
-% ila.instrument.(instrument_to_clear).qc.fsw = [];
-% ila.instrument.(instrument_to_clear).prod.p = [];
-% ila.instrument.(instrument_to_clear).prod.QCfailed = [];
-
 %% 'SBE4536073','atlasTSG002','atlasTSG003','atlasTSG004','NMEA','FLOW','ACS412','HyperBB8002','BB3349','SUVF6254','WS3S1081','LISST1183'
-ila.cfg.instruments2run = {'FLOW','HyperBB8002'};
-ila.cfg.qcref.view = 'HyperBB8002';
+ila.cfg.instruments2run = {'FLOW','LISST1183'};
+ila.cfg.qcref.view = 'LISST1183';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 
@@ -38,10 +25,11 @@ ila.ReadRaw();
 ila.CheckDataStatus();
 
 %% Or Load data from already processed mat files
-% ila.Read('raw');
-% ila.Read('bin');
-% ila.Read('qc');
-% ila.Read('prod');
+ila.Read('raw');
+ila.Read('bin');
+ila.Read('qc');
+ila.Read('prod');
+ila.CheckDataStatus();
 
 %% 2. Synchronise instruments
 % % % Independent of flow rate (for now)
@@ -92,7 +80,7 @@ ila.CheckDataStatus();
 % Note: when redoing QC of a given period of time (days2run) the previous
 % QC during the same period of time is erased, QC done on other periods of
 % time is kept in the json file
-ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
+ila.cfg.qcref.mode='load'; % 'ui' or 'load'
 ila.cfg.qcref.remove_old = false; % remove old selection of the same period
 ila.QCRef();
 
@@ -101,32 +89,32 @@ ila.Split();
 ila.CheckDataStatus();
 
 %% 4.1. Diagnostic Plot
-% check raw spectrums AC or BB sensors
-ila.DiagnosticPlot('BB',{'raw'}); % AC or BB
+% check raw spectrums AC | BB | LISST sensors
+ila.DiagnosticPlot('LISST',{'raw'});
 
 %% 5. Automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR & ALFA values
 % fudge factor for auto QC ACS.
 % Varies between ACS: 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
-ila.cfg.qc.RawAutoQCLim.filtered.a = 1.3; %
+ila.cfg.qc.RawAutoQCLim.filtered.a = 1.5; %
 ila.cfg.qc.RawAutoQCLim.filtered.c = 5; %
-ila.cfg.qc.RawAutoQCLim.total.a = 1.3; %
-ila.cfg.qc.RawAutoQCLim.total.c = 5; %
+ila.cfg.qc.RawAutoQCLim.total.a = 1.5; %
+ila.cfg.qc.RawAutoQCLim.total.c = 3.5; %
 % fudge factor for auto QC BB
 % 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
-ila.cfg.qc.RawAutoQCLim.filtered.bb = 3; %
-ila.cfg.qc.RawAutoQCLim.total.bb = 3; %
+ila.cfg.qc.RawAutoQCLim.filtered.bb = 2; % 10
+ila.cfg.qc.RawAutoQCLim.total.bb = 2; % 10
 % remove saturated periods in BB
 ila.cfg.qc.Saturation_Threshold_bb = 4100; % saturate above 4000 counts
 ila.RawAutoQC('raw');
 ila.CheckDataStatus();
 
 %% 5.1. Diagnostic Plot
-% check raw spectrums AC or BB sensors
+% check raw spectrums AC | BB | LISST sensors
 ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 
 %% 5.2. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:
-% 1) 'AC or BB'
+% 1) 'AC' | 'BB' | 'LISST' sensors
 % 2) 'level':  'raw' | 'bin' | 'qc' | 'prod'
 % 3) save plot option: boolean
 % 4) table and variable to QC as shown in examples below
@@ -135,7 +123,7 @@ ila.DiagnosticPlot('AC',{'raw'}); % AC or BB
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.DiagnosticPlot('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.DiagnosticPlot('AC',{'prod'}, false, {'g','ag'})
-ila.DiagnosticPlot('AC',{'raw'}, false, {'fsw','c'});
+ila.DiagnosticPlot('LISST',{'raw'}, false, {'fsw','all'});
 
 %% 5.3. Loading previous qc pick selection at raw level
 ila.cfg.qc.mode='load';  % load or ui
@@ -153,8 +141,8 @@ ila.Bin()
 ila.CheckDataStatus();
 
 %% 6.1. Diagnostic Plot
-% check binned spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'bin'}); % AC or BB
+% check binned spectrums AC | BB | LISST sensors
+ila.DiagnosticPlot('LISST',{'bin'});
 
 %% 6.2. Write bin | write only 'part' or 'diw' or 'all'
 ila.Write('bin', 'part')
@@ -171,7 +159,7 @@ ila.cfg.qc.remove_old = false;  % remove old selection of this period
 ila.cfg.qc.qc_once_for_all = false; % true = QC all variables | false = QC variables separately)
 % Global
 ila.cfg.qc.global.view = {ila.cfg.qcref.view};
-ila.cfg.qc.global.active = false;
+ila.cfg.qc.global.active = true;
 % Specific
 ila.cfg.qc.specific.run = {ila.cfg.qcref.view};
 %%%%%%%%%%%%%%%%%%%
@@ -181,15 +169,15 @@ ila.QC();
 ila.CheckDataStatus();
 
 %% 8.1. Auto QC at level 'qc': run until it stabilize to 0
-ila.RawAutoQC('qc');
+% ila.RawAutoQC('qc');
 
 %% 8.2. Diagnostic Plot
-% check QCed spectrums AC or BB sensors
-ila.DiagnosticPlot('AC',{'qc'}); % AC or BB
+% check QCed spectrums AC | BB | LISST sensors
+ila.DiagnosticPlot('BB',{'qc'});
 
 %% 8.3. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:
-% 1) 'AC or BB'
+% 1) 'AC' | 'BB' | 'LISST' sensors
 % 2) 'level':  'raw' | 'bin' | 'qc' | 'prod'
 % 3) save plot option: boolean
 % 4) table and variable to QC as shown in examples below
@@ -219,14 +207,14 @@ ila.CheckDataStatus();
 save_figures = true;
 
 %%% AC or BB 3D plots %%%
-ila.DiagnosticPlot('AC', {'prod'}, save_figures); % AC or BB
+ila.DiagnosticPlot('BB', {'prod'}, save_figures); % AC or BB
 
 %%% ACS BB3 TSG PAR WSCD SUVF ALFA LISST final product visualisation %%%
 ila.visProd_timeseries()
 
 %% 11. Run QC directly on spectra at any level
 % ila.DiagnosticPlot inputs:
-% 1) 'AC or BB'
+% 1) 'AC' | 'BB' | 'LISST' sensors
 % 2) 'level':  'raw' | 'bin' | 'qc' | 'prod'
 % 3) save plot option: boolean
 % 4) table and variable to QC as shown in examples below

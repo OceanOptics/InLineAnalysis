@@ -40,16 +40,23 @@ end
 if contains(instrument,'BB')
   wl = data.lambda;
   instrument = 'BB';
+  ylab = 'Lambda (nm)';
 elseif contains(instrument,'AC')
   wla = data.lambda_a;
   wlc = data.lambda_c;
   instrument = 'AC';
+  ylab = 'Lambda (nm)';
+elseif contains(instrument,'LISST')
+  theta = data.theta;
+  instrument = 'LISST';
+  ylab = 'theta (°)';
 else
   error('Intrument not supported')
 end
 
 ACsize_to_plot = 50000;
 BBsize_to_plot = 120000;
+LISSTsz_to_plot = 120000;
 
 user_selection = [];
 for j = 1:length(level)
@@ -59,7 +66,7 @@ for j = 1:length(level)
   tabletoplot = tabletoplot(~structfun(@isempty, data.(level{j})));
   tabletoplot(strcmp(tabletoplot, 'bad')) = [];
   tabletoplot(strcmp(tabletoplot, 'FiltStat')) = [];
-  sztoplot = table(0.4, 8, 'VariableNames', {'AC', 'BB'});
+  sztoplot = table(0.4, 8, 8, 'VariableNames', {'AC', 'BB', 'LISST'});
   switch level{j}
     case 'raw'
       szdt = NaN(size(tabletoplot, 1), 2);
@@ -73,7 +80,7 @@ for j = 1:length(level)
         if strcmp(toClean{end}, 'all')
           toClean{end} = 'a';
         end
-      else
+      elseif contains(instrument,'BB') || contains(instrument,'LISST')
         toplot = repmat({'beta'}, size(tabletoplot));
         if strcmp(toClean{end}, 'all')
           toClean{end} = 'beta';
@@ -91,7 +98,7 @@ for j = 1:length(level)
         if strcmp(toClean{end}, 'all')
           toClean{end} = 'a';
         end
-      else
+      elseif contains(instrument,'BB') || contains(instrument,'LISST')
         toplot = repmat({'beta'}, size(tabletoplot));
         if strcmp(toClean{end}, 'all')
           toClean{end} = 'beta';
@@ -113,7 +120,15 @@ for j = 1:length(level)
         if any(contains(toplot, 'QCfailed'))
           toplot(contains(toplot, 'QCfailed')) = {'ap', 'cp'};
         end
-      else
+      elseif contains(instrument,'LISST')
+        toplot = [cellfun(@(x) ['beta' x], tabletoplot, 'un', 0) 'PSD' 'VSD'];
+        if strcmp(toClean{end}, 'all')
+          toClean{end} = cellfun(@(x) ['beta' x], tabletoplot, 'un', 0);
+        end
+        if any(contains(toplot, 'QCfailed'))
+          toplot(contains(toplot, 'QCfailed')) = {'betap', 'bbp'};
+        end
+      elseif contains(instrument,'BB')
         toplot = [cellfun(@(x) ['beta' x], tabletoplot, 'un', 0) ...
           cellfun(@(x) ['bb' x], tabletoplot, 'un', 0)];
         if strcmp(toClean{end}, 'all')
@@ -138,9 +153,15 @@ for j = 1:length(level)
             warning('Large dataset, only the first %i %s %s %s spectrum were plotted to save computer memory', ...
               ACsize_to_plot, level{j}, tabletoplot{i}, toplot{i, k})
             sel(1:ACsize_to_plot) = true;
+          elseif contains(instrument,'LISST') && size(sel,1) < LISSTsz_to_plot
+            sel(1:end) = true;
+          elseif contains(instrument,'LISST')
+            warning('Large dataset, only the first %i %s %s %s spectrum were plotted to save computer memory', ...
+              LISSTsz_to_plot, level{j}, tabletoplot{i}, toplot{i, k})
+            sel(1:LISSTsz_to_plot) = true;
           elseif contains(instrument,'BB') && size(sel,1) < BBsize_to_plot
             sel(1:end) = true;
-          else
+          elseif contains(instrument,'BB')
             warning('Large dataset, only the first %i %s %s %s spectrum were plotted to save computer memory', ...
               BBsize_to_plot, level{j}, tabletoplot{i}, toplot{i, k})
             sel(1:BBsize_to_plot) = true;
@@ -159,13 +180,15 @@ for j = 1:length(level)
           wl = wla;
         elseif contains(instrument,'AC') && contains(toplot{i, k}, 'c')
           wl = wlc;
+        elseif contains(instrument,'LISST')
+          wl = theta;
         end
         if sum(sel) > 1
           fh = visProd3D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, 'Wavelength', false, j*i+k*10);
           zlabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
-          xlabel('lambda (nm)');
+          xlabel(ylab);
           ylabel('time');
           title([level{j} ' ' tabletoplot{i}], 'FontSize', 16);
         elseif sum(sel) < 2
@@ -173,7 +196,7 @@ for j = 1:length(level)
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, j*i+k*10);
           ylabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
-          xlabel('lambda (nm)');
+          xlabel(ylab);
           title([level{j} ' ' tabletoplot{i} ' ' datestr(data.(level{j}).(tabletoplot{i}).dt(sel))], ...
             'FontSize', 16);
         end

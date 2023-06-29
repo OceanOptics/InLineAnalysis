@@ -368,9 +368,9 @@ for i = 1:size(cfg.process.instruments2run)
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 5; % 5 min for HyperBB
   elseif any(contains(cfg.process.instruments2run{i}, 'LISST') & ~contains(cfg.process.instruments2run{i}, {'TAU','tau','Tau','200X','200x'}))
-    cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 10; % 10 min for LISST
+    cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 2; % 2 min for LISST100X
   elseif any(contains(cfg.process.instruments2run{i}, 'LISST200X'))
-    cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for LISST
+    cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for LISST200X
   elseif any(contains(cfg.process.instruments2run{i}, {'LISSTTAU','LISSTTau','LISST-TAU'}))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for LISST-Tau
   elseif any(contains(cfg.process.instruments2run{i}(1:3), 'ALFA'))
