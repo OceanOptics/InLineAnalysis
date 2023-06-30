@@ -14,15 +14,45 @@ classdef FL < ECO
       
       % Post initialization
       if isempty(obj.varname); obj.varname = 'fchl'; end % Required for ECO class
-      if isnan(obj.slope); error('Missing field slope.'); end
-      if isnan(obj.dark); error('Missing field dark.'); end
+      if isempty(obj.view.varname); obj.view.varname = 'fdom'; end
+      if isfield(cfg, 'analog_channel'); obj.analog_channel = strrep(strrep(cfg.analog_channel, '(', ''), ')', ''); end
+      if isnan(obj.slope); warning('Missing field slope.'); end
+      if isnan(obj.dark); warning('Missing field dark.'); end
       
     end
 
-    function Calibrate(obj, SWT)
+    % function Calibrate(obj)
+    %   param = struct('slope', obj.slope, 'dark', obj.dark);
+    %   [obj.prod.p, obj.prod.g] = processFL(param, obj.qc.tsw, obj.qc.fsw, obj.qc.diw);
+    % end
+
+
+    function Calibrate(obj, compute_dissolved, SWT, di_method, filt_method)
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       param = struct('slope', obj.slope, 'dark', obj.dark);
-      obj.prod.p = processFL(param, obj.qc.tsw, obj.qc.fsw, SWT, SWT_constants);
+      % linear interpolation only, CDOM interpolation is not yet available
+      if compute_dissolved
+        switch filt_method
+          case '25percentil'
+            [obj.prod.p, obj.prod.g] = processFL(param, obj.qc.tsw, obj.qc.fsw, [], [], ...
+              obj.bin.diw, di_method, filt_method, SWT, SWT_constants);
+          case 'exponential_fit'
+            [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processFL(param, obj.qc.tsw, ...
+              obj.qc.fsw, obj.raw.fsw, obj.raw.bad, obj.bin.diw, di_method, ...
+              filt_method, SWT, SWT_constants);
+        end
+      else
+        switch filt_method
+          case '25percentil'
+            obj.prod.p = processFL(param, obj.qc.tsw, obj.qc.fsw, [], [], [], [], [], ...
+              filt_method, SWT, SWT_constants);
+          case 'exponential_fit'
+            [obj.prod.p, ~, obj.prod.FiltStat] = processFL(param, obj.qc.tsw, ...
+              obj.qc.fsw, obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT, ...
+              SWT_constants);
+        end
+      end
     end
+
   end
 end

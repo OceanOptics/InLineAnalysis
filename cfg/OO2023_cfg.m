@@ -32,7 +32,7 @@ SN = '36073';
 cfg.instruments.([model SN]) = struct();
 cfg.instruments.([model SN]).model = model;
 cfg.instruments.([model SN]).boat = 'Tara';
-cfg.instruments.([model SN]).logger = 'Inlinino'; % TeraTerm Matlab Inlinino
+cfg.instruments.([model SN]).logger = 'Inlinino_base'; % TeraTerm Matlab Inlinino
 cfg.instruments.([model SN]).sn = SN;
 cfg.instruments.([model SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', [model SN]),...
                                   'wk',   fullfile(PATH_ROOT, 'wk', [model SN]),...
@@ -49,7 +49,7 @@ cfg.instruments.([model SN]).model = 'atlasTSG';
 cfg.instruments.([model SN]).TSseparated = true;
 cfg.instruments.([model SN]).coef = struct('t', struct('slope',1,'interc',0), ...
                                   'c', struct('slope',1,'interc',0));
-cfg.instruments.([model SN]).logger = 'Inlinino_atlasTSG';
+cfg.instruments.([model SN]).logger = 'Inlinino_base'; % Inlinino_atlasTSG
 cfg.instruments.([model SN]).sn = SN;
 cfg.instruments.([model SN]).prefix = 'ATLAS';
 cfg.instruments.([model SN]).path = struct('raw',  [PATH_ROOT 'raw' filesep 'atlasTSG' filesep],...
@@ -66,7 +66,7 @@ cfg.instruments.([model SN]).model = 'atlasTSG';
 cfg.instruments.([model SN]).TSseparated = false;
 cfg.instruments.([model SN]).coef = struct('t', struct('slope',1,'interc',0), ...
                                   'c', struct('slope',1,'interc',0));
-cfg.instruments.([model SN]).logger = 'Inlinino_atlasTSG';
+cfg.instruments.([model SN]).logger = 'Inlinino_base'; % Inlinino_atlasTSG
 cfg.instruments.([model SN]).sn = SN;
 cfg.instruments.([model SN]).prefix = 'ATLASECRTD';
 cfg.instruments.([model SN]).path = struct('raw',  [PATH_ROOT 'raw' filesep 'atlasTSG' filesep],...
@@ -83,7 +83,7 @@ cfg.instruments.([model SN]).model = 'atlasTSG';
 cfg.instruments.([model SN]).TSseparated = false;
 cfg.instruments.([model SN]).coef = struct('t', struct('slope',1,'interc',0), ...
                                   'c', struct('slope',1,'interc',0));
-cfg.instruments.([model SN]).logger = 'Inlinino_atlasTSG';
+cfg.instruments.([model SN]).logger = 'Inlinino_base'; % Inlinino_atlasTSG
 cfg.instruments.([model SN]).sn = SN;
 cfg.instruments.([model SN]).prefix = 'ATLASECRTD';
 cfg.instruments.([model SN]).path = struct('raw',  [PATH_ROOT 'raw' filesep 'atlasTSG' filesep],...
@@ -111,7 +111,7 @@ cfg.instruments.NMEA.view = struct('varname', 'lat');
 SN = 'B02782';
 cfg.instruments.FLOW = struct();
 cfg.instruments.FLOW.model = 'ADU100';
-cfg.instruments.FLOW.logger = 'Inlinino';
+cfg.instruments.FLOW.logger = 'Inlinino_base';
 cfg.instruments.FLOW.sn = SN;
 cfg.instruments.FLOW.LoadPrevious = true;
 cfg.instruments.FLOW.analog1 = '';
@@ -167,8 +167,8 @@ cfg.instruments.(['BB3' SN]).di.prefix = ['DIW_BB3' SN '_'];
 cfg.instruments.(['BB3' SN]).di.postfix = '';
 cfg.instruments.(['BB3' SN]).model = 'BB';
 cfg.instruments.(['BB3' SN]).sn = SN;
-cfg.instruments.(['BB3' SN]).ila_prefix = 'BB3';
-cfg.instruments.(['BB3' SN]).logger = 'InlininoBB3SN';
+cfg.instruments.(['BB3' SN]).ila_prefix = ['BB3' SN];
+cfg.instruments.(['BB3' SN]).logger = 'Inlinino_base'; % InlininoBB3SN
 cfg.instruments.(['BB3' SN]).lambda = [468,528,655];
 cfg.instruments.(['BB3' SN]).theta = 120;
 cfg.instruments.(['BB3' SN]).slope = [8.407E-06,4.624E-06,4.090E-06]; % Emmanuel cal 2021
@@ -212,9 +212,10 @@ cfg.instruments.(['WS3S' SN]) = struct();
 cfg.instruments.(['WS3S' SN]).sn = SN;
 cfg.instruments.(['WS3S' SN]).model = 'FL';
 cfg.instruments.(['WS3S' SN]).ila_prefix = ['WS3S' SN];
-cfg.instruments.(['WS3S' SN]).logger = 'InlininoWSCDSN';
+cfg.instruments.(['WS3S' SN]).logger = 'Inlinino_base';
 cfg.instruments.(['WS3S' SN]).slope = 5.6;
 cfg.instruments.(['WS3S' SN]).dark = 0.068;
+cfg.instruments.(['WS3S' SN]).analog_channel = 'C2';
 cfg.instruments.(['WS3S' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['WS3S' SN]),...
                                   'wk',   fullfile(PATH_ROOT, 'wk', ['WS3S' SN]),...
                                   'prod', fullfile(PATH_ROOT, 'prod'),...
@@ -453,6 +454,12 @@ for i = 1:size(cfg.process.instruments2run)
                                       'TSG_source', 'SBE4536073', ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'SW_scattering', ... % interpolate constant SW_scattering
+                                      'filt_method', 'exponential_fit'); % 25percentil exponential_fit
+  % ECO-FL options
+  elseif any(contains(cfg.process.instruments2run{i}, {'WS3S'}))
+    cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', true, ...
+                                      'FLOW_source', 'FLOW', ...
+                                      'di_method', 'best_di', ... % best_di interpolate constant SW_scattering
                                       'filt_method', 'exponential_fit'); % 25percentil exponential_fit
   % HyperBB options
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))

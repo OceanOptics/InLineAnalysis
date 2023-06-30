@@ -14,8 +14,8 @@ ila = InLineAnalysis('cfg/OO2023_cfg.m');
 ila.cfg.days2run = datenum(2023,6,27):datenum(2023,6,27);
 
 %% 'SBE4536073','atlasTSG002','atlasTSG003','atlasTSG004','NMEA','FLOW','ACS412','HyperBB8002','BB3349','SUVF6254','WS3S1081','LISST1183'
-ila.cfg.instruments2run = {'FLOW','LISST1183'};
-ila.cfg.qcref.view = 'LISST1183';
+ila.cfg.instruments2run = {'FLOW','HyperBB8002'};
+ila.cfg.qcref.view = 'HyperBB8002';
 ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 
@@ -80,8 +80,8 @@ ila.CheckDataStatus();
 % Note: when redoing QC of a given period of time (days2run) the previous
 % QC during the same period of time is erased, QC done on other periods of
 % time is kept in the json file
-ila.cfg.qcref.mode='load'; % 'ui' or 'load'
-ila.cfg.qcref.remove_old = false; % remove old selection of the same period
+ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
+ila.cfg.qcref.remove_old = true; % remove old selection of the same period
 ila.QCRef();
 
 %% 4. Split fsw and tsw
@@ -155,7 +155,7 @@ ila.CheckDataStatus();
 %% 8. QC Interactive or Loading previous qc selection
 %%%%% Settings %%%%%
 ila.cfg.qc.mode='ui';  % load or ui
-ila.cfg.qc.remove_old = false;  % remove old selection of this period
+ila.cfg.qc.remove_old = true;  % remove old selection of this period
 ila.cfg.qc.qc_once_for_all = false; % true = QC all variables | false = QC variables separately)
 % Global
 ila.cfg.qc.global.view = {ila.cfg.qcref.view};

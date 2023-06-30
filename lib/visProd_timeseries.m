@@ -17,7 +17,7 @@ if ~isdatetime(data.dt)
   data.dt = datetime(data.dt, 'ConvertFrom', 'datenum');
 end
 
-% list_instru = {'ACS', 'AC', 'BB', 'TSG', 'PAR', 'WSCD', 'HBB'};
+% list_instru = {'ACS', 'AC', 'BB', 'TSG', 'PAR', 'WSCD', 'HBB','WS3S'};
 % idx = false(size(list_instru));
 % for i = 1:max(size(list_instru)); idx(i) = contains(instrument, list_instru{i}); end
 
@@ -208,6 +208,12 @@ switch instrument
     clf
     scatter(data.dt, data.fdom, 6, 'filled');
     ylabel('FDOM ppb');
+    xlim([min(data.dt) max(data.dt)]);
+  case 'WSS'
+    fig(95);
+    clf
+    scatter(data.dt, data.chl, 6, 'filled');
+    ylabel('Chl (mg.m^{-3})');
     xlim([min(data.dt) max(data.dt)]);
   case 'ALFA'
     fig(96);

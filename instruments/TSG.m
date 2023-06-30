@@ -40,9 +40,12 @@ classdef TSG < Instrument
             case {'TeraTerm', 'teraterm', 'TERATERM'}
               obj.data = iRead(@importTSGTeraTerm, obj.path.raw, obj.path.wk, 'TeraTerm_tsg_',...
                              days2run, 'TeraTerm', force_import, ~write, true);
-            case {'Inlinino','inlinino'}
-              obj.data = iRead(@importInlininoTSG, obj.path.raw, obj.path.wk, [obj.model obj.sn '_'],...
+            case 'Inlinino_base'
+              obj.data = iRead(@importInlinino_base, obj.path.raw, obj.path.wk, obj.prefix,...
                              days2run, 'Inlinino', force_import, ~write, true);
+            % case {'Inlinino','inlinino'}
+            %   obj.data = iRead(@importInlininoTSG, obj.path.raw, obj.path.wk, [obj.model obj.sn '_'],...
+            %                  days2run, 'Inlinino', force_import, ~write, true);
 %               obj.data = renamevars(obj.data, obj.temperature_variable, 'sst');
 %               if strcmp(obj.view.varname, obj.temperature_variable)
 %                 obj.view.varname = 'sst';

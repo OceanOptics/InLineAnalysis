@@ -6,7 +6,7 @@ classdef ECO < Instrument
     varname = '';
     slope = NaN;
     dark = NaN;
-    analog_channel = NaN;
+    analog_channel = '';
   end
   
   methods
@@ -23,7 +23,7 @@ classdef ECO < Instrument
       if isfield(cfg, 'varname'); obj.varname = cfg.varname; end
       if isfield(cfg, 'slope'); obj.slope = cfg.slope; end
       if isfield(cfg, 'dark'); obj.dark = cfg.dark; end
-      if isfield(cfg, 'analog_channel'); obj.analog_channel = cfg.analog_channel; end
+      if isfield(cfg, 'analog_channel'); obj.analog_channel = strrep(strrep(cfg.analog_channel, '(', ''), ')', ''); end
       
       if isempty(obj.logger); obj.logger = 'Inlinino'; end
     end
@@ -32,6 +32,9 @@ classdef ECO < Instrument
       switch obj.logger
         case 'Inlinino'
           obj.data = iRead(@importInlinino, obj.path.raw, obj.path.wk, 'Inlinino_',...
+                         days2run, 'Inlinino', force_import, ~write, true);
+        case 'Inlinino_base'
+          obj.data = iRead(@importInlinino_base, obj.path.raw, obj.path.wk, [obj.prefix '_'],...
                          days2run, 'Inlinino', force_import, ~write, true);
         case 'InlininoBB3'
           obj.data = iRead(@importInlininoBB3, obj.path.raw, obj.path.wk, 'Inlinino_',...
@@ -49,11 +52,8 @@ classdef ECO < Instrument
           obj.data = iRead(@importInlininoSUVF, obj.path.raw, obj.path.wk, ['SUVF' obj.sn '_'],...
                          days2run, 'Inlinino', force_import, ~write, true);
         case 'InlininoADU100'
-          obj.data = iRead(@importInlininoFlowControl, obj.path.raw, obj.path.wk, obj.prefix,...
-                         days2run, 'InlininoADU100', force_import, ~write, true);
-          obj.data.Properties.VariableNames{strcmp(obj.data.Properties.VariableNames, obj.analog_channel)} = ...
-            obj.varname;
-          obj.data(:, ~strcmp(obj.data.Properties.VariableNames, 'dt') & ~strcmp(obj.data.Properties.VariableNames, obj.varname)) = [];
+          obj.data = iRead(@importInlinino_base, obj.path.raw, obj.path.wk, obj.prefix,...
+                         days2run, 'Inlinino', force_import, ~write, true); % @importInlininoFlowControl InlininoADU100
         case 'InlininoPourquoiPas'
           obj.data = iRead(@importInlininoPourquoiPas, obj.path.raw, obj.path.wk, 'Inlinino_',...
                          days2run, 'Inlinino', force_import, ~write, true);
@@ -68,7 +68,7 @@ classdef ECO < Instrument
         foo = find(strcmp(obj.data.Properties.VariableNames, obj.varname));
         if ~isempty(foo); obj.data = obj.data(:,[1,foo]); end
         % Remove empty lines
-        obj.data(all(isnan(obj.data.(obj.varname)),2),:) = [];
+        obj.data(all(isnan(table2array(obj.data(:, ~strcmp(obj.data.Properties.VariableNames, 'dt')))), 2), :) = [];
       end
     end
     

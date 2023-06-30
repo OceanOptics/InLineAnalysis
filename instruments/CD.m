@@ -13,6 +13,7 @@ classdef CD < ECO
       obj = obj@ECO(cfg);
       
       % Post initialization
+      if isfield(cfg, 'analog_channel'); obj.analog_channel = strrep(strrep(cfg.analog_channel, '(', ''), ')', ''); end
       if isempty(obj.varname); obj.varname = 'fdom'; end % Required for ECO class
       if isempty(obj.view.varname); obj.view.varname = 'fdom'; end
       

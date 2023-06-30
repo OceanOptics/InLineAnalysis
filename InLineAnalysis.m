@@ -139,6 +139,12 @@ classdef InLineAnalysis < handle
         else
           fprintf('READ RAW: %s\n', i);
           obj.instrument.(i).ReadRaw(obj.cfg.days2run, obj.cfg.force_import, true);
+          if any(strcmp(fieldnames(obj.instrument.(i)), 'analog_channel'))
+            if ~isempty(obj.instrument.(i).analog_channel)
+              obj.instrument.(i).data.Properties.VariableNames{strcmp(obj.instrument.(i).data.Properties.VariableNames, obj.instrument.(i).analog_channel)} = ...
+                obj.instrument.(i).varname;
+            end
+          end
         end
       end
     end
@@ -1056,6 +1062,11 @@ classdef InLineAnalysis < handle
                                            obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
                                            obj.cfg.calibrate.(i).di_method,...
                                            obj.cfg.calibrate.(i).filt_method)
+            case {'FL'}
+              obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
+                                           obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
+                                           obj.cfg.calibrate.(i).di_method,...
+                                           obj.cfg.calibrate.(i).filt_method)
             case 'CD'
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved)
             case {'LISST', 'LISST100X', 'LISST100x', 'LISST200X', 'LISST200x'}
@@ -1262,7 +1273,7 @@ classdef InLineAnalysis < handle
   end
   
   methods (Access=private)
-    function update_userselection_bad(~, filename, user_selection, remove_old, level, channel)
+    function update_userselection_bad(obj, filename, user_selection, remove_old, level, channel)
       if nargin < 5
         level = 'qc';
         channel = '';
