@@ -455,13 +455,15 @@ classdef InLineAnalysis < handle
           % Fresh selection does not take into account previous QC
           % TOTAL and FILTERED Sections
           fh = fig(31);
-          title('Select total (t; red) and filtered (f; green) sections (q to save)');
+          title(['\fontsize{22}Switch position QC:' newline '\fontsize{18}Select total (t; \color{red}red\color{black}) and filtered (f; \color{green}green\color{black}) sections' newline '\fontsize{14}Press q to save and quit (close graph to cancel and quit)'], 'interpreter', 'tex');
           fprintf('Select total (t; red) and filtered (f; green) sections (q to save)\n');
           yyaxis('left');
           plot(obj.instrument.(obj.cfg.qcref.reference).data.dt,...
                obj.instrument.(obj.cfg.qcref.reference).data.(obj.instrument.(obj.cfg.qcref.reference).view.varname), ...
                'k', 'LineWidth', obj.instrument.(obj.cfg.qcref.reference).view.varcol);
           ylim([-0.1 1.1]);
+          ax = gca; ax.YColor = 'k';
+          ylabel('Switch position')
           yyaxis('right');
           plot(obj.instrument.(obj.cfg.qcref.view).data.dt,...
                obj.instrument.(obj.cfg.qcref.view).data.(obj.instrument.(obj.cfg.qcref.view).view.varname)(:,obj.instrument.(obj.cfg.qcref.view).view.varcol),'.');
@@ -474,6 +476,8 @@ classdef InLineAnalysis < handle
           else
             ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname obj.instrument.(obj.cfg.qcref.view).view.varcol]);
           end
+          datetick2_doy();
+          legend('switch position (1=filtered | 0=total)', obj.instrument.(obj.cfg.qcref.view).view.varname, 'FontSize', 14)
           [user_selection.total, user_selection.filtered] = guiSelectOnTimeSeries(fh);
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection.total, 'total');
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection.filtered, 'filtered');
@@ -533,6 +537,30 @@ classdef InLineAnalysis < handle
             if ~isempty(file_selection.filtered)
               obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(file_selection.filtered, 'filtered');
             end
+            fh = fig(31);
+            title(['\fontsize{22}Switch position QC:' newline '\fontsize{18}Previous selection applied' newline 'Make sure filtered and total are properly seleceted'], 'interpreter', 'tex');
+            fprintf('Select total (t; red) and filtered (f; green) sections (q to save)\n');
+            yyaxis('left');
+            plot(obj.instrument.(obj.cfg.qcref.reference).data.dt,...
+                 obj.instrument.(obj.cfg.qcref.reference).data.(obj.instrument.(obj.cfg.qcref.reference).view.varname), ...
+                 'k', 'LineWidth', obj.instrument.(obj.cfg.qcref.reference).view.varcol);
+            ylim([-0.1 1.1]);
+            ax = gca; ax.YColor = 'k';
+            ylabel('Switch position')
+            yyaxis('right');
+            plot(obj.instrument.(obj.cfg.qcref.view).data.dt,...
+                 obj.instrument.(obj.cfg.qcref.view).data.(obj.instrument.(obj.cfg.qcref.view).view.varname)(:,obj.instrument.(obj.cfg.qcref.view).view.varcol),'.');
+            if contains(obj.cfg.qcref.view, 'AC')
+              ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname ' ' ...
+                  num2str(round(obj.instrument.(obj.cfg.qcref.view).('lambda_ref')(obj.instrument.(obj.cfg.qcref.view).view.varcol),0)) 'nm'])
+            elseif contains(obj.cfg.qcref.view, 'BB')
+              ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname ' ' ...
+                  num2str(round(obj.instrument.(obj.cfg.qcref.view).('lambda')(obj.instrument.(obj.cfg.qcref.view).view.varcol),0)) 'nm'])
+            else
+              ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname obj.instrument.(obj.cfg.qcref.view).view.varcol]);
+            end
+            datetick2_doy();
+            legend('switch position (1=filtered | 0=total)', obj.instrument.(obj.cfg.qcref.view).view.varname, 'FontSize', 14)
           else
             fprintf(['Warning: ' filename ' not found\n'])
           end
@@ -635,7 +663,8 @@ classdef InLineAnalysis < handle
             fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                        foo.qc.fsw, foo.suspect.fsw, foo.view.varname, foo.view.varcol,...
                        foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
-            title('Global QC: Trash section pressing t (q to save)');
+            title('\fontsize{22}\color{red}Global QC: \fontsize{18}\color{black}Press t to trash section (press q to save)', 'interpreter', 'tex');
+            fprintf('Global QC: Press t to trash section (press q to save)\n');
             user_selection = guiSelectOnTimeSeries(fh);
             % For each instrument 
             for i=obj.cfg.qc.global.apply(:)'; i = i{1};
@@ -681,7 +710,9 @@ classdef InLineAnalysis < handle
                   fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                              foo.qc.fsw, foo.suspect.fsw, j{:}, foo.view.varcol,...
                              foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
-                  title([i ' QC of "' j{:} '" only' newline 'Trash section pressing t (q to save)']);
+                  title(['\fontsize{22}\color{red}' i ' QC of "' j{:} '" only:' newline '\fontsize{18}\color{black}Press t to trash section (press q to save)'], 'interpreter', 'tex');
+                  % title([i ' QC of "' j{:} '" only' newline 'Press t to trash section (press q to save)']);
+                  fprintf([i ' QC of "' j{:} '" only: Press t to trash section (press q to save)\n']);
                   % Get user selection
                   user_selection = guiSelectOnTimeSeries(fh);
                   % Apply user selection
@@ -708,7 +739,9 @@ classdef InLineAnalysis < handle
                   fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                              foo.qc.fsw, foo.suspect.fsw, j{:}, foo.view.varcol,...
                              foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
-                  title([i ' QC of "' j{:} '" only' newline 'Trash section pressing t (q to save)']);
+                  title(['\fontsize{22}\color{red}' i ' QC of "' j{:} '" only:' newline '\fontsize{18}\color{black}Press t to trash section (press q to save)'], 'interpreter', 'tex');
+                  % title([i ' QC of "' j{:} '" only' newline 'Press t to trash section (press q to save)']);
+                  fprintf([i ' QC of "' j{:} '" only: Press t to trash section (press q to save)\n']);
                   % Get user selection
                   user_selection = guiSelectOnTimeSeries(fh);
                   % Apply user selection
@@ -730,8 +763,9 @@ classdef InLineAnalysis < handle
                              foo.view.varname, foo.view.varcol, foo.raw.bad, fooflow,...
                              obj.instrument.FLOW.view.spd_variable);
                 end
-                title([i ' specific QC all' newline 'Trash full section pressing t (q to save)']);
-                fprintf('Trash section pressing t (q to save)\n');
+                title(['\fontsize{22}\color{red}' i ' QC all variables:' newline '\fontsize{18}\color{black}Press t to trash section (press q to save)'], 'interpreter', 'tex');
+                % title([i ' specific QC all' newline 'Trash full section pressing t (q to save)']);
+                fprintf([i ' QC of "' j{:} '" only: Press t to trash section (press q to save)\n']);
                 user_selection = guiSelectOnTimeSeries(fh);
                 % Apply user selection
                 obj.instrument.(i).DeleteUserSelection(user_selection);
@@ -895,7 +929,7 @@ classdef InLineAnalysis < handle
               channel = {'a', 'c'};
               for j = 1:size(channel,2)
                 plot(foo.qc.diw.dt, foo.qc.diw.(channel{j})(:,foo.view.varcol), 'o', 'Color', ColorSet(j,:));
-                title([i ' QC of "' channel{j} '" only' newline 'Trash section pressing t (q to save)']);
+                title([i ' QC of "' channel{j} '" only' newline 'Press t to trash section (press q to save)']);
                 ylabel(channel{j});
                 datetick2_doy();
                 set(datacursormode(fh), 'UpdateFcn', @data_cursor_display_date);

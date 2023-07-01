@@ -22,18 +22,41 @@ yyaxis('left');
 % Plot second bin data
 %   plot(raw_tot.dt, raw_tot.(varname{1})(:,varindex), sha_raw, 'Color', col_tot);
 %   plot(raw_tot.dt, raw_tot.(varname{2})(:,varindex), sha_raw, 'Color', col_tot);
-if ~isempty(raw_tot);  scatter(raw_tot.dt, raw_tot.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_tot, 'MarkerEdgeAlpha', 0.5); end
-if ~isempty(raw_filt); scatter(raw_filt.dt, raw_filt.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_filt, 'MarkerEdgeAlpha', 0.5); end
-if ~isempty(raw_bad); scatter(raw_bad.dt, raw_bad.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_switch, 'MarkerEdgeAlpha', 0.5); end
+sc = [];
+leg = {};
+if ~isempty(raw_tot)
+  sc(end+1) = scatter(raw_tot.dt, raw_tot.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_tot, 'MarkerEdgeAlpha', 0.5);
+  leg{end+1} = 'raw total';
+end
+if ~isempty(raw_filt)
+  sc(end+1) = scatter(raw_filt.dt, raw_filt.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_filt, 'MarkerEdgeAlpha', 0.5);
+  leg{end+1} = 'raw filtered';
+end
+if ~isempty(raw_bad)
+  sc(end+1) = scatter(raw_bad.dt, raw_bad.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_switch, 'MarkerEdgeAlpha', 0.5);
+  leg{end+1} = 'raw switch buffer';
+end
 
 % Plot tot binned data
-if ~isempty(bin_tot_good); plot(bin_tot_good.dt, bin_tot_good.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', col_tot); end
-if ~isempty(bin_tot_suspect); plot(bin_tot_suspect.dt, bin_tot_suspect.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', col_flag, 'MarkerFaceColor', col_flag); end
+if ~isempty(bin_tot_good)
+  sc(end+1) = plot(bin_tot_good.dt, bin_tot_good.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', col_tot);
+  leg{end+1} = 'binned total';
+end
+if ~isempty(bin_tot_suspect)
+  sc(end+1) = plot(bin_tot_suspect.dt, bin_tot_suspect.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', col_flag, 'MarkerFaceColor', col_flag);
+  leg{end+1} = 'binned total suspect';
+end
 %   plot(bb3_tot_flag.dt(sel_tot_target), bb3_tot_flag.beta(sel_tot_target,1), 'o', 'MarkerEdgeColor', col_target);
 
 % Plot filt binned data
-if ~isempty(bin_filt_good); plot(bin_filt_good.dt, bin_filt_good.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', col_filt); end
-if ~isempty(bin_filt_bad); plot(bin_filt_bad.dt, bin_filt_bad.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', col_flag, 'MarkerFaceColor', col_flag); end
+if ~isempty(bin_filt_good)
+  sc(end+1) = plot(bin_filt_good.dt, bin_filt_good.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', col_filt);
+  leg{end+1} = 'binned filtered';
+end
+if ~isempty(bin_filt_bad)
+  sc(end+1) = plot(bin_filt_bad.dt, bin_filt_bad.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', col_flag, 'MarkerFaceColor', col_flag);
+  leg{end+1} = 'binned filtered bad';
+end
 %   plot(bb3_filt_flag.dt(sel_filt_target), bb3_filt_flag.beta(sel_filt_target,1), 'o', 'MarkerEdgeColor', col_target);  legend('pass 2', 'flag 16 & 32');
 
 % set y limit to binned data in priority
@@ -60,11 +83,15 @@ if ~strcmp(varname,'par')
           ~contains(fooflow.Properties.VariableNames, 'avg')};
       end
       if any(~isnan(fooflow.(spd_var)))
-        plot(fooflow.dt, fooflow.(spd_var),'Color',[0 0.8 0]); popo=gca; 
+        sc(end+1) = plot(fooflow.dt, fooflow.(spd_var),'Color',[0 0.8 0]); popo=gca; 
         ylim([0 max(fooflow.(spd_var))+4]); ylabel('Flow rate (lpm)'); popo.YColor = [0 0.8 0]; % green
         ylabel('flow rate (lpm)');
+        leg{end+1} = 'flow';
       end
     end
+end
+if ~isempty(leg)
+  legend(sc, leg, 'FontSize', 13)
 end
 
 set(datacursormode(fh),'UpdateFcn',@data_cursor_display_date);
