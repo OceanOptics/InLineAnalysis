@@ -113,26 +113,115 @@ switch interpolation_method
       fprintf('Warning: %i identical dates in CDOM data => deleted\n', sum(indexToDump))
       cdom_base(indexToDump, :) = [];
     end
-    cdom = table();
+    % fill missing data with spline interpolation
+    cdom_full = table();
     foo_dt = datetime(cdom_base.dt, 'ConvertFrom', 'datenum');
-    cdom.dt = (datenum(foo_dt(1):median(diff(foo_dt)):foo_dt(end)))';
-    cdom.fdom = interp1(cdom_base.dt, cdom_base.fdom, cdom.dt, 'linear');
+    cdom_full.dt = (datenum(foo_dt(1):median(diff(foo_dt)):foo_dt(end)))';
+    cdom_full.fdom = interp1(cdom_base.dt, cdom_base.fdom, cdom_full.dt, 'spline');
     % keep only leg data
     cdom_base = cdom_base(cdom_base.dt >= min([tot.dt; filt.dt]) & cdom_base.dt <= max([tot.dt; filt.dt]), :);
-    cdom = cdom(cdom.dt >= min([tot.dt; filt.dt]) & cdom.dt <= max([tot.dt; filt.dt]), :);
-    
-    % smooth FDOM data
-    cdom_base.mv_fdom = movmean(cdom_base.fdom, 30);
-    cdom.mv_fdom = movmean(cdom.fdom, 10);
-%     cdom.fdom(~ismember(cdom.dt, cdom_base.dt),:) = NaN;
-    % interpolate FDOM onto filt_avg
-    filt_avg.cdom_b = interp1(cdom_base.dt, cdom_base.mv_fdom, filt_avg.dt, 'linear');
-    filt_avg.cdom_b(isnan(filt_avg.cdom_b)) = interp1(cdom_base.dt, cdom_base.mv_fdom, filt_avg.dt(isnan(filt_avg.cdom_b)), ...
+    cdom_full = cdom_full(cdom_full.dt >= min([tot.dt; filt.dt]) & cdom_full.dt <= max([tot.dt; filt.dt]), :);
+
+    % interpolate on filter events
+    filt_avg.cdom = interp1(cdom_full.dt, cdom_full.fdom, filt_avg.dt, 'linear');
+    filt_avg.cdom(isnan(filt_avg.cdom)) = interp1(cdom_full.dt, cdom_full.fdom, filt_avg.dt(isnan(filt_avg.cdom)), ...
       'nearest', 'extrap');
-    filt_avg.cdom = interp1(cdom.dt, cdom.mv_fdom, filt_avg.dt, 'linear');
-    filt_avg.cdom(isnan(filt_avg.cdom)) = interp1(cdom.dt, cdom.mv_fdom, filt_avg.dt(isnan(filt_avg.cdom)), ...
-      'nearest', 'extrap');
+
+    % Interpolate fCDOM over total measurements
+    filt_interp = table(tot.dt, 'VariableNames', {'dt'});
+    filt_interp.cdom = interp1(cdom_full.dt, cdom_full.fdom, tot.dt, 'linear');
+    filt_interp.cdom(isnan(filt_interp.cdom)) = interp1(cdom_full.dt, ...
+      cdom_full.fdom, tot.dt(isnan(filt_interp.cdom)), 'nearest', 'extrap');
+
+    % Interpolate cdom data over filtered datetime
+    filt.cdom_b = interp1(cdom_base.dt, cdom_base.fdom, filt.dt, 'linear');
+    % robust linear regression between filt a&c and fdom
+    a_fcdom_reg = array2table(NaN(size(lambda.a, 2), 4), 'VariableNames', {'slope', 'intercept', 'RMSE', 'nRMSE', 'R2'});
+    c_fcdom_reg = array2table(NaN(size(lambda.a, 2), 4), 'VariableNames', {'slope', 'intercept', 'RMSE', 'nRMSE', 'R2'});
+    for i = 1:size(lambda.a, 2)
+      % regress fCDOM with filtered water absorption
+      [stats.b, stats.stats] = robustfit(filt.cdom_b, filt.a(:, i));
+      a_fcdom_reg.slope(i) = stats.b(2);
+      a_fcdom_reg.intercept(i) = stats.b(1);
+      a_fcdom_reg.RMSE(i) = stats.stats.robust_s;
+      % calculated normalize RMSE by average
+      id_nonan = all(~isnan([filt.a(:, i) filt.cdom_b]), 2);
+      a_fcdom_reg.nRMSE(i) = a_fcdom_reg.RMSE(i)/abs(mean(filt.a(id_nonan, i), 'omitnan'))*100;
+      
+      % regress fCDOM with filtered water attenuation
+      [stats.b, stats.stats] = robustfit(filt.cdom_b, filt.c(:, i));
+      c_fcdom_reg.slope(i) = stats.b(2);
+      c_fcdom_reg.intercept(i) = stats.b(1);
+      c_fcdom_reg.RMSE(i) = stats.stats.robust_s;
+      % calculated normalize RMSE by average
+      id_nonan = all(~isnan([filt.c(:, i) filt.cdom_b]), 2);
+      c_fcdom_reg.nRMSE(i) = c_fcdom_reg.RMSE(i)/abs(mean(filt.c(id_nonan, i), 'omitnan'))*100;
+    end
+
+    % model CDOM a&c from fdom
+    filt_interp.a = filt_interp.cdom .* a_fcdom_reg.slope' + repmat(a_fcdom_reg.intercept', size(tot.a, 1), 1);
+    filt_interp.c = filt_interp.cdom .* c_fcdom_reg.slope' + repmat(c_fcdom_reg.intercept', size(tot.c, 1), 1);
+
+    % % find start of temperature impact
+    % t_lim_a = find(abs(diff(a_fcdom_reg.R2)./diff(lambda.a')) > 10*median(abs(diff(a_fcdom_reg.R2)./diff(lambda.a')), 'omitnan'), 1, 'first');
+    % t_lim_c = find(abs(diff(c_fcdom_reg.R2)./diff(lambda.c')) > 10*median(abs(diff(c_fcdom_reg.R2)./diff(lambda.c')), 'omitnan'), 1, 'first');
+    % % linear interpolation when temperature impacts a&c
+    % filt_interp.a(:, t_lim_a:end) = interp1(filt_avg.dt, filt_avg.a(:, t_lim_a:end), filt_interp.dt, 'linear');
+    % filt_interp.c(:, t_lim_c:end) = interp1(filt_avg.dt, filt_avg.c(:, t_lim_c:end), filt_interp.dt, 'linear');
+
+    % % model filt_avg a&c from fdom
+    % spectral_filt_avg_fdom = table();
+    % spectral_filt_avg_fdom.dt = filt_avg.dt;
+    % spectral_filt_avg_fdom.a = filt_avg.cdom .* a_fcdom_reg.slope' + repmat(a_fcdom_reg.intercept', size(filt_avg.a, 1), 1);
+    % spectral_filt_avg_fdom.c = filt_avg.cdom .* c_fcdom_reg.slope' + repmat(c_fcdom_reg.intercept', size(filt_avg.c, 1), 1);
+    % % model total event a&c from fdom
+    % spectral_fdom = table();
+    % spectral_fdom.dt = filt_interp.dt;
+    % spectral_fdom.a = filt_interp.cdom .* a_fcdom_reg.slope' + repmat(a_fcdom_reg.intercept', size(tot.a, 1), 1);
+    % spectral_fdom.c = filt_interp.cdom .* c_fcdom_reg.slope' + repmat(c_fcdom_reg.intercept', size(tot.c, 1), 1);
+    % 
+    % 
+    % figure;
+    % [stats, leg] = plot_linreg(filt.cdom_b, filt.c(:, 75), 'robust', 'linear', false, 0.05);
+    % 
+    % figure;
+    % hold on
+    % scatter(lambda.a, a_fcdom_reg.slope, 20, 'filled')
+    % scatter(lambda.c, c_fcdom_reg.slope,  20)
+    % legend('slope of c_{filt} to fCDOM', 'slope of a_{filt} to fCDOM', 'FontSize', 16, 'Location', 'Northwest')
+    % ylabel('slope of a_{filt} and c_{filt} to fCDOM', 'FontSize', 16)
+    % xlabel("wavelength (nm)")
+    %
+    % % percentage difference between modelled a and c from fdom and a and c
+    % filt_diff = table();
+    % filt_diff.a = abs((spectral_filt_avg_fdom.a - filt_avg.a) ./ filt_avg.a) * 100;
+    % filt_diff.c = abs((spectral_filt_avg_fdom.c - filt_avg.c) ./ filt_avg.c) * 100;
+    % avg_diff_a = mean(filt_diff.a, 'omitnan');
+    % avg_diff_c = mean(filt_diff.c, 'omitnan');
+    % std_diff_a = std(filt_diff.a, 'omitnan');
+    % std_diff_c = std(filt_diff.c, 'omitnan');
+    % 
+    % figure; hold on
+    % plot(lambda.a, avg_diff_a, '-b')
+    % plot(lambda.c, avg_diff_c, '-r')
+    % ylabel('percentage difference a&c filtered fdom and measured')
+    % legend('percentage difference a', 'percentage difference c')
+    % 
+    % visProd3D(lambda.a, spectral_filt_avg_fdom.dt, spectral_filt_avg_fdom.a, false, 'Wavelength', false, 23);
+    % visProd3D(lambda.c, spectral_filt_avg_fdom.dt, spectral_filt_avg_fdom.c, false, 'Wavelength', false, 24);
+    % 
+    % visProd3D(lambda.a, filt_avg.dt, filt_avg.a, false, 'Wavelength', false, 25);
+    % visProd3D(lambda.c, filt_avg.dt, filt_avg.c, false, 'Wavelength', false, 26);
+    % 
+    % visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 23);
+    % visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 24);
+    % visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 25);
+    % visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 26);
+    % 
+    % visProd3D(lambda.a, tot.dt, tot.a, false, 'Wavelength', false, 25);
+    % visProd3D(lambda.c, tot.dt, tot.c, false, 'Wavelength', false, 26);
     
+
 %     figure()
 %     hold on
 %     cdom.mv_fdom
@@ -142,135 +231,8 @@ switch interpolation_method
 %     scatter(datetime(cdom.dt, 'ConvertFrom', 'datenum'), cdom.mv_fdom, 20, 'filled', 'o')
 %     legend('cdom_base.fdom', 'cdom_base.mv_fdom', 'cdom.fdom', 'cdom.mv_fdom')
     
-    % Use simple mathematical function to interpolate based on CDOM
-    n_periods = size(filt_avg,1)-1;
-    filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-    filt_interp.cdom = interp1(cdom.dt, cdom.mv_fdom, tot.dt, 'linear');
-    filt_interp.cdom(isnan(filt_interp.cdom)) = interp1(cdom.dt, ...
-      cdom.mv_fdom, tot.dt(isnan(filt_interp.cdom)), 'nearest', 'extrap'); % as independent from tot|filt period
-    filt_interp.a = NaN(size(filt_interp,1),size(lambda.a, 2));
-    filt_interp.c = NaN(size(filt_interp,1),size(lambda.c, 2));
-    % For each period going from t0 to t1, starting and finishing by a filtered time
-    for i=1:n_periods
-      it0 = i; it1 = i + 1;
-      it = filt_avg.dt(it0) <= filt_interp.dt & filt_interp.dt <= filt_avg.dt(it1);
-      if any(it)
-        it_filt_interp = filt_interp(it,:);
 
-%         figure()
-%         scatter(it_filt_interp.cdom, tot.a(it,40), 20, 'filled')
-%         
-%         std(tot.a(it,:),[], 1)'
-% 
-%           figure();
-%           yyaxis('left')
-%           hold on
-%           scatter(filt_interp.dt, filt_interp.cdom, 30, 'filled', 'MarkerFaceColor', 'b','MarkerFaceAlpha', 0.5)
-%           scatter(filt_avg.dt, filt_avg.cdom, 30, 'filled', 'MarkerFaceColor', 'r', 'MarkerFaceAlpha', 0.5)
-%           yyaxis('right')
-%           hold on
-%           scatter(tot.dt, tot.a(:,40), 30, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5)
-% 
-%           Xt = (filt_avg.cdom(it1) - filt_interp.cdom(it)) / (filt_avg.cdom(it1) - filt_avg.cdom(it0));
-%           filt_interp.a(it,:) = Xt .* filt_avg.a(it0,:) + (1 - Xt) .* filt_avg.a(it1,:);
-%           filt_interp.c(it,:) = Xt .* filt_avg.c(it0,:) + (1 - Xt) .* filt_avg.c(it1,:);
-
-        % linearly interpolate cdom between filter average
-        dt_filtavg_it = filt_avg.dt(it0:it1,:);
-        cdom_filtavg_it = filt_avg.cdom(it0:it1,:);
-        if sum(isnan(cdom_filtavg_it)) == 1 && ~all(isnan(filt_interp.cdom(it,:)))
-          foo = it_filt_interp(~isnan(it_filt_interp.cdom),:);
-          cdom_filtavg_it(isnan(cdom_filtavg_it)) = foo.cdom(find(abs(foo.dt - dt_filtavg_it(isnan(cdom_filtavg_it))) == ...
-            min(abs(foo.dt - dt_filtavg_it(isnan(cdom_filtavg_it)))), 1, 'first'));
-        end
-        lin_cdom = interp1(dt_filtavg_it, cdom_filtavg_it, it_filt_interp.dt, 'linear');
-        % get cdom variance to the linear interpolation
-        Xt = lin_cdom ./ it_filt_interp.cdom;
-        % fill missing values in cdom variance by interpolating linearly
-        if any(isnan(Xt))
-          foo_Xt = [1; Xt; 1];
-          foo_Xt_dt = [dt_filtavg_it(1); it_filt_interp.dt; dt_filtavg_it(2)];
-          % remove duplicates
-          if foo_Xt_dt(1) == foo_Xt_dt(2)
-            foo_Xt_dt(1) = foo_Xt_dt(2) - median(diff(foo_Xt_dt), 'omitnan');
-          end
-          if foo_Xt_dt(end) == foo_Xt_dt(end-1)
-            foo_Xt_dt(end) = foo_Xt_dt(end-1) + median(diff(foo_Xt_dt), 'omitnan');
-          end
-          foo_Xt = fillmissing(foo_Xt, 'linear','SamplePoints',foo_Xt_dt);
-          Xt = foo_Xt(2:end-1);
-        end
-        % linearly interpolate a and c
-        lin_a = interp1(dt_filtavg_it, filt_avg.a(it0:it1,:), it_filt_interp.dt, 'linear');
-        lin_c = interp1(dt_filtavg_it, filt_avg.c(it0:it1,:), it_filt_interp.dt, 'linear');
-        % apply cdom variance to a and c if Xt not NaN
-%         if any(all(isnan(it_filt_interp.cdom)) | ...
-%             all(1 - min(it_filt_interp.cdom) / max(it_filt_interp.cdom) > 0.3 & ...
-%             sum(1 - min(filt_avg.a(it0:it1,:)) ./ max(filt_avg.a(it0:it1,:)) < 0.005) > size(filt_avg.a, 2)/2))
-%           filt_interp.a(it,:) = lin_a;
-%           filt_interp.c(it,:) = lin_c;
-%         else
-%           filt_interp.a(it,:) = lin_a ./ Xt;
-%           filt_interp.c(it,:) = lin_c ./ Xt;
-%         end
-        
-        foo_interp_a = NaN(size(lin_a));
-        foo_interp_c = NaN(size(lin_c));
-        
-        pos_interp_a = lin_a ./ Xt;
-        pos_interp_c = lin_c ./ Xt;
-        neg_interp_a = lin_a .* Xt;
-        neg_interp_c = lin_c .* Xt;
-        
-        foo_interp_a(lin_a > 0) = pos_interp_a(lin_a > 0);
-        foo_interp_c(lin_c > 0) = pos_interp_c(lin_c > 0);
-        
-        foo_interp_a(lin_a < 0) = neg_interp_a(lin_a < 0);
-        foo_interp_c(lin_c < 0) = neg_interp_c(lin_c < 0);
-
-        filt_interp.a(it, :) = foo_interp_a;
-        filt_interp.c(it, :) = foo_interp_c;
-
-%         idl = filt_interp.dt >= min(it_filt_interp.dt) & filt_interp.dt <= max(it_filt_interp.dt);
-%         visProd3D(lambda.a, filt_interp.dt(idl), filt_interp.a(idl,:), false, 'Wavelength', false, 23);
-%         visProd3D(lambda.a, it_filt_interp.dt, lin_a, false, 'Wavelength', false, 24);
-%         idp = tot.dt >= min(it_filt_interp.dt) & tot.dt <= max(it_filt_interp.dt);
-%         figure(25)
-%         scatter(datetime(tot.dt(idp), 'ConvertFrom', 'datenum'), filt_interp.cdom(idp), 20, 'filled')
-
-%         figure()
-%         clf
-%         subplot(1,2,1)
-%         yyaxis('left')
-%         hold on
-%         plot_dt = datetime(it_filt_interp.dt, 'ConvertFrom', 'datenum');
-%         scatter(plot_dt, ...
-%           filt_interp.a(it,40), 30, 'filled', 'MarkerFaceColor', 'b','MarkerFaceAlpha', 0.5)
-%         scatter(datetime(filt_avg.dt, 'ConvertFrom', 'datenum'), ...
-%           filt_avg.a(:,40), 30, 'filled', 'MarkerFaceColor', [255	193	37]/255,'MarkerFaceAlpha', 1)
-%         xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
-%         yyaxis('right')
-%         hold on
-%         scatter(plot_dt, ...
-%           it_filt_interp.cdom, 30, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5)
-%         xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
-%         subplot(1,2,2)
-%         yyaxis('left')
-%         hold on
-%         scatter(plot_dt, ...
-%           filt_interp.c(it,40), 30, 'filled', 'MarkerFaceColor', 'r','MarkerFaceAlpha', 0.5)
-%         scatter(datetime(filt_avg.dt, 'ConvertFrom', 'datenum'), ...
-%           filt_avg.c(:,40), 30, 'filled', 'MarkerFaceColor', [255	193	37]/255,'MarkerFaceAlpha', 1)
-%         xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
-%         yyaxis('right')
-%         hold on
-%         scatter(plot_dt, ...
-%           it_filt_interp.cdom, 30, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5)
-%         xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
-      end
-    end
-    
-    % Note std is interpolated linearly (not using the cdom function)
+    % TODO: propagate error from regression and filter event STD
     filt_interp.a_avg_sd = interp1(filt.dt, filt.a_avg_sd, filt_interp.dt, 'linear');
     filt_interp.c_avg_sd = interp1(filt.dt, filt.c_avg_sd, filt_interp.dt, 'linear');
     
@@ -299,7 +261,7 @@ filt_interp(sel2rm,:) = [];
 
 if strcmp(interpolation_method, 'CDOM')
   % remove cdom interpolation when there is no a and c data
-  cdom(~ismember(cdom.dt, filt_interp.dt), :) = [];
+  cdom_full(~ismember(cdom_full.dt, filt_interp.dt), :) = [];
 end
 
 if exist('visFlag', 'file')
@@ -308,7 +270,7 @@ if exist('visFlag', 'file')
   if strcmp(interpolation_method, 'CDOM')
     ax1 = gca;
     ax1.YColor = [0	205	205]/255;
-    scatter(cdom.dt, cdom.mv_fdom, 15, [0	205	205]/255, 'filled')
+    scatter(cdom_full.dt, cdom_full.fdom, 15, [0	205	205]/255, 'filled')
     ylabel('FDOM (volts)')
     legend('Filtered interpolated', 'Total', 'Filtered median', 'smoothed FDOM',...
       'AutoUpdate','off', 'FontSize', 12)
