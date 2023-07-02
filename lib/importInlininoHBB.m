@@ -6,8 +6,6 @@ function [ data, lambda ] = importInlininoHBB( filename, calfile_plaque, calfile
 % Date : May 2021
 %
 %%
-% filename = '/Volumes/Samsung_T5/Data/TaraMicrobiome/raw/HyperBB8005/HyperBB8005_20220129_221810.csv';
-% filename = '/Volumes/Samsung_T5/Data/TaraMicrobiome/raw/HyperBB8005/HyperBB8005_20220208_161946.csv';
 % verbose = true;
 
 if nargin < 4; verbose = false; end
@@ -180,17 +178,13 @@ end
 dat = addvars(dat, ScatX, GainX, 'After', 'Scat3', 'NewVariableNames', {'ScatX', 'GainX'});
 
 % read cal files
-load(calfile_plaque, 'cal');
-if ~all(isfield(cal, {'gain12', 'gain23', 'pmtGamma', 'pmtRefGain', 'H', 'rho', 'muWavelengths', 'muFactors'}))
+if ~all(isfield(calfile_plaque, {'gain12', 'gain23', 'pmtGamma', 'pmtRefGain', 'H', 'rho', 'muWavelengths', 'muFactors'}))
   error('Input cal struct does not contain required fields.')
 end
 
-%load temperature cal file
-load(calfile_temp, 'cal_temp');
-
 if istable(dat)
   if sum(ismember(dat.Properties.VariableNames, {'Scat1', 'Scat2', 'Scat3', 'PmtGain'})) == 4
-    dat = processDataTable(dat, cal, cal_temp);
+    dat = processDataTable(dat, calfile_plaque, calfile_temp);
   else
     if verbose
       warning(['dat{' num2str(kd) '} does not contain proper data.'])
@@ -202,15 +196,15 @@ else
   end
 end
 
-[data, lambda] = reformatHBB(dat, cal_temp.wl);
+[data, lambda] = reformatHBB(dat, calfile_temp.wl);
 data(all(isnan(data.beta), 2), :) = [];
 
 % save calibration information in table properties
 data = addprop(data, {'PlaqueCal', 'TemperatureCal'}, ...
               {'table', 'table'});
 
-data.Properties.CustomProperties.PlaqueCal = cal;
-data.Properties.CustomProperties.TemperatureCal = cal_temp;
+data.Properties.CustomProperties.PlaqueCal = calfile_plaque;
+data.Properties.CustomProperties.TemperatureCal = calfile_temp;
 
 if verbose; fprintf('Done\n'); end
 end 
