@@ -7,6 +7,7 @@ classdef ACS < Instrument
     lambda_ref = [];
     lambda_c = [];
     lambda_a = [];
+    cal_param = [];
     modelG50 = [];
     modelmphi = [];
   end
@@ -40,7 +41,7 @@ classdef ACS < Instrument
     
     function ReadDeviceFile(obj)
       % Read Device file to set wavelength
-      [obj.lambda_c, obj.lambda_a] = importACSDeviceFile(obj.device_file);
+      [obj.lambda_c, obj.lambda_a, obj.cal_param] = importACSDeviceFile(obj.device_file);
       if isempty(obj.lambda_ref); obj.lambda_ref = obj.lambda_a; end
     end
     
@@ -132,18 +133,18 @@ classdef ACS < Instrument
         case 'linear'
           if compute_dissolved
             [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, ...
-              obj.qc.tsw, obj.qc.fsw, obj.modelG50, obj.modelmphi, obj.bin.diw, ...
+              obj.qc.tsw, obj.qc.fsw, [], obj.modelG50, obj.modelmphi, obj.bin.diw, ...
               [], SWT, SWT_constants, interpolation_method, di_method, ...
               compute_ad_aphi);
           else
             [obj.prod.p, ~, obj.prod.QCfailed] = processACS(lambda, ...
-              obj.qc.tsw, obj.qc.fsw, obj.modelG50, obj.modelmphi, [], ...
+              obj.qc.tsw, obj.qc.fsw, [], obj.modelG50, obj.modelmphi, [], ...
               [], SWT, SWT_constants, interpolation_method, [], ...
               compute_ad_aphi);
           end
         case 'CDOM'
           if ~isfield(CDOM.prod, 'pd') && isempty(CDOM.qc.tsw)
-            error('No CDOM data loaded');
+            error('No CDOM data loaded: required for CDOM interpolation');
           end
           if isempty(CDOM.qc.tsw)
             cdom = CDOM.prod.pd;
@@ -152,12 +153,12 @@ classdef ACS < Instrument
           end
           if compute_dissolved
             [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, ...
-              obj.qc.tsw, obj.qc.fsw, obj.modelG50, obj.modelmphi, obj.bin.diw, ...
+              obj.qc.tsw, obj.qc.fsw, obj.cal_param, obj.modelG50, obj.modelmphi, obj.bin.diw, ...
               cdom, SWT, SWT_constants, interpolation_method, di_method, ...
               compute_ad_aphi);
           else
             [obj.prod.p, ~, obj.prod.QCfailed] = processACS(lambda, ...
-              obj.qc.tsw, obj.qc.fsw, obj.modelG50, obj.modelmphi, [], ...
+              obj.qc.tsw, obj.qc.fsw, obj.cal_param, obj.modelG50, obj.modelmphi, [], ...
               cdom, SWT, SWT_constants, interpolation_method, [], ...
               compute_ad_aphi);
           end
