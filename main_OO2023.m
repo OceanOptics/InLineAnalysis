@@ -95,16 +95,16 @@ ila.SpectralQC('AC',{'raw'});
 
 %% 5. Automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR & ALFA values
 % tolerance factor for auto QC ACS.
-% Varies between ACS: 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
+% Varies between ACS: 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
 ila.cfg.qc.AutoQC_tolerance.filtered.a = 5; % ACS262 5 ACS412 5 
 ila.cfg.qc.AutoQC_tolerance.filtered.c = 5; % ACS262 5 ACS412 5 
 ila.cfg.qc.AutoQC_tolerance.total.a = 1.5; % ACS262 5 ACS412 1 
 ila.cfg.qc.AutoQC_tolerance.total.c = 1.5; % ACS262 1.5 ACS412 2 
 % define saturation threshold of a and c in uncalibrated m^-1
-ila.cfg.qc.AutoQC_Saturation_Threshold.a = 10; % saturate above 4000 counts
-ila.cfg.qc.AutoQC_Saturation_Threshold.c = 40; % saturate above 4000 counts
+ila.cfg.qc.AutoQC_Saturation_Threshold.a = 10; % remove any spectra > threshold m^-1 (uncalibrated)
+ila.cfg.qc.AutoQC_Saturation_Threshold.c = 40; % remove any spectra > threshold m^-1 (uncalibrated)
 % tolerance factor for auto QC BB
-% 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
+% 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
 ila.cfg.qc.AutoQC_tolerance.filtered.bb = 2; % 10
 ila.cfg.qc.AutoQC_tolerance.total.bb = 2; % 10
 % define saturation threshold of beta in counts

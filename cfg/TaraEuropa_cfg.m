@@ -24,7 +24,8 @@ cfg.meta.measurement_depth = 2;
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-PATH_ROOT = '/Users/emmanuelboss/Desktop/TaraEuropa';
+% PATH_ROOT = '/Users/emmanuelboss/Desktop/TaraEuropa';
+PATH_ROOT = '/Volumes/Samsung_T5/Data/TaraEuropa';
 
 %%% TSG %%%
 model = 'SBE3845';
@@ -43,7 +44,7 @@ cfg.instruments.([model SN]).temperature_variable = 't2';
 
 
 %%% NMEA %%%
-model = 'GPSCOMPASSAT'; % GPSSC701Tara GPS32Tara GPSCOMPASSAT
+model = 'GPS32Tara'; % GPSSC701Tara GPS32Tara GPSCOMPASSAT
 SN = '';
 cfg.instruments.NMEA = struct();
 cfg.instruments.NMEA.model = model;
@@ -325,16 +326,18 @@ cfg.process.flag.default = struct();
   
 %%% Auto QC %%%
 cfg.process.qc = struct();
-cfg.process.qc.RawAutoQCLim.filtered.a = 3;
-cfg.process.qc.RawAutoQCLim.filtered.c = 3;
-cfg.process.qc.RawAutoQCLim.total.a = 3;
-cfg.process.qc.RawAutoQCLim.total.c = 3;
-cfg.process.qc.RawAutoQCLim.dissolved.a = 3;
-cfg.process.qc.RawAutoQCLim.dissolved.c = 3;
-cfg.process.qc.RawAutoQCLim.filtered.bb = 3;
-cfg.process.qc.RawAutoQCLim.total.bb = 3;
-cfg.process.qc.RawAutoQCLim.dissolved.bb = 3;
-cfg.process.qc.Saturation_Threshold_bb = 4100; % (counts) max being 4130
+cfg.process.qc.AutoQC_tolerance.filtered.a = 3;
+cfg.process.qc.AutoQC_tolerance.filtered.c = 3;
+cfg.process.qc.AutoQC_tolerance.total.a = 3;
+cfg.process.qc.AutoQC_tolerance.total.c = 3;
+cfg.process.qc.AutoQC_tolerance.dissolved.a = 3;
+cfg.process.qc.AutoQC_tolerance.dissolved.c = 3;
+cfg.process.qc.AutoQC_tolerance.filtered.bb = 3;
+cfg.process.qc.AutoQC_Saturation_Threshold.a = 50; % in uncalibrated m^-1
+cfg.process.qc.AutoQC_Saturation_Threshold.c = 50; % in uncalibrated m^-1
+cfg.process.qc.AutoQC_tolerance.total.bb = 3;
+cfg.process.qc.AutoQC_tolerance.dissolved.bb = 3;
+cfg.process.qc.AutoQC_Saturation_Threshold.bb = 4100; % (counts) max being 4130
 
 %%% Manually QC %%%
 cfg.process.qc.mode = 'ui';

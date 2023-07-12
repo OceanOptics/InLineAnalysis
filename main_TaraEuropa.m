@@ -4,7 +4,7 @@
 clear
 close all
 
-cd('/Users/emmanuelboss/Desktop/TaraEuropa/InLineAnalysis-master')
+cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master')
 
 % Load InLineAnalysis and the configuration
 ila = InLineAnalysis('cfg/TaraEuropa_cfg.m');
@@ -95,18 +95,21 @@ ila.SpectralQC('AC',{'raw'});
 
 %% 5. Automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR & ALFA values
 % fudge factor for auto QC ACS.
-% Varies between ACS: 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
-ila.cfg.qc.RawAutoQCLim.filtered.a = 2; %
-ila.cfg.qc.RawAutoQCLim.filtered.c = 2; %
-ila.cfg.qc.RawAutoQCLim.total.a = 2; %
-ila.cfg.qc.RawAutoQCLim.total.c = 3; %
-% fudge factor for auto QC BB
-% 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
-ila.cfg.qc.RawAutoQCLim.filtered.bb = 100; % 10
-ila.cfg.qc.RawAutoQCLim.total.bb = 10; % 10
-% remove saturated periods in BB
-ila.cfg.qc.Saturation_Threshold_bb = 4100; % saturate above 4000 counts
-ila.RawAutoQC('raw');
+% Varies between ACS: 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
+ila.cfg.qc.AutoQC_tolerance.filtered.a = 2; %
+ila.cfg.qc.AutoQC_tolerance.filtered.c = 2; %
+ila.cfg.qc.AutoQC_tolerance.total.a = 2; %
+ila.cfg.qc.AutoQC_tolerance.total.c = 3; %
+% define saturation threshold of a and c in uncalibrated m^-1
+ila.cfg.qc.AutoQC_Saturation_Threshold.a = 10; % remove any spectra > threshold m^-1 (uncalibrated)
+ila.cfg.qc.AutoQC_Saturation_Threshold.c = 40; % remove any spectra > threshold m^-1 (uncalibrated)
+% tolerance factor for auto QC BB
+% 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
+ila.cfg.qc.AutoQC_tolerance.filtered.bb = 100; % 10
+ila.cfg.qc.AutoQC_tolerance.total.bb = 10; % 10
+% define saturation threshold of beta in counts
+ila.cfg.qc.AutoQC_Saturation_Threshold.bb = 4100; % saturate above 4000 counts
+ila.AutoQC('raw');
 ila.CheckDataStatus();
 
 %% 5.1. Spectral QC
@@ -170,7 +173,7 @@ ila.QC();
 ila.CheckDataStatus();
 
 %% 8.1. Auto QC at level 'qc': run until it stabilize to 0
-% ila.RawAutoQC('qc');
+% ila.AutoQC('qc');
 
 %% 8.2. Spectral QC
 % check QCed spectrums AC | BB | LISST sensors
