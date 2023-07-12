@@ -1,4 +1,4 @@
-function user_selection = DiagnosticPlot(data, instrument, level, save_figure, prefix, toClean)
+function user_selection = SpectralQC(data, instrument, level, save_figure, prefix, toClean)
 % Plot all level of processing 3D spectrums of BB and AC sensors to
 % quality check while processing
 % Option to save the plots (save_figure)
@@ -60,12 +60,24 @@ LISSTsz_to_plot = 120000;
 
 user_selection = [];
 for j = 1:length(level)
-  % get fieldname of data.level structure
-  tabletoplot = fieldnames(data.(level{j}));
-  % remove fieldname of empty table
-  tabletoplot = tabletoplot(~structfun(@isempty, data.(level{j})));
-  tabletoplot(strcmp(tabletoplot, 'bad')) = [];
-  tabletoplot(strcmp(tabletoplot, 'FiltStat')) = [];
+  if ~isempty(toClean{1})
+    tabletoplot = toClean(1);
+    % close figure not to clean
+    fig_toclose = [(1:4) .* (1:2)' + 1 * 10; (1:4) .* (1:2)' + 2 * 10];
+    fig_toclose = fig_toclose(:);
+    for c = 1:size(fig_toclose, 1)
+      if ishghandle(fig_toclose(c))
+        close(fig_toclose(c))
+      end
+    end
+  else
+    % get fieldname of data.level structure
+    tabletoplot = fieldnames(data.(level{j}));
+    % remove fieldname of empty table
+    tabletoplot = tabletoplot(~structfun(@isempty, data.(level{j})));
+    tabletoplot(strcmp(tabletoplot, 'bad')) = [];
+    tabletoplot(strcmp(tabletoplot, 'FiltStat')) = [];
+  end
   sztoplot = table(0.4, 8, 8, 'VariableNames', {'AC', 'BB', 'LISST'});
   switch level{j}
     case 'raw'
@@ -76,12 +88,20 @@ for j = 1:length(level)
       end
       day_to_plot = [max(szdt(:,1)) max(szdt(:,2)) + sztoplot.(instrument)];
       if contains(instrument,'AC')
-        toplot = repmat({'a','c'}, size(tabletoplot));
+        if ~isempty(toClean{1})
+          toplot = toClean(2);
+        else
+          toplot = repmat({'a','c'}, size(tabletoplot));
+        end
         if strcmp(toClean{end}, 'all')
           toClean{end} = 'a';
         end
       elseif contains(instrument,'BB') || contains(instrument,'LISST')
-        toplot = repmat({'beta'}, size(tabletoplot));
+        if ~isempty(toClean{1})
+          toplot = toClean(2);
+        else
+          toplot = repmat({'beta'}, size(tabletoplot));
+        end
         if strcmp(toClean{end}, 'all')
           toClean{end} = 'beta';
         end
@@ -94,12 +114,20 @@ for j = 1:length(level)
       end
       day_to_plot = [min(szdt(:,1)) max(szdt(:,2))];
       if contains(instrument,'AC')
-        toplot = repmat({'a','c'}, size(tabletoplot));
+        if ~isempty(toClean{1})
+          toplot = toClean(2);
+        else
+          toplot = repmat({'a','c'}, size(tabletoplot));
+        end
         if strcmp(toClean{end}, 'all')
           toClean{end} = 'a';
         end
       elseif contains(instrument,'BB') || contains(instrument,'LISST')
-        toplot = repmat({'beta'}, size(tabletoplot));
+        if ~isempty(toClean{1})
+          toplot = toClean(2);
+        else
+          toplot = repmat({'beta'}, size(tabletoplot));
+        end
         if strcmp(toClean{end}, 'all')
           toClean{end} = 'beta';
         end
@@ -112,8 +140,12 @@ for j = 1:length(level)
       end
       day_to_plot = [min(szdt(:,1)) max(szdt(:,2))];
       if contains(instrument,'AC')
-        toplot = [cellfun(@(x) ['a' x], tabletoplot, 'un', 0) ...
-          cellfun(@(x) ['c' x], tabletoplot, 'un', 0)];
+        if ~isempty(toClean{1})
+          toplot = toClean(2);
+        else
+          toplot = [cellfun(@(x) ['a' x], tabletoplot, 'un', 0) ...
+            cellfun(@(x) ['c' x], tabletoplot, 'un', 0)];
+        end
         if strcmp(toClean{end}, 'all')
           toClean{end} = cellfun(@(x) ['a' x], tabletoplot, 'un', 0);
         end
@@ -121,7 +153,11 @@ for j = 1:length(level)
           toplot(contains(toplot, 'QCfailed')) = {'ap', 'cp'};
         end
       elseif contains(instrument,'LISST')
-        toplot = [cellfun(@(x) ['beta' x], tabletoplot, 'un', 0) 'PSD' 'VSD'];
+        if ~isempty(toClean{1})
+          toplot = toClean(2);
+        else
+          toplot = [cellfun(@(x) ['beta' x], tabletoplot, 'un', 0) 'PSD' 'VSD'];
+        end
         if strcmp(toClean{end}, 'all')
           toClean{end} = cellfun(@(x) ['beta' x], tabletoplot, 'un', 0);
         end
@@ -129,8 +165,12 @@ for j = 1:length(level)
           toplot(contains(toplot, 'QCfailed')) = {'betap', 'bbp'};
         end
       elseif contains(instrument,'BB')
-        toplot = [cellfun(@(x) ['beta' x], tabletoplot, 'un', 0) ...
-          cellfun(@(x) ['bb' x], tabletoplot, 'un', 0)];
+        if ~isempty(toClean{1})
+          toplot = toClean(2);
+        else
+          toplot = [cellfun(@(x) ['beta' x], tabletoplot, 'un', 0) ...
+            cellfun(@(x) ['bb' x], tabletoplot, 'un', 0)];
+        end
         if strcmp(toClean{end}, 'all')
           toClean{end} = cellfun(@(x) ['bb' x], tabletoplot, 'un', 0);
         end
@@ -190,14 +230,14 @@ for j = 1:length(level)
           zlabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
           xlabel(ylab);
           ylabel('time');
-          title([level{j} ' ' tabletoplot{i}], 'FontSize', 16);
+          title([instrument ' ' level{j} ' ' tabletoplot{i}], 'FontSize', 16);
         elseif sum(sel) < 2
           fh = visProd2D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, j*i+k*10);
           ylabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
           xlabel(ylab);
-          title([level{j} ' ' tabletoplot{i} ' ' datestr(data.(level{j}).(tabletoplot{i}).dt(sel))], ...
+          title([instrument ' ' level{j} ' ' tabletoplot{i} ' ' datestr(data.(level{j}).(tabletoplot{i}).dt(sel))], ...
             'FontSize', 16);
         end
         % plot plan at 676 nm to check shift in chl a peak wavelength
@@ -214,6 +254,7 @@ for j = 1:length(level)
           hold off
         end
         if any(strcmp(toClean{1}, tabletoplot{i})) && any(strcmp(toClean{2}, toplot{i, k}))
+          title(['\fontsize{20}\color{red}' instrument ' ' level{j} ' ' tabletoplot{i} ' spectral QC:' newline '\fontsize{16}\color{black}Select single spectrum using datatip and press "d" to delete' newline '(press q to save and quit)'], 'interpreter', 'tex');
           [ ~, ~, ~, user_sel ] = guiSelectOnTimeSeries(fh);
           user_selection = [user_selection; user_sel];
         end

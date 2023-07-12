@@ -91,7 +91,7 @@ if ~strcmp(varname,'par')
     end
 end
 if ~isempty(leg)
-  legend(sc, leg, 'FontSize', 13)
+  legend(sc, leg, 'FontSize', 13, 'AutoUpdate','off')
 end
 
 set(datacursormode(fh),'UpdateFcn',@data_cursor_display_date);

@@ -1,5 +1,5 @@
 function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, modelG50, modelmphi, di, ...
-  cdom_base, fth, fth_constants, interpolation_method, di_method, compute_ad_aphi)
+  cdom_base, fth, fth_constants, interpolation_method, di_method, scattering_correction, compute_ad_aphi)
 
   % NOTE: wavelength of c are interpolated to wavelength of a
   %% ap & cp
@@ -12,6 +12,11 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     SWITCH_FILTERED = fth_constants.SWITCH_FILTERED;
     SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
   end
+  % check scattering correction method
+  if ~any(strcmp(scattering_correction, {'Zaneveld1994', 'Kostakis2022'}))
+    error('%s residual temperature and scattering correction not supported', scattering_correction)
+  end
+
   % remove duplicates
   [~, L, ~] = unique(fth.qc.tsw.dt,'first');
   indexToDump = not(ismember(1:numel(fth.qc.tsw.dt), L));
@@ -345,18 +350,29 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     cp_for_apresiduals_corr = interp1(lambda.c', p.cp', lambda.a', 'linear', 'extrap')';
     % ap Scattering & Residual temperature correction
     % cp Residual correction (for efficiency use the one computed from ap as it should be the same)
-    fprintf('ap residual temperature and scattering correction ... ')
-    [p.ap, ~] = ResidualTemperatureAndScatteringCorrection(p.ap, cp_for_apresiduals_corr, lambda.a);
+    fprintf(['ap ' scattering_correction ' residual temperature and scattering correction ... '])
+    if strcmp(scattering_correction, 'Kostakis2022')
+      [p.ap, ~] = ResidualTemperatureAndScatteringCorrectionKostakis(p.ap, cp_for_apresiduals_corr, lambda.a);
+    elseif strcmp(scattering_correction, 'Zaneveld1994')
+      [p.ap, ~] = ResidualTemperatureAndScatteringCorrectionZaneveld(p.ap, cp_for_apresiduals_corr, lambda.a);
+    end
     fprintf('Done\n')
-    fprintf('cp residual temperature and scattering correction ... ')
-    [~, p.cp] = ResidualTemperatureAndScatteringCorrection(ap_for_cpresiduals_corr, p.cp, lambda.c);
+    fprintf(['cp ' scattering_correction ' residual temperature and scattering correction ... '])
+    if strcmp(scattering_correction, 'Kostakis2022')
+      [~, p.cp] = ResidualTemperatureAndScatteringCorrectionKostakis(ap_for_cpresiduals_corr, p.cp, lambda.c);
+    elseif strcmp(scattering_correction, 'Zaneveld1994')
+      [~, p.cp] = ResidualTemperatureAndScatteringCorrectionZaneveld(ap_for_cpresiduals_corr, p.cp, lambda.c);
+    end
     fprintf('Done\n')
   else
-    fprintf('ap and cp residual temperature and scattering corrections ... ')
-    [p.ap, p.cp] = ResidualTemperatureAndScatteringCorrection(p.ap, p.cp, lambda.ref);
-    fprintf('Done\n')
+    fprintf(['ap and cp ' scattering_correction ' residual temperature and scattering correction ... '])
+    if strcmp(scattering_correction, 'Kostakis2022')
+      [p.ap, p.cp] = ResidualTemperatureAndScatteringCorrectionKostakis(p.ap, p.cp, lambda.ref);
+    elseif strcmp(scattering_correction, 'Zaneveld1994')
+      [p.ap, p.cpp] = ResidualTemperatureAndScatteringCorrectionZaneveld(p.ap, p.cp, lambda.ref);
+    end
   end
-  
+
   % Propagate error (using geometric mean of measurement errors)
   %   Note: Error is not propagated through Scattering & Residual temperature
   %         correction as required by SeaBASS
@@ -365,11 +381,11 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   p.ap_n = tot.a_avg_n;
   p.cp_n = tot.c_avg_n;
   
-  % % delete ap spectrum full of NaNs
+  % % delete ap spectra full of NaNs
   % p(all(isnan(p.ap),2),:) = [];
   % p(all(isnan(p.cp),2),:) = [];
   
-  % Unsmoothing ACS spectrum
+  % Unsmoothing ACS spectra
   % Ron Zaneveld, WET Labs, Inc., 2005
   if size(lambda.a, 2) > 50 % unsmooth only ACS, not AC9
     p = unsmoothACS(p, lambda);
@@ -396,7 +412,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   % flag ap spectra when ap430-700 < -0.0015
   toflag = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
   if sum(toflag) > 0
-    fprintf('%.2f%% (%i) spectrum flagged: ap 430-700 < -0.0015\n', ...
+    fprintf('%.2f%% (%i) spectra flagged: ap 430-700 < -0.0015\n', ...
       sum(toflag) / size(p, 1) * 100, sum(toflag))
   end
   flag.ap430_700_neg(toflag) = true;
@@ -407,7 +423,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   % delete cp spectra when any cp < -0.0015
   todelete = any(p.cp < -0.0015, 2);
   if sum(todelete) > 0
-    fprintf('%.2f%% (%i) spectrum failed auto-QC: cp < -0.0015\n', ...
+    fprintf('%.2f%% (%i) spectra failed auto-QC: cp < -0.0015\n', ...
       sum(todelete) / size(p, 1) * 100, sum(todelete))
   end
   flag.cp_neg(toflag) = true;
@@ -420,7 +436,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   % delete ap spectra when any ap < -0.01
   todelete = any(p.ap < -0.01 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
   if sum(todelete) > 0
-    fprintf('%.2f%% (%i) spectrum failed auto-QC: ap 430-700 < -0.01\n', ...
+    fprintf('%.2f%% (%i) spectra failed auto-QC: ap 430-700 < -0.01\n', ...
       sum(todelete) / size(p, 1) * 100, sum(todelete))
   end
   flag.ap_neg(todelete) = true;
@@ -430,24 +446,22 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   %   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
   % p.ap(todelete, :) = NaN;
   
-  % delete unrealistic data when ap650 > ap676
-  todelete = any(mean(p.ap(:, lambda.a >= 640 & lambda.a <= 655), 2, 'omitnan') > ...
+  % flag when ap650 > ap676: high NAP
+  toflag = any(mean(p.ap(:, lambda.a >= 640 & lambda.a <= 655), 2, 'omitnan') > ...
     mean(p.ap(:, lambda.a >= 670 & lambda.a <= 680), 2, 'omitnan'), 2);
-  if sum(todelete) > 0
-    fprintf('%.2f%% (%i) spectrum failed auto-QC: ap650 > ap676\n', ...
-      sum(todelete) / size(p, 1) * 100, sum(todelete))
+  if sum(toflag) > 0
+    fprintf('%.2f%% (%i) spectra flagged: ap650 > ap676 high NAP\n', ...
+      sum(toflag) / size(p, 1) * 100, sum(toflag))
   end
   flag.ap_shape(toflag) = true;
-  bad = [bad; p(todelete, :) table(repmat({'ap650 > ap676'}, ...
-    sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-  % bad = [p(todelete, :) table(repmat({'cp < -0.0015'}, ...
-  %   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-  p.cp(todelete, :) = NaN;
+  bad = [bad; p(toflag, :) table(repmat({'ap650 > ap676: high NAP'}, ...
+    sum(toflag), 1), 'VariableNames', {'QC_failed'})];
+  % p.cp(toflag, :) = NaN;
   
   % flag attenuation spectra when cp > 10
   toflag = any(p.cp > 10, 2);
   if sum(toflag) > 0
-    fprintf('%.2f%% (%i) spectrum flagged: p.cp > 10\n', ...
+    fprintf('%.2f%% (%i) spectra flagged: p.cp > 10\n', ...
       sum(toflag) / size(p, 1) * 100, sum(toflag))
   end
   flag.cp_over10(toflag) = true;
@@ -497,31 +511,31 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       ndel_spec(i) = sum(toflag);
     end
     fudge_factor = fudge_list(find(abs(diff(ndel_spec)) == min(abs(diff(ndel_spec))) & ...
-      ndel_spec(2:end) < 0.001 * max(ndel_spec), 1,  'first')); % 0.05 threshold on first derivative of number of spectrum deleted
+      ndel_spec(2:end) < 0.001 * max(ndel_spec), 1,  'first')); % 0.05 threshold on first derivative of number of spectra deleted
     if isempty(fudge_factor)
       fudge_factor = fudge_list(find(abs(diff(ndel_spec)) == min(abs(diff(ndel_spec))) & ...
-        ndel_spec(2:end) < 0.01 * max(ndel_spec), 1,  'first')); % 0.05 threshold on first derivative of number of spectrum deleted
+        ndel_spec(2:end) < 0.01 * max(ndel_spec), 1,  'first')); % 0.05 threshold on first derivative of number of spectra deleted
     end
     if ~isempty(fudge_factor)
       toflag = ratiod600_ap450 > fudge_factor * median(ratiod600_ap450);
       if sum(toflag) > 0
-        fprintf('%.2f%% (%i) spectrum flagged: sum(abs(d(ap)/d(lambda(600-650)))) / ap450nm\n', ...
+        fprintf('%.2f%% (%i) spectra flagged: sum(abs(d(ap)/d(lambda(600-650)))) / ap450nm\n', ...
           sum(toflag) / size(p, 1) * 100, sum(toflag))
       end
   
-    %   delete bad spectrum
+    %   delete bad spectra
       flag.noisy600_650(toflag) = true;
       bad = [bad; p(toflag, :) ...
         table(repmat({'sum(abs(d(ap)/d(lambda(600-650)))) / ap_{450nm}'}, sum(toflag), 1), ...
         'VariableNames', {'QC_failed'})];
   %     p.ap(toflag, :) = NaN;
     end
-    % flag potential bubbles using the step in the center of the spectrum
+    % flag potential bubbles using the step in the center of the spectra
     foo_difstep = diff(p.ap(:, lambda.a > 560 & lambda.a <= 600),1, 2) ./ diff(lambda.a(lambda.a > 560 & lambda.a <= 600));
     foo_difref = diff(p.ap(:, lambda.a > 500 & lambda.a <= 560),1, 2) ./ diff(lambda.a(lambda.a > 500 & lambda.a <= 560));
     toflag = any(abs(foo_difstep) > 3 * median(abs(foo_difref), 2, 'omitnan'), 2);
     if sum(toflag)
-      fprintf('Signal of bubbles detected in %.2f%% (%i) of the spectrum, flagged: step in ap between 550 and 600 nm\n', ...
+      fprintf('Signal of bubbles detected in %.2f%% (%i) of the spectra, flagged: step in ap between 550 and 600 nm\n', ...
         sum(toflag) / size(p, 1) * 100, sum(toflag))
       flag.ap_bubbles(toflag) = true;
     end
@@ -533,10 +547,10 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   % larger than 0.006
   ap_450 = p.ap(:, find(lambda.a >= 450, 1,'first'));
   d460_640 = diff(p.ap(:, lambda.a > 460 & lambda.a <= 640),[],2);
-  % delete bad spectrum
+  % delete bad spectra
   toflag = any(d460_640 > 0.4 * ap_450,2) | any(abs(diff(d460_640,[],2)) > 0.05, 2);
   if sum(toflag)
-    fprintf('%.2f%% (%i) spectrum flagged: d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)\n', ...
+    fprintf('%.2f%% (%i) spectra flagged: d(ap)/d(lambda460-640) > 0.4 * ap_{450nm} | abs(d"(ap)/d(lambda460-640)) > 0.05)\n', ...
       sum(toflag) / size(p, 1) * 100, sum(toflag))
   end
   flag.ap460_640_04_450(toflag) = true;
@@ -544,7 +558,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     sum(toflag), 1), 'VariableNames', {'QC_failed'})];
   % p.ap(toflag, :) = NaN;
   
-  % Auto QC when ap spectrum contains 4 consecutive positive first derivatives of ap over
+  % Auto QC when ap spectra contains 4 consecutive positive first derivatives of ap over
   % wavelentght between 485 and 570 nm
   d485_570 = diff(p.ap(:, lambda.a > 485 & lambda.a <= 570),[],2);
   pos_d485_570 = d485_570 > 0;
@@ -557,7 +571,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     end
   end
   if sum(toflag)
-    fprintf('%.2f%% (%i) spectrum flagged: 4 consecutive d(ap)/d(lambda485-570) > 0\n', ...
+    fprintf('%.2f%% (%i) spectra flagged: 4 consecutive d(ap)/d(lambda485-570) > 0\n', ...
       sum(toflag) / size(p, 1) * 100, sum(toflag))
   end
   flag.positive_ap450_570(toflag) = true;
@@ -566,7 +580,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   bad = sortrows(bad, 'dt');
   % p.ap(toflag, :) = NaN;
   
-  % % Auto QC when ap spectrum contains 5 consecutive positive first derivatives of cp over
+  % % Auto QC when ap spectra contains 5 consecutive positive first derivatives of cp over
   % % wavelentght between 485 and 570 nm
   % d485_570 = diff(p.cp(:, lambda.c > 485 & lambda.c <= 570),[],2);
   % pos_d485_570 = d485_570 > 0;
@@ -579,7 +593,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   %   end
   % end
   % if sum(todelete)
-  %   fprintf('%.2f%% (%i) spectrum failed auto-QC: 5 consecutive d(cp)/d(lambda485-570) > 0\n', ...
+  %   fprintf('%.2f%% (%i) spectra failed auto-QC: 5 consecutive d(cp)/d(lambda485-570) > 0\n', ...
   %     sum(todelete) / size(p, 1) * 100, sum(todelete))
   % end
   % bad = [bad; p(todelete, :) table(repmat({'5 consecutive d(cp)/d(lambda485-570) > 0'}, ...
@@ -754,7 +768,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     g.cg_fitflag(g.RMSE_fit_cg > 0.0025) = true;
     fprintf('Done\n')
     
-  %   % QC with ag and cg spectrums (limited testing on the QC)
+  %   % QC with ag and cg spectra (limited testing on the QC)
   %   g(g.ag(:,1) < 0 & g.cg(:,end-3) < -0.005, :) = [];
   else
     g = table();
@@ -850,8 +864,51 @@ end
 
 
 %%
-function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrection(ap, cp, wl)
+function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrectionZaneveld(ap, cp, wl)
   % Function from Emmanuel Boss improved by Nils Haëntjens
+  % Assumes negligible ap in NIR after Zaneveld 1994 method 3
+  
+  % Sullivan et al. 2006 values
+  psi_wl = [400;402;404;406;408;410;412;414;416;418;420;422;424;426;428;430;432;434;436;438;440;442;444;446;448;450;452;454;456;458;460;462;464;466;468;470;472;474;476;478;480;482;484;486;488;490;492;494;496;498;500;502;504;506;508;510;512;514;516;518;520;522;524;526;528;530;532;534;536;538;540;542;544;546;548;550;552;554;556;558;560;562;564;566;568;570;572;574;576;578;580;582;584;586;588;590;592;594;596;598;600;602;604;606;608;610;612;614;616;618;620;622;624;626;628;630;632;634;636;638;640;642;644;646;648;650;652;654;656;658;660;662;664;666;668;670;672;674;676;678;680;682;684;686;688;690;692;694;696;698;700;702;704;706;708;710;712;714;716;718;720;722;724;726;728;730;732;734;736;738;740;742;744;746;748;750]';
+  psiT = [0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0003;0.0003;0.0004;0.0005;0.0006;0.0006;0.0007;0.0008;0.0009;0.001;0.001;0.001;0.001;0.001;0.0009;0.0009;0.0008;0.0007;0.0006;0.0006;0.0005;0.0004;0.0003;0.0003;0.0002;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0002;0.0002;0.0001;0.0001;0.0001;0;0;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;0;0;0.0001;0.0002;0.0003;0.0005;0.0007;0.0009;0.0013;0.0017;0.0021;0.0026;0.0032;0.0038;0.0045;0.0054;0.0063;0.0073;0.0083;0.0094;0.0104;0.0113;0.0121;0.0128;0.0133;0.0136;0.0136;0.0133;0.0129;0.0124;0.0116;0.0107]';
+  psiT = interp1(psi_wl, psiT, wl);
+  
+  % Parameters of minization routine
+  opts = optimset('fminsearch');
+  % opts = optimset(opts,'NonlEqnAlgorithm', 'gn'); % Does not work on R2017a
+  opts = optimset(opts,'MaxIter',20000000);
+  opts = optimset(opts,'MaxFunEvals',20000);
+  opts = optimset(opts,'TolX',1e-8);
+  opts = optimset(opts,'TolFun',1e-8);
+  
+  % Find Near Infrared & references
+  iNIR = 710 <= wl &  wl <= 750;  % spectral srange for optimization (710 to 750nm)
+  if isempty(iNIR); error('Unable to perform correction as no wavelength available in NIR.'); end
+  % Find nearest wavelength to greater than 730 nm to use as reference for correction
+  iref = find(730 <= wl, 1,'first'); % 715 730
+  % If ACS spectra do not go up to 730 nm take the closest wavelength to 730 nm
+  if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
+  
+  % Initialize output arrays
+  deltaT = NaN(size(ap,1),1);
+  
+  % Init routine parameters
+  bp = cp - ap;
+  
+  % Run minimization routine on good spectra only
+  sel = find(all(isfinite(ap),2));
+  for k = sel'
+    deltaT(k) = fminsearch(@costFun_RTSC, 0, opts, ap(k,:), bp(k,:), psiT, iNIR, iref);         
+  end
+  ap_corr = ap - psiT.*deltaT - ((ap(:,iref) - psiT(iref).*deltaT) ./ bp(:,iref)) .* bp; 
+  cp_corr = cp - psiT.*deltaT;
+end
+
+
+%% 
+function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrectionKostakis(ap, cp, wl)
+  % Function from Emmanuel Boss after Kostakis et al. 2022
+  % Allows absorption in NIR in case of high NAP
   
   % Sullivan et al. 2006 values
   psi_wl = [400;402;404;406;408;410;412;414;416;418;420;422;424;426;428;430;432;434;436;438;440;442;444;446;448;450;452;454;456;458;460;462;464;466;468;470;472;474;476;478;480;482;484;486;488;490;492;494;496;498;500;502;504;506;508;510;512;514;516;518;520;522;524;526;528;530;532;534;536;538;540;542;544;546;548;550;552;554;556;558;560;562;564;566;568;570;572;574;576;578;580;582;584;586;588;590;592;594;596;598;600;602;604;606;608;610;612;614;616;618;620;622;624;626;628;630;632;634;636;638;640;642;644;646;648;650;652;654;656;658;660;662;664;666;668;670;672;674;676;678;680;682;684;686;688;690;692;694;696;698;700;702;704;706;708;710;712;714;716;718;720;722;724;726;728;730;732;734;736;738;740;742;744;746;748;750]';
@@ -871,7 +928,7 @@ function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrection(ap, cp,
   if isempty(iNIR); error('Unable to perform correction as no wavelength available in NIR.'); end
   % Find nearest wavelength to greater than 730 nm to use as reference for correction
   iref = find(730 <= wl, 1,'first'); % 715 730
-  % If ACS spectrum does not go up to 730 nm take the closest wavelength to 730 nm
+  % If ACS spectra do not go up to 730 nm take the closest wavelength to 730 nm
   if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
   
   % Initialize output arrays
@@ -880,12 +937,12 @@ function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrection(ap, cp,
   % Init routine parameters
   bp = cp - ap;
   
-  % Run minimization routine on good spectrum only
+  % Run minimization routine on good spectra only
   sel = find(all(isfinite(ap),2));
   for k = sel'
     deltaT(k) = fminsearch(@costFun_RTSC, 0, opts, ap(k,:), bp(k,:), psiT, iNIR, iref);         
   end
-  ap_corr = ap - psiT.*deltaT - ((ap(:,iref) - psiT(iref).*deltaT) ./ bp(:,iref)) .* bp; 
+  ap_corr = ap - psiT.*deltaT - (ap(:,iref) - psiT(iref).*deltaT) + 0.212*(ap(:,iref) - psiT(iref).*deltaT).^1.135; 
   cp_corr = cp - psiT.*deltaT;
 end
 
@@ -1064,7 +1121,7 @@ function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
   coef2 = [coef2nap', coef2];
   
   % normalize both the component functions and the measured ap
-  % spectrum by the uncertainty (std dev) in the ap spectra
+  % spectra by the uncertainty (std dev) in the ap spectra
   ap_sd_int = interp1(lambda, ap_sd_filled', onenm, 'linear', 'extrap');
   acorr2onenm_new = (acorr2onenm ./ ap_sd_int);
   

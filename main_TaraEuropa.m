@@ -4,33 +4,33 @@
 clear
 close all
 
-cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master/')
+cd('/Users/emmanuelboss/Desktop/TaraEuropa/InLineAnalysis-master')
 
 % Load InLineAnalysis and the configuration
-ila = InLineAnalysis('cfg/OO2023_cfg.m');
+ila = InLineAnalysis('cfg/TaraEuropa_cfg.m');
 
 % Quick cfg update
 %% set the date to process
-% ila.cfg.days2run = datenum(2023,7,3):datenum(2023,7,3);
-ila.cfg.days2run = datenum(2023,7,4):datenum(2023,7,4);
+ila.cfg.days2run = datenum(2023,4,2):datenum(2023,5,6); %datenum(2023,5,5)
 
-%% 'SBE4536073','atlasTSG002','atlasTSG003','atlasTSG004','NMEA','FLOW','ACS412','ACS091','ACS262','ACS327','ACS410','HyperBB8002','BB3349','SUVF6254','WS3S1081','LISST1183'
-ila.cfg.instruments2run = {'FLOW','ACS262'}; % , 'SUVF6254','SBE4536073'
-ila.cfg.qcref.view = 'ACS262';
-ila.cfg.parallel = Inf;
+%% 'SBE38450269','NMEA','FLOW','ACS412','HyperBB8002','BB3349','SUVF6254','WS3S1081','LISST1183'
+ila.cfg.instruments2run = {'NMEA'};
+ila.cfg.qcref.view = 'NMEA';
+%ila.cfg.instruments2run = {'FLOW','SBE38450269'};
+%ila.cfg.qcref.view = 'SBE38450269';ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 
 %% 1. Import | Load raw data
-ila.cfg.force_import = false;
+ila.cfg.force_import = false; %no need if first time
 ila.ReadRaw();
 ila.CheckDataStatus();
 
 %% Or Load data from already processed mat files
-ila.Read('raw');
-ila.Read('bin');
-ila.Read('qc');
-ila.Read('prod');
-ila.CheckDataStatus();
+%ila.Read('raw');
+%ila.Read('bin');
+%ila.Read('qc');
+%ila.Read('prod');
+% ila.CheckDataStatus();
 
 %% 2. Synchronise instruments
 % % % Independent of flow rate (for now)
@@ -81,8 +81,8 @@ ila.CheckDataStatus();
 % Note: when redoing QC of a given period of time (days2run) the previous
 % QC during the same period of time is erased, QC done on other periods of
 % time is kept in the json file
-ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
-ila.cfg.qcref.remove_old = false; % remove old selection of the same period
+ila.cfg.qcref.mode='load'; % 'ui' or 'load'
+ila.cfg.qcref.remove_old = false; % clear old selection of the same period
 ila.QCRef();
 
 %% 4. Split fsw and tsw
@@ -94,22 +94,19 @@ ila.CheckDataStatus();
 ila.SpectralQC('AC',{'raw'});
 
 %% 5. Automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR & ALFA values
-% tolerance factor for auto QC ACS.
+% fudge factor for auto QC ACS.
 % Varies between ACS: 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
-ila.cfg.qc.AutoQC_tolerance.filtered.a = 5; % ACS262 5 ACS412 5 
-ila.cfg.qc.AutoQC_tolerance.filtered.c = 5; % ACS262 5 ACS412 5 
-ila.cfg.qc.AutoQC_tolerance.total.a = 1.5; % ACS262 5 ACS412 1 
-ila.cfg.qc.AutoQC_tolerance.total.c = 1.5; % ACS262 1.5 ACS412 2 
-% define saturation threshold of a and c in uncalibrated m^-1
-ila.cfg.qc.AutoQC_Saturation_Threshold.a = 10; % saturate above 4000 counts
-ila.cfg.qc.AutoQC_Saturation_Threshold.c = 40; % saturate above 4000 counts
-% tolerance factor for auto QC BB
+ila.cfg.qc.RawAutoQCLim.filtered.a = 2; %
+ila.cfg.qc.RawAutoQCLim.filtered.c = 2; %
+ila.cfg.qc.RawAutoQCLim.total.a = 2; %
+ila.cfg.qc.RawAutoQCLim.total.c = 3; %
+% fudge factor for auto QC BB
 % 0.1 = maximum filtration and >> 10 = very small filtration (default = 3)
-ila.cfg.qc.AutoQC_tolerance.filtered.bb = 2; % 10
-ila.cfg.qc.AutoQC_tolerance.total.bb = 2; % 10
-% define saturation threshold of beta in counts
-ila.cfg.qc.AutoQC_Saturation_Threshold.bb = 4100; % saturate above 4000 counts
-ila.AutoQC('raw');
+ila.cfg.qc.RawAutoQCLim.filtered.bb = 100; % 10
+ila.cfg.qc.RawAutoQCLim.total.bb = 10; % 10
+% remove saturated periods in BB
+ila.cfg.qc.Saturation_Threshold_bb = 4100; % saturate above 4000 counts
+ila.RawAutoQC('raw');
 ila.CheckDataStatus();
 
 %% 5.1. Spectral QC
@@ -117,7 +114,7 @@ ila.CheckDataStatus();
 ila.SpectralQC('AC',{'raw'}); % AC or BB
 
 %% 5.2. Run QC directly on spectra at any level
-% ila.SpectralQC inputs:        
+% ila.SpectralQC inputs:
 % 1) 'AC' | 'BB' | 'LISST' sensors
 % 2) 'level':  'raw' | 'bin' | 'qc' | 'prod'
 % 3) save plot option: boolean
@@ -127,7 +124,7 @@ ila.SpectralQC('AC',{'raw'}); % AC or BB
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.SpectralQC('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'g','ag'})
-ila.SpectralQC('AC',{'raw'}, false, {'fsw','a'});
+ila.SpectralQC('AC',{'raw'}, false, {'fsw','qc'});
 
 %% 5.3. Loading previous qc pick selection at raw level
 ila.cfg.qc.mode='load';  % load or ui
@@ -173,7 +170,7 @@ ila.QC();
 ila.CheckDataStatus();
 
 %% 8.1. Auto QC at level 'qc': run until it stabilize to 0
-% ila.AutoQC('qc');
+% ila.RawAutoQC('qc');
 
 %% 8.2. Spectral QC
 % check QCed spectrums AC | BB | LISST sensors
@@ -191,7 +188,7 @@ ila.SpectralQC('AC',{'qc'});
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.SpectralQC('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'g','ag'})
 % ila.SpectralQC('AC',{'qc'}, false, {'fsw','a'});
-ila.SpectralQC('AC',{'qc'}, false, {'fsw','a'});
+ila.SpectralQC('AC',{'qc'}, false, {'tsw','c'});
 
 %% 9. QC Switch position
 % QC switch position to make sure each filter event is separated by a
@@ -213,7 +210,7 @@ ila.Calibrate();
 ila.CheckDataStatus();
 
 %% 10.1 Product visualisation plots with option to save
-save_figures = false;
+save_figures = true;
 
 %%% AC or BB 3D plots %%%
 ila.SpectralQC('AC', {'prod'}, save_figures); % AC or BB
@@ -232,7 +229,7 @@ ila.visProd_timeseries()
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.SpectralQC('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'g','ag'})
-ila.SpectralQC('LISST',{'prod'}, false, {'p','ap'});
+ila.SpectralQC('AC',{'prod'}, false, {'p','ap'});
 
 %% 11.1. Load previous qc pick selection at prod level
 ila.cfg.qc.mode = 'load';  % load or ui

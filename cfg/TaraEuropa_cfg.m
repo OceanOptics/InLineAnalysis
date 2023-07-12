@@ -1,34 +1,34 @@
-% OO2023 Configuration file
-% author: Guilaume Bourdin
-% created: June 27, 2023
+% Tara Europa Configuration file
+% author: Guilaume Bourdin & Emmanuel Boss
+% created: June 27, 2023, July 8, 2023
 
 cfg = struct('meta', struct(), 'instruments', struct(), 'process', struct());
 
 %%%%%%%%%%%%%%
 %% METADATA %%
 %%%%%%%%%%%%%%
-cfg.meta.investigators = 'OO2023_participants';
+cfg.meta.investigators = 'Emmanuel_Boss';
 cfg.meta.affiliations = 'University_of_Maine';
 cfg.meta.emails = 'emmanuel.boss@maine.edu';
-cfg.meta.experiment = 'OO2023';
-cfg.meta.cruise = 'OO2023';
+cfg.meta.experiment = 'TaraEuropa';
+cfg.meta.cruise = 'TaraEuropa';
 cfg.meta.station = 'NA';
 cfg.meta.documents = 'NA';
 cfg.meta.calibration_files = 'NA';
 cfg.meta.data_type = 'flow_thru';
 cfg.meta.data_status = 'preliminary';
-cfg.meta.measurement_depth = 1.5;
+cfg.meta.measurement_depth = 2;
 
 
 %%%%%%%%%%%%%%%%%
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-PATH_ROOT = '/Volumes/Samsung_T5/Data/OO2023';
+PATH_ROOT = '/Users/emmanuelboss/Desktop/TaraEuropa';
 
 %%% TSG %%%
-model = 'SBE45';
-SN = '36073';
+model = 'SBE3845';
+SN = '0269';
 cfg.instruments.([model SN]) = struct();
 cfg.instruments.([model SN]).model = model;
 cfg.instruments.([model SN]).boat = 'Tara';
@@ -38,80 +38,30 @@ cfg.instruments.([model SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', [m
                                   'wk',   fullfile(PATH_ROOT, 'wk', [model SN]),...
                                   'prod', fullfile(PATH_ROOT, 'prod'),...
                                   'ui', fullfile(PATH_ROOT, 'ui', [model SN]));
-cfg.instruments.([model SN]).view = struct('varname', 't');
-cfg.instruments.([model SN]).temperature_variable = 't';
+cfg.instruments.([model SN]).view = struct('varname', 't2');
+cfg.instruments.([model SN]).temperature_variable = 't2';
 
-%%% atlasTSG002 %%%
-model = 'atlasTSG';
-SN = '002';
-cfg.instruments.([model SN]) = struct();
-cfg.instruments.([model SN]).model = 'atlasTSG';
-cfg.instruments.([model SN]).TSseparated = true;
-cfg.instruments.([model SN]).coef = struct('t', struct('slope',1,'interc',0), ...
-                                  'c', struct('slope',1,'interc',0));
-cfg.instruments.([model SN]).logger = 'Inlinino_base'; % Inlinino_atlasTSG
-cfg.instruments.([model SN]).sn = SN;
-cfg.instruments.([model SN]).prefix = 'ATLAS';
-cfg.instruments.([model SN]).path = struct('raw',  [PATH_ROOT 'raw' filesep 'atlasTSG' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'atlasTSG' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'atlasTSG' filesep]);
-cfg.instruments.([model SN]).view = struct('varname', 't');
-
-%%% atlasTSG003 %%%
-model = 'atlasTSG';
-SN = '003';
-cfg.instruments.([model SN]) = struct();
-cfg.instruments.([model SN]).model = 'atlasTSG';
-cfg.instruments.([model SN]).TSseparated = false;
-cfg.instruments.([model SN]).coef = struct('t', struct('slope',1,'interc',0), ...
-                                  'c', struct('slope',1,'interc',0));
-cfg.instruments.([model SN]).logger = 'Inlinino_base'; % Inlinino_atlasTSG
-cfg.instruments.([model SN]).sn = SN;
-cfg.instruments.([model SN]).prefix = 'ATLASECRTD';
-cfg.instruments.([model SN]).path = struct('raw',  [PATH_ROOT 'raw' filesep 'atlasTSG' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'atlasTSG' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'atlasTSG' filesep]);
-cfg.instruments.([model SN]).view = struct('varname', 't');
-
-%%% atlasTSG004 %%%
-model = 'atlasTSG';
-SN = '004';
-cfg.instruments.([model SN]) = struct();
-cfg.instruments.([model SN]).model = 'atlasTSG';
-cfg.instruments.([model SN]).TSseparated = false;
-cfg.instruments.([model SN]).coef = struct('t', struct('slope',1,'interc',0), ...
-                                  'c', struct('slope',1,'interc',0));
-cfg.instruments.([model SN]).logger = 'Inlinino_base'; % Inlinino_atlasTSG
-cfg.instruments.([model SN]).sn = SN;
-cfg.instruments.([model SN]).prefix = 'ATLASECRTD';
-cfg.instruments.([model SN]).path = struct('raw',  [PATH_ROOT 'raw' filesep 'atlasTSG' filesep],...
-                                  'wk',   [PATH_ROOT 'wk' filesep 'atlasTSG' filesep],...
-                                  'prod', [PATH_ROOT 'prod' filesep],...
-                                  'ui', [PATH_ROOT 'ui' filesep 'atlasTSG' filesep]);
-cfg.instruments.([model SN]).view = struct('varname', 't');
 
 %%% NMEA %%%
-model = '19X'; % GPSSC701 GPSGP32
-SN = '2J5055713';
+model = 'GPSCOMPASSAT'; % GPSSC701Tara GPS32Tara GPSCOMPASSAT
+SN = '';
 cfg.instruments.NMEA = struct();
 cfg.instruments.NMEA.model = model;
-cfg.instruments.NMEA.boat = 'Ira-C';
+cfg.instruments.NMEA.boat = 'Tara';
 cfg.instruments.NMEA.logger = 'Inlinino';
 cfg.instruments.NMEA.sn = SN;
-cfg.instruments.NMEA.prefix = 'GPS19x';
-cfg.instruments.NMEA.path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['GPS' cfg.instruments.NMEA.model]),...
-                                  'wk',   fullfile(PATH_ROOT, 'wk', ['GPS' cfg.instruments.NMEA.model]),...
+cfg.instruments.NMEA.prefix = [model SN];
+cfg.instruments.NMEA.path = struct('raw',  fullfile(PATH_ROOT, 'raw', [model SN]),...
+                                  'wk',   fullfile(PATH_ROOT, 'wk', [model SN]),...
                                   'prod', fullfile(PATH_ROOT, 'prod'),...
-                                  'ui', fullfile(PATH_ROOT, 'ui', ['GPS' cfg.instruments.NMEA.model]));
+                                  'ui', fullfile(PATH_ROOT, 'ui', [model SN]));
 cfg.instruments.NMEA.view = struct('varname', 'lat');
 
 %%% FLOW (FlowControl) %%%
-SN = 'B02782';
+SN = '';
 cfg.instruments.FLOW = struct();
-cfg.instruments.FLOW.model = 'ADU100';
-cfg.instruments.FLOW.logger = 'Inlinino_base';
+cfg.instruments.FLOW.model = 'FTH';
+cfg.instruments.FLOW.logger = 'FlowControl';
 cfg.instruments.FLOW.sn = SN;
 cfg.instruments.FLOW.LoadPrevious = true;
 cfg.instruments.FLOW.analog1 = '';
@@ -122,8 +72,8 @@ cfg.instruments.FLOW.path = struct('raw',  fullfile(PATH_ROOT, 'raw', 'FlowContr
                                   'ui', fullfile(PATH_ROOT, 'ui', 'FlowControl'));
 cfg.instruments.FLOW.view = struct('varname', 'swt','spd_variable','spd1'); % spd1 spd2
 
-%%% ACS412 %%%
-SN = '412';
+%%% ACS003 %%%
+SN = '003';
 cfg.instruments.(['ACS' SN]) = struct();
 cfg.instruments.(['ACS' SN]).di = struct();
 cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN '_'];
@@ -131,7 +81,7 @@ cfg.instruments.(['ACS' SN]).di.postfix = '';
 cfg.instruments.(['ACS' SN]).model = 'ACS';
 cfg.instruments.(['ACS' SN]).sn = SN;
 cfg.instruments.(['ACS' SN]).logger = 'InlininoACScsv';
-cfg.instruments.(['ACS' SN]).device_file = fullfile(PATH_ROOT, 'DeviceFiles', 'acs412_20230510.dev');
+cfg.instruments.(['ACS' SN]).device_file = fullfile(PATH_ROOT, 'DeviceFiles', 'acs003_20220602.dev');
 cfg.instruments.(['ACS' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['ACS' SN]),...
                                     'di',  fullfile(PATH_ROOT, 'raw', ['ACS' SN], 'DI'),...
                                     'wk',   fullfile(PATH_ROOT, 'wk', ['ACS' SN]),...
@@ -139,124 +89,36 @@ cfg.instruments.(['ACS' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['
                                     'ui', fullfile(PATH_ROOT, 'ui', ['ACS' SN]));
 cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 
-%%% ACS091 %%%
-SN = '091';
-cfg.instruments.(['ACS' SN]) = struct();
-cfg.instruments.(['ACS' SN]).di = struct();
-cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN '_'];
-cfg.instruments.(['ACS' SN]).di.postfix = '';
-cfg.instruments.(['ACS' SN]).model = 'ACS';
-cfg.instruments.(['ACS' SN]).sn = SN;
-cfg.instruments.(['ACS' SN]).logger = 'InlininoACScsv';
-cfg.instruments.(['ACS' SN]).device_file = fullfile(PATH_ROOT, 'DeviceFiles', 'acs091_20200217.dev');
-cfg.instruments.(['ACS' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['ACS' SN]),...
-                                    'di',  fullfile(PATH_ROOT, 'raw', ['ACS' SN], 'DI'),...
-                                    'wk',   fullfile(PATH_ROOT, 'wk', ['ACS' SN]),...
-                                    'prod', fullfile(PATH_ROOT, 'prod'),...
-                                    'ui', fullfile(PATH_ROOT, 'ui', ['ACS' SN]));
-cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
+% %%% HBB %%%
+% SN = '8005';
+% cfg.instruments.(['HyperBB' SN]) = struct();
+% cfg.instruments.(['HyperBB' SN]).di = struct();
+% cfg.instruments.(['HyperBB' SN]).di.prefix = ['DIW_HyperBB' SN '_'];
+% cfg.instruments.(['HyperBB' SN]).di.postfix = '';
+% cfg.instruments.(['HyperBB' SN]).model = 'HBB';
+% cfg.instruments.(['HyperBB' SN]).sn = SN;
+% cfg.instruments.(['HyperBB' SN]).ila_prefix = ['HyperBB' SN];
+% cfg.instruments.(['HyperBB' SN]).logger = 'InlininoHBB';
+% cfg.instruments.(['HyperBB' SN]).theta = 135;
+% cfg.instruments.(['HyperBB' SN]).PlaqueCal = fullfile(PATH_ROOT, 'DeviceFiles', 'HyperBB8005_cal_20230307/Hbb_Cal_Plaque_20230307_131026_3_avg.mat');
+% cfg.instruments.(['HyperBB' SN]).TemperatureCal = fullfile(PATH_ROOT, 'DeviceFiles', 'HyperBB8005_cal_20230307/Hbb_Cal_Temp_20230217_160954.mat');
+% cfg.instruments.(['HyperBB' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN]),...
+%                                   'di',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN], 'DI'),...
+%                                   'wk',   fullfile(PATH_ROOT, 'wk', ['HyperBB' SN]),...
+%                                   'prod', fullfile(PATH_ROOT, 'prod'),...
+%                                   'ui', fullfile(PATH_ROOT, 'ui', ['HyperBB' SN]));
+% cfg.instruments.(['HyperBB' SN]).view = struct('varname', 'beta', 'varcol', 23);
 
-%%% ACS262 %%%
-SN = '262';
-cfg.instruments.(['ACS' SN]) = struct();
-cfg.instruments.(['ACS' SN]).di = struct();
-cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN '_'];
-cfg.instruments.(['ACS' SN]).di.postfix = '';
-cfg.instruments.(['ACS' SN]).model = 'ACS';
-cfg.instruments.(['ACS' SN]).sn = SN;
-cfg.instruments.(['ACS' SN]).logger = 'InlininoACScsv';
-cfg.instruments.(['ACS' SN]).device_file = fullfile(PATH_ROOT, 'DeviceFiles', 'acs262_20230525.dev');
-cfg.instruments.(['ACS' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['ACS' SN]),...
-                                    'di',  fullfile(PATH_ROOT, 'raw', ['ACS' SN], 'DI'),...
-                                    'wk',   fullfile(PATH_ROOT, 'wk', ['ACS' SN]),...
-                                    'prod', fullfile(PATH_ROOT, 'prod'),...
-                                    'ui', fullfile(PATH_ROOT, 'ui', ['ACS' SN]));
-cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
-
-%%% ACS327 %%%
-SN = '327';
-cfg.instruments.(['ACS' SN]) = struct();
-cfg.instruments.(['ACS' SN]).di = struct();
-cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN '_'];
-cfg.instruments.(['ACS' SN]).di.postfix = '';
-cfg.instruments.(['ACS' SN]).model = 'ACS';
-cfg.instruments.(['ACS' SN]).sn = SN;
-cfg.instruments.(['ACS' SN]).logger = 'InlininoACScsv';
-cfg.instruments.(['ACS' SN]).device_file = fullfile(PATH_ROOT, 'DeviceFiles', 'acs327_20220411.dev');
-cfg.instruments.(['ACS' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['ACS' SN]),...
-                                    'di',  fullfile(PATH_ROOT, 'raw', ['ACS' SN], 'DI'),...
-                                    'wk',   fullfile(PATH_ROOT, 'wk', ['ACS' SN]),...
-                                    'prod', fullfile(PATH_ROOT, 'prod'),...
-                                    'ui', fullfile(PATH_ROOT, 'ui', ['ACS' SN]));
-cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
-
-%%% ACS410 %%%
-SN = '410';
-cfg.instruments.(['ACS' SN]) = struct();
-cfg.instruments.(['ACS' SN]).di = struct();
-cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN '_'];
-cfg.instruments.(['ACS' SN]).di.postfix = '';
-cfg.instruments.(['ACS' SN]).model = 'ACS';
-cfg.instruments.(['ACS' SN]).sn = SN;
-cfg.instruments.(['ACS' SN]).logger = 'InlininoACScsv';
-cfg.instruments.(['ACS' SN]).device_file = fullfile(PATH_ROOT, 'DeviceFiles', 'acs410_20230509.dev');
-cfg.instruments.(['ACS' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['ACS' SN]),...
-                                    'di',  fullfile(PATH_ROOT, 'raw', ['ACS' SN], 'DI'),...
-                                    'wk',   fullfile(PATH_ROOT, 'wk', ['ACS' SN]),...
-                                    'prod', fullfile(PATH_ROOT, 'prod'),...
-                                    'ui', fullfile(PATH_ROOT, 'ui', ['ACS' SN]));
-cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
-
-%%% HBB8002 %%%
-SN = '8002';
-cfg.instruments.(['HyperBB' SN]) = struct();
-cfg.instruments.(['HyperBB' SN]).di = struct();
-cfg.instruments.(['HyperBB' SN]).di.prefix = ['DIW_HyperBB' SN '_'];
-cfg.instruments.(['HyperBB' SN]).di.postfix = '';
-cfg.instruments.(['HyperBB' SN]).model = 'HBB';
-cfg.instruments.(['HyperBB' SN]).sn = SN;
-cfg.instruments.(['HyperBB' SN]).ila_prefix = ['HyperBB' SN];
-cfg.instruments.(['HyperBB' SN]).logger = 'InlininoHBB';
-cfg.instruments.(['HyperBB' SN]).theta = 135;
-cfg.instruments.(['HyperBB' SN]).PlaqueCal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Plaque_20230606_120731.mat');
-cfg.instruments.(['HyperBB' SN]).TemperatureCal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Temp_20230601_145659.mat');
-cfg.instruments.(['HyperBB' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN]),...
-                                  'di',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN], 'DI'),...
-                                  'wk',   fullfile(PATH_ROOT, 'wk', ['HyperBB' SN]),...
-                                  'prod', fullfile(PATH_ROOT, 'prod'),...
-                                  'ui', fullfile(PATH_ROOT, 'ui', ['HyperBB' SN]));
-cfg.instruments.(['HyperBB' SN]).view = struct('varname', 'beta', 'varcol', 23);
-
-%%% BB3 %%%
-SN = '349';
-cfg.instruments.(['BB3' SN]) = struct();
-cfg.instruments.(['BB3' SN]).di = struct();
-cfg.instruments.(['BB3' SN]).di.prefix = ['DIW_BB3' SN '_'];
-cfg.instruments.(['BB3' SN]).di.postfix = '';
-cfg.instruments.(['BB3' SN]).model = 'BB';
-cfg.instruments.(['BB3' SN]).sn = SN;
-cfg.instruments.(['BB3' SN]).ila_prefix = ['BB3' SN];
-cfg.instruments.(['BB3' SN]).logger = 'Inlinino_base'; % InlininoBB3SN
-cfg.instruments.(['BB3' SN]).lambda = [468,528,655];
-cfg.instruments.(['BB3' SN]).theta = 120;
-cfg.instruments.(['BB3' SN]).slope = [8.407E-06,4.624E-06,4.090E-06]; % Emmanuel cal 2021
-cfg.instruments.(['BB3' SN]).dark = [50, 44, 46];
-cfg.instruments.(['BB3' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['BB3' SN]),...
-                                  'di',  fullfile(PATH_ROOT, 'raw', ['BB3' SN]),...
-                                  'wk',   fullfile(PATH_ROOT, 'wk', ['BB3' SN]),...
-                                  'prod', fullfile(PATH_ROOT, 'prod'),...
-                                  'ui', fullfile(PATH_ROOT, 'ui', ['BB3' SN]));
-cfg.instruments.(['BB3' SN]).view = struct('varname', 'beta', 'varcol', 2);
 
 %%% SUVF %%%
-SN = '6254';
+SN = '6244';
 cfg.instruments.(['SUVF' SN]) = struct();
 cfg.instruments.(['SUVF' SN]).model = 'CD';
 cfg.instruments.(['SUVF' SN]).sn = SN;
 cfg.instruments.(['SUVF' SN]).slope = 1;
 cfg.instruments.(['SUVF' SN]).dark = 0;
-cfg.instruments.(['SUVF' SN]).logger = 'InlininoADU100';
-cfg.instruments.(['SUVF' SN]).analog_channel = 'Analog(2)';
+cfg.instruments.(['SUVF' SN]).logger = 'Inlinino_base';
+cfg.instruments.(['SUVF' SN]).analog_channel = '';
 if strcmp(cfg.instruments.(['SUVF' SN]).logger, 'InlininoADU100')
   cfg.instruments.(['SUVF' SN]).ila_prefix = [cfg.instruments.FLOW.model cfg.instruments.FLOW.sn '_'];
   [~, raw_folder_name] = fileparts(cfg.instruments.FLOW.path.raw);
@@ -272,25 +134,10 @@ cfg.instruments.(['SUVF' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', r
                                   'wk',   fullfile(PATH_ROOT, 'wk', ['SUVF' SN]),...
                                   'prod', fullfile(PATH_ROOT, 'prod'),...
                                   'ui', fullfile(PATH_ROOT, 'ui', ['SUVF' SN]));
-cfg.instruments.(['SUVF' SN]).view = struct('varname', 'fdom', 'varcol', 1);
+cfg.instruments.(['SUVF' SN]).view = struct('varname', 'C2', 'varcol', 1);
 
-%%% WS3S %%%
-SN = '1081';
-cfg.instruments.(['WS3S' SN]) = struct();
-cfg.instruments.(['WS3S' SN]).sn = SN;
-cfg.instruments.(['WS3S' SN]).model = 'FL';
-cfg.instruments.(['WS3S' SN]).ila_prefix = ['WS3S' SN];
-cfg.instruments.(['WS3S' SN]).logger = 'Inlinino_base';
-cfg.instruments.(['WS3S' SN]).slope = 5.6;
-cfg.instruments.(['WS3S' SN]).dark = 0.068;
-cfg.instruments.(['WS3S' SN]).analog_channel = 'C2';
-cfg.instruments.(['WS3S' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['WS3S' SN]),...
-                                  'wk',   fullfile(PATH_ROOT, 'wk', ['WS3S' SN]),...
-                                  'prod', fullfile(PATH_ROOT, 'prod'),...
-                                  'ui', fullfile(PATH_ROOT, 'ui', ['WS3S' SN]));
-cfg.instruments.(['WS3S' SN]).view = struct('varname', 'fchl');
 
-%%% LISST %%%
+%%% LISST %%% - take from microbiome for 200X
 SN = '1183';
 cfg.instruments.(['LISST' SN]) = struct();
 cfg.instruments.(['LISST' SN]).di = struct();
@@ -478,18 +325,16 @@ cfg.process.flag.default = struct();
   
 %%% Auto QC %%%
 cfg.process.qc = struct();
-cfg.process.qc.AutoQC_tolerance.filtered.a = 3;
-cfg.process.qc.AutoQC_tolerance.filtered.c = 3;
-cfg.process.qc.AutoQC_tolerance.total.a = 3;
-cfg.process.qc.AutoQC_tolerance.total.c = 3;
-cfg.process.qc.AutoQC_tolerance.dissolved.a = 3;
-cfg.process.qc.AutoQC_tolerance.dissolved.c = 3;
-cfg.process.qc.AutoQC_tolerance.filtered.bb = 3;
-cfg.process.qc.AutoQC_Saturation_Threshold.a = 50; % in uncalibrated m^-1
-cfg.process.qc.AutoQC_Saturation_Threshold.c = 50; % in uncalibrated m^-1
-cfg.process.qc.AutoQC_tolerance.total.bb = 3;
-cfg.process.qc.AutoQC_tolerance.dissolved.bb = 3;
-cfg.process.qc.AutoQC_Saturation_Threshold.bb = 4100; % (counts) max being 4130
+cfg.process.qc.RawAutoQCLim.filtered.a = 3;
+cfg.process.qc.RawAutoQCLim.filtered.c = 3;
+cfg.process.qc.RawAutoQCLim.total.a = 3;
+cfg.process.qc.RawAutoQCLim.total.c = 3;
+cfg.process.qc.RawAutoQCLim.dissolved.a = 3;
+cfg.process.qc.RawAutoQCLim.dissolved.c = 3;
+cfg.process.qc.RawAutoQCLim.filtered.bb = 3;
+cfg.process.qc.RawAutoQCLim.total.bb = 3;
+cfg.process.qc.RawAutoQCLim.dissolved.bb = 3;
+cfg.process.qc.Saturation_Threshold_bb = 4100; % (counts) max being 4130
 
 %%% Manually QC %%%
 cfg.process.qc.mode = 'ui';
@@ -513,16 +358,16 @@ for i = 1:size(cfg.process.instruments2run)
   % AC meter options
   if any(contains(cfg.process.instruments2run{i}, {'ACS', 'AC9'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
-                                      'interpolation_method', 'CDOM', ... % linear CDOM
-                                      'CDOM_source', 'SUVF6254', ... %
+                                      'interpolation_method', 'linear', ... % choose one: linear CDOM
+                                      'CDOM_source', 'SUVF6244', ... %
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'best_di', ... % best_di normal
                                       'scattering_correction', 'Kostakis2022', ... % Zaneveld1994 Kostakis2022
-                                      'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
+                                      'compute_ad_aphi', true); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
   % ECO-BB options
   elseif any(contains(cfg.process.instruments2run{i}, {'BB', 'BB'}) & ~contains(cfg.process.instruments2run{i}, {'HyperBB','HBB','hbb'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', true, ...
-                                      'TSG_source', 'SBE4536073', ...
+                                      'TSG_source', 'SBE38450269', ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'SW_scattering', ... % interpolate constant SW_scattering
                                       'filt_method', 'exponential_fit'); % 25percentil exponential_fit
@@ -535,7 +380,7 @@ for i = 1:size(cfg.process.instruments2run)
   % HyperBB options
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
-                                      'TSG_source', 'SBE4536073', ...
+                                      'TSG_source', 'SBE38450269', ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'SW_scattering', ... % interpolate constant SW_scattering
                                       'filt_method', 'exponential_fit'); % 25percentil exponential_fit
@@ -553,7 +398,7 @@ for i = 1:size(cfg.process.instruments2run)
   elseif any(contains(cfg.process.instruments2run{i}, {'LISSTTau','LISSTTAU','LISST-Tau','TAU'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
                                       'interpolation_method', 'linear', ... % linear CDOM
-                                      'CDOM_source', 'SUVF6254', ... % 
+                                      'CDOM_source', 'SUVF6244', ... % 
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'normal'); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
   end

@@ -64,8 +64,8 @@ for i=1:length(dt)
     else
       % Import data from selection
       ddata = [];
-      for j=1:size(l,1)
-%       parfor (j=1:size(l,1), parallel_flag)
+      % for j=1:size(l,1)
+      parfor (j=1:size(l,1), parallel_flag)
         if isempty(otherarg1) && isempty(otherarg2)
           foo = fun(fullfile(dir_in, l{j}), verbose);
         elseif isempty(otherarg2)
@@ -160,11 +160,13 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
       end
     case {'Inlinino', 'Inlinino_atlasTSG', 'InlininoADU100'}
       % List all files in directory
-      l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.csv']));
-      if isempty(l)
-        l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.raw']));
+      filenames = struct2table(dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.csv']))).name;
+      if isempty(filenames)
+        filenames = struct2table(dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.raw']))).name;
       end
-      filenames = {l.name}';
+      if isempty(filenames)
+        filenames = struct2table(dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.log']))).name;
+      end
     case 'SBE45software'
       % List all files in directory
       l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.sbe45']));
@@ -236,7 +238,9 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
     otherwise
       error('Software not supported: %s.', software);
   end
-
+  if ~isempty(filenames)
+    if ~iscell(filenames); filenames = cellstr(filenames); end
+  end
 end
 
 function [str] = dt_yyyymmdd(dt)

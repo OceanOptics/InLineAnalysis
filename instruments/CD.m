@@ -22,7 +22,7 @@ classdef CD < ECO
     end
 
     function Calibrate(obj, compute_dissolved)
-      param = struct('slope', obj.slope, 'dark', obj.dark);
+      param = struct('slope', obj.slope, 'dark', obj.dark, 'varname', obj.varname);
       % linear interpolation only
       if compute_dissolved
         obj.prod.pd = processCD(param, obj.qc.tsw, obj.bin.diw);

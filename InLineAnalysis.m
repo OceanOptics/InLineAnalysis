@@ -80,7 +80,7 @@ classdef InLineAnalysis < handle
         % Initialize each instrument
         for i = fieldnames(cfg.instruments)'; i = i{1};
           switch cfg.instruments.(i).model
-            case {'NMEA','SC701','GP32','SC701Tara','GP32Tara','19X'}
+            case {'NMEA','SC701','GP32','GPS32Tara','GP32Tara','GPSSC701Tara','19X','GPS19X','GPSCOMPASSAT'}
               obj.instrument.(i) = NMEA(cfg.instruments.(i));
             case {'TSG', 'SBE45', 'SBE3845'}
               obj.instrument.(i) = TSG(cfg.instruments.(i));
@@ -185,18 +185,20 @@ classdef InLineAnalysis < handle
       fprintf('Done\n');
     end
     
-    function RawAutoQC (obj, level)
-      fudge_factor = obj.cfg.qc.RawAutoQCLim;
-      bb_threshold = obj.cfg.qc.Saturation_Threshold_bb;
-      if isempty(fudge_factor)
-        fudge_factor.dissolved.a = 3;
-        fudge_factor.dissolved.c = 3;
-        fudge_factor.filtered.a = 3;
-        fudge_factor.filtered.c = 3;
-        fudge_factor.total.a = 3;
-        fudge_factor.total.c = 3;
-      elseif isempty(bb_threshold)
-        bb_threshold = 4000;
+    function AutoQC (obj, level)
+      tolerance = obj.cfg.qc.AutoQC_tolerance;
+      saturation_threshold = obj.cfg.qc.AutoQC_Saturation_Threshold;
+      if isempty(tolerance)
+        tolerance.dissolved.a = 3;
+        tolerance.dissolved.c = 3;
+        tolerance.filtered.a = 3;
+        tolerance.filtered.c = 3;
+        tolerance.total.a = 3;
+        tolerance.total.c = 3;
+      elseif isempty(saturation_threshold)
+        saturation_threshold.a = 50;
+        saturation_threshold.c = 50;
+        saturation_threshold.bb = 4000;
       elseif nargin < 2
         level = 'raw';
       end
@@ -208,13 +210,18 @@ classdef InLineAnalysis < handle
             if any(contains(i,'AC'))
               lambda.a = obj.instrument.(i).lambda_a;
               lambda.c = obj.instrument.(i).lambda_c;
-            elseif  any(contains(i,'BB'))
+              bb_dark = [];
+            elseif  any(contains(i,'BB3'))
               lambda.bb = obj.instrument.(i).lambda;
+              bb_dark = obj.instrument.(instru{contains(instru, 'BB3')}).dark;
+            elseif  any(contains(i,{'HBB', 'HyperBB'}))
+              lambda.bb = obj.instrument.(i).lambda;
+              bb_dark = [];
             end
             if any(contains(i,{'AC','BB'}))
-              [obj.instrument.(i).(level).fsw, Nbad]= RawAutoQC(i, obj.instrument.(i).(level).fsw,...
-                lambda, fudge_factor.filtered, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
-                bb_threshold);
+              [obj.instrument.(i).(level).fsw, bad_spec, Nbad] = AutoQC(i, obj.instrument.(i).(level).fsw,...
+                lambda, tolerance.filtered, bb_dark, saturation_threshold);
+              obj.instrument.(i).(level).bad = [obj.instrument.(i).(level).bad; bad_spec];
             end
             if any(contains(i,'AC'))
               fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectra deleted from %s filtered %s data\n',...
@@ -287,9 +294,9 @@ classdef InLineAnalysis < handle
               foo = foo / sum(toqc(:));
             end
             if any(contains(i,{'AC','BB'}))
-              [obj.instrument.(i).(level).tsw, Nbad]= RawAutoQC(i, obj.instrument.(i).(level).tsw,...
-                lambda, fudge_factor.total, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
-                bb_threshold);
+              [obj.instrument.(i).(level).tsw, bad_spec, Nbad] = AutoQC(i, obj.instrument.(i).(level).tsw,...
+                lambda, tolerance.total, bb_dark, saturation_threshold);
+              obj.instrument.(i).(level).bad = [obj.instrument.(i).(level).bad; bad_spec];
             end
             if any(contains(i,'AC'))
               fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectra deleted from %s total %s data\n',...
@@ -330,9 +337,10 @@ classdef InLineAnalysis < handle
               lambda.bb = obj.instrument.(i).lambda;
             end
             if any(contains(i,{'AC','BB'}))
-              [obj.instrument.(i).(level).diw, Nbad]= RawAutoQC(i, obj.instrument.(i).(level).diw,...
-                lambda, fudge_factor.dissolved, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
-                bb_threshold, true);
+              [obj.instrument.(i).(level).diw, bad_spec, Nbad] = AutoQC(i, obj.instrument.(i).(level).diw,...
+                lambda, tolerance.dissolved, obj.instrument.(instru{contains(instru, 'BB3')}).dark,...
+                saturation_threshold, true);
+              obj.instrument.(i).(level).bad = [obj.instrument.(i).(level).bad; bad_spec];
             end
             if any(contains(i,'AC'))
               fprintf('%4.2f%% of absorption and %4.2f%% of attenuation spectra deleted from %s dissolved %s data\n',...
@@ -360,14 +368,14 @@ classdef InLineAnalysis < handle
               fprintf(dat, Nbad.bb)
             end
           end
-          fprintf('RawAutoQC [Done]\n')
+          fprintf('AutoQC [Done]\n')
         else
-          fprintf('No RawAutoQC for %s [Done]\n', i)
+          fprintf('No AutoQC for %s [Done]\n', i)
         end
       end
     end
     
-    function DiagnosticPlot (obj, instru, level, save_figure, toClean)
+    function SpectralQC (obj, instru, level, save_figure, toClean)
       if nargin < 3
         error('Not enough input argument')
       elseif nargin == 3
@@ -383,8 +391,8 @@ classdef InLineAnalysis < handle
       end
       for i=obj.cfg.instruments2run; i = i{1};
         if any(contains(i,instru))
-          fprintf('%s Diagnostic plots\n', i);
-          [user_selection] = DiagnosticPlot(obj.instrument.(i), i, level, ...
+          fprintf('%s Spectral QCs\n', i);
+          [user_selection] = SpectralQC(obj.instrument.(i), i, level, ...
             save_figure, obj.meta.cruise, toClean);
           % Apply user selection
           if ~isempty(user_selection)
@@ -477,7 +485,7 @@ classdef InLineAnalysis < handle
             ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname obj.instrument.(obj.cfg.qcref.view).view.varcol]);
           end
           datetick2_doy();
-          legend('switch position (1=filtered | 0=total)', obj.instrument.(obj.cfg.qcref.view).view.varname, 'FontSize', 14)
+          legend('switch position (1=filtered | 0=total)', obj.instrument.(obj.cfg.qcref.view).view.varname, 'FontSize', 14, 'AutoUpdate','off')
           [user_selection.total, user_selection.filtered] = guiSelectOnTimeSeries(fh);
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection.total, 'total');
           obj.instrument.(obj.cfg.qcref.reference).ApplyUserInput(user_selection.filtered, 'filtered');
@@ -560,7 +568,7 @@ classdef InLineAnalysis < handle
               ylabel([obj.instrument.(obj.cfg.qcref.view).view.varname obj.instrument.(obj.cfg.qcref.view).view.varcol]);
             end
             datetick2_doy();
-            legend('switch position (1=filtered | 0=total)', obj.instrument.(obj.cfg.qcref.view).view.varname, 'FontSize', 14)
+            legend('switch position (1=filtered | 0=total)', obj.instrument.(obj.cfg.qcref.view).view.varname, 'FontSize', 14, 'AutoUpdate','off')
           else
             fprintf(['Warning: ' filename ' not found\n'])
           end
@@ -765,7 +773,7 @@ classdef InLineAnalysis < handle
                 end
                 title(['\fontsize{22}\color{red}' i ' QC all variables:' newline '\fontsize{18}\color{black}Press t to trash section (press q to save)'], 'interpreter', 'tex');
                 % title([i ' specific QC all' newline 'Trash full section pressing t (q to save)']);
-                fprintf([i ' QC of "' j{:} '" only: Press t to trash section (press q to save)\n']);
+                fprintf([i ' QC all: Press t to trash section (press q to save)\n']);
                 user_selection = guiSelectOnTimeSeries(fh);
                 % Apply user selection
                 obj.instrument.(i).DeleteUserSelection(user_selection);
@@ -1082,6 +1090,7 @@ classdef InLineAnalysis < handle
                                            cdom_source,...
                                            obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
                                            obj.cfg.calibrate.(i).di_method, ...
+                                           obj.cfg.calibrate.(i).scattering_correction, ...
                                            obj.cfg.calibrate.(i).compute_ad_aphi);
             case 'ACS'
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
@@ -1089,6 +1098,7 @@ classdef InLineAnalysis < handle
                                            cdom_source,...
                                            obj.instrument.(obj.cfg.calibrate.(i).FLOW_source),...
                                            obj.cfg.calibrate.(i).di_method, ...
+                                           obj.cfg.calibrate.(i).scattering_correction, ...
                                            obj.cfg.calibrate.(i).compute_ad_aphi);
             case {'BB', 'BB3', 'HBB'}
               obj.instrument.(i).Calibrate(obj.cfg.calibrate.(i).compute_dissolved,...
