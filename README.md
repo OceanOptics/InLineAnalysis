@@ -40,12 +40,11 @@ Download and add the packages below in the `packages` folder:
   + [Scattering in pure seawater betasw_ZHH2009.m](https://github.com/ooici/ion-functions/blob/master/ion_functions/data/matlab_scripts/flort/betasw_ZHH2009.m)
   + [TOES-10 Toolbox](https://www.teos-10.org/software.htm)
 
-Install the [JSONlab toolbox](https://www.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files)
 
 Recommended Toolbox
-  + image processing toolbox
-  + Finance
-  + Parallel
+  + Image Processing Toolbox
+  + Financial toolbox
+  + Parallel Computing Toolbox
 
 ## Configuration
 For each project a new configuration file should be written. The configuration files are located in the `cfg` directory.
