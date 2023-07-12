@@ -5,18 +5,21 @@ InLineAnalysis provide a set of routine to process observations from scientific 
 
 To date the following instruments are supported:
   + TSG
+  + Atlas TSG
   + ACS
   + AC9
   + FLBBCD
-  + BB3
   + WSCD
-  + LISST
+  + SUVF
+  + WS3S
+  + BB3
+  + HyperBB
+  + LISSTTau
+  + LISST100x
+  + LISST200x
   + ALFA
   + PAR
-  + SUVF
-  + HyperBB
   + NMEA (GPS)
-  + Atlas TSG
 
 The application is under continuous development, please use the [GitHub Issues Tracker](https://github.com/OceanOptics/InLineAnalysis/issues) to signal any bug, or feature requests. The documentation is limited to this files and the comments in the code at this time.
 
