@@ -1,11 +1,11 @@
-function [data, bad, Nbad] = AutoQC (instrument, data, lambda, tolerance, bb_dark, saturation_threshold, DI)
+function [data_out, bad, Nbad] = AutoQC (instrument, data_in, lambda, tolerance, bb_dark, saturation_threshold, DI)
 % author: Guillaume Bourdin
 % created: Nov 13, 2019
 %
 % AutoQC: Auto QC ACs/AC9/BB spectra
 %
 % INPUT:
-%   - data_in: ACS data <Nx3 Table> time series of data that must contains:
+%   - data_in: raw data in <Nx3 Table> time series of data that must contains:
 %         - dt <Nx1 datenum> date and time precise to the second
 %         for each other field the folowwing field must exist:
 %         - a spectra <NxM double> in column
@@ -34,7 +34,7 @@ function [data, bad, Nbad] = AutoQC (instrument, data, lambda, tolerance, bb_dar
 %   - DI: boolean DI or not DI
 %
 % OUTPUT:
-%   - data_in: quality filtered ACS data <Nx3 Table> time series of data that must contains:
+%   - data_out: cleaned data out <Nx3 Table> time series of data that must contains:
 %         - dt <Nx1 datenum> date and time precise to the second
 %         for each other field the folowwing field must exist:
 %         - a spectra <NxM double> in column
@@ -72,15 +72,16 @@ if contains(instrument, 'AC')
     saturation_threshold.c = 50;
     warning('c threshold missing, set to default (50 m^{-1} uncalibrated)');
   end
-
-  Nbad.a = sum(any(data.a >= saturation_threshold.a, 2));
-  Nbad.c = sum(any(data.c >= saturation_threshold.c, 2));
-  bad = data(any(data.a >= saturation_threshold.a, 2) | any(data.c >= saturation_threshold.c, 2), :);
-  data.a(any(data.a >= saturation_threshold.a, 2)) = NaN;
-  data.c(any(data.c >= saturation_threshold.c, 2)) = NaN;
+  
+  data_out = data_in;
+  Nbad.a = sum(any(data_in.a >= saturation_threshold.a, 2));
+  Nbad.c = sum(any(data_in.c >= saturation_threshold.c, 2));
+  bad = data_in(any(data_in.a >= saturation_threshold.a, 2) | any(data_in.c >= saturation_threshold.c, 2), :);
+  data_out.a(any(data_in.a >= saturation_threshold.a, 2), :) = NaN;
+  data_out.c(any(data_in.c >= saturation_threshold.c, 2), :) = NaN;
 
   % normalize data to homogenize auto QC
-  datanorm = data;
+  datanorm = data_in;
   datanorm.a = datanorm.a - min(datanorm.a(:)) + 2;
   datanorm.c = datanorm.c - min(datanorm.c(:)) + 2;
   
@@ -93,8 +94,7 @@ if contains(instrument, 'AC')
   bad_a = max(abs(diff_a(:,wl_a > 560 & wl_a < 600)),[],2)...
     > tolerance.a*median(abs(diff_a(:,wl_a > 500 & wl_a < 550)),2);
   bad_c = max(abs(diff_c(:,wl_c > 560 & wl_c < 600)),[],2)...
-    > tolerance.c*median(abs(diff_c(:,wl_c > 500 & wl_c < 550)),2) | ...
-    any(data.c > 40, 2);
+    > tolerance.c*median(abs(diff_c(:,wl_c > 500 & wl_c < 550)),2);
   if DI 
     % segment database per DI event
     foo = find(diff(datetime(datanorm.dt, 'ConvertFrom', 'datenum')) > hours(0.5)) + 1;
@@ -131,12 +131,12 @@ if contains(instrument, 'AC')
     bad_a = bad_a > 0;
     bad_c = bad_c > 0;
   end
-  Nbad.a = (Nbad.a + sum(bad_a)) / size(data,1)*100;
-  Nbad.c = (Nbad.c + sum(bad_c)) / size(data,1)*100;
-  bad = [bad; data(bad_a | bad_c, :)];
-  data.a(bad_a,:) = NaN;
-  data.c(bad_c,:) = NaN;
-  data(bad_a & bad_c,:)=[];
+  Nbad.a = (Nbad.a + sum(bad_a)) / size(data_in,1)*100;
+  Nbad.c = (Nbad.c + sum(bad_c)) / size(data_in,1)*100;
+  bad = [bad; data_in(bad_a | bad_c, :)];
+  data_out.a(bad_a,:) = NaN;
+  data_out.c(bad_c,:) = NaN;
+  data_out(bad_a & bad_c,:) = [];
     
 elseif contains(instrument, 'BB3')
   if nargin < 6
@@ -145,33 +145,34 @@ elseif contains(instrument, 'BB3')
   end
 
   if nargin < 5; error('beta dark missing (4th argument)'); end
+  data_out = data_in;
 
   Nbad.bb = NaN(1, size(lambda.bb,2));
   for ii = 1:size(lambda.bb,2)
-    Nbad.bb(ii) = sum(data.beta(:,ii) >= saturation_threshold.bb);
-    data.beta(data.beta(:,ii) >= saturation_threshold.bb, ii) = NaN;
+    Nbad.bb(ii) = sum(data_in.beta(:,ii) >= saturation_threshold.bb);
+    data_out.beta(data_in.beta(:,ii) >= saturation_threshold.bb, ii) = NaN;
   end
 
   if any(tolerance.bb < 3); warning('QC threshold might be too low, data might be lost'); end
-  bad_bb = false(size(data,1), size(lambda.bb, 2));
+  bad_bb = false(size(data_in,1), size(lambda.bb, 2));
   for ii = 1:size(lambda.bb, 2)
     other = 1:size(lambda.bb, 2); other(ii)=[];
-    bad_bb (:,ii) = data.beta(:,ii) - bb_dark(ii) > tolerance.bb * ...
-      (median(data.beta(:,other),2, 'omitnan') - median(bb_dark(other),2, 'omitnan'));
+    bad_bb (:,ii) = data_in.beta(:,ii) - bb_dark(ii) > tolerance.bb * ...
+      (median(data_in.beta(:,other),2, 'omitnan') - median(bb_dark(other),2, 'omitnan'));
 %     Nbad.bb(ii) = Nbad.bb(ii) + sum(bad_bb(:,ii));
   end
   
   if DI 
     % segment database per DI event
-    foo = find(diff(datetime(data.dt, 'ConvertFrom', 'datenum')) > hours(0.5)) + 1;
+    foo = find(diff(datetime(data_in.dt, 'ConvertFrom', 'datenum')) > hours(0.5)) + 1;
     if isempty(foo)
-      foo = [1 size(data, 1)];
+      foo = [1 size(data_in, 1)];
     else
       foo = [[1; foo], [foo-1; foo(end) + foo(1)]];
-      foo(end, end) = size(data, 1);
+      foo(end, end) = size(data_in, 1);
     end
     for i = 1:size(foo,1)
-      seg = data(foo(i, 1):foo(i, 2), :);
+      seg = data_in(foo(i, 1):foo(i, 2), :);
       % normalize each segments independently
       seg.beta = seg.beta - min(seg.beta(:)) + 2;
       
@@ -189,15 +190,16 @@ elseif contains(instrument, 'BB3')
     bad_bb = bad_bb > 0;
   end
   
-  Nbad.bb = sum(bad_bb) / size(data.beta,1) * 100;
-  bad = data(bad_bb, :);
-  data.beta(bad_bb) = NaN;
-  data(all(isnan(data.beta), 2),:) = [];
+  Nbad.bb = sum(bad_bb) / size(data_in.beta,1) * 100;
+  bad = data_in(bad_bb, :);
+  data_out.beta(bad_bb) = NaN;
+  data_out(all(isnan(data_out.beta), 2),:) = [];
   
 elseif any(contains(instrument, {'HBB', 'HyperBB'}))
   % delete empty rows
-  data(all(isnan(data.beta),2), :) = [];
-  dup = data;
+  data_in(all(isnan(data_in.beta),2), :) = [];
+  data_out = data_in;
+  dup = data_in;
   dup.beta = dup.beta + median(dup.beta(:, end), 'omitnan');
   dup.beta = fillmissing(dup.beta, 'movmedian', 30);
   bad_bb = false(size(dup.beta));
@@ -218,7 +220,7 @@ elseif any(contains(instrument, {'HBB', 'HyperBB'}))
 %   % old method
 %   bad_bb(diff_bb > tolerance.bb * abs(median(movdiff, 1, 'omitnan'))) = true;
   
-  data.beta(bad_bb) = NaN;
+  data_out.beta(bad_bb) = NaN;
   
 %   visProd3D(lambda.bb, dup.dt, dup.beta, ...
 %     false, 'Wavelength', false, 71); zlabel('beta (m^{-1})'); %, 'Wavelength', true
@@ -237,12 +239,12 @@ elseif any(contains(instrument, {'HBB', 'HyperBB'}))
   end
 %   bad_bb = bad_bb_up + bad_bb_chl + bad_bb_down + bad_bb_time;
   bad_bb = bad_bb > 0;
-  bad = data(bad_bb, :);
-  data.beta(bad_bb) = NaN;
-  data(sum(isnan(data.beta), 2) > size(data.beta, 2) / 3, :) = [];
+  bad = data_in(bad_bb, :);
+  data_out.beta(bad_bb) = NaN;
+  data_out(sum(isnan(data_out.beta), 2) > size(data_out.beta, 2) / 3, :) = [];
   % count only bad that were not already NaN (interpolation)
-  bad_bb(isnan(data.beta)) = false;
-  Nbad.bb = sum(bad_bb) / size(data.beta,1) * 100;
+  bad_bb(isnan(data_in.beta)) = false;
+  Nbad.bb = sum(bad_bb) / size(data_in.beta,1) * 100;
 end
 
 fnames = fieldnames(Nbad);
