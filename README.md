@@ -39,6 +39,7 @@ Download and add the packages below in the `packages` folder:
   + [Progress bar](https://github.com/JAAdrian/MatlabProgressBar)
   + [Scattering in pure seawater betasw_ZHH2009.m](https://github.com/ooici/ion-functions/blob/master/ion_functions/data/matlab_scripts/flort/betasw_ZHH2009.m)
   + [TOES-10 Toolbox](https://www.teos-10.org/software.htm)
+  + [day-of-year](https://www.mathworks.com/matlabcentral/fileexchange/27989-day-of-year)
 
 
 Recommended Toolbox
