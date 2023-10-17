@@ -123,7 +123,8 @@ classdef ACS < Instrument
       end
     end
     
-    function Calibrate(obj, compute_dissolved, interpolation_method, CDOM, SWT, di_method, scattering_corr, compute_ad_aphi)
+    function Calibrate(obj, compute_dissolved, interpolation_method, CDOM, SWT, di_method, scattering_corr, compute_ad_aphi, TSG)
+        
       lambda = struct('ref', obj.lambda_ref, 'a', obj.lambda_a, 'c', obj.lambda_c);
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       % Load model from Haëntjens et al. 2021v22 to estimate cross-sectional
@@ -135,12 +136,12 @@ classdef ACS < Instrument
             [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, [], obj.modelG50, obj.modelmphi, obj.bin.diw, ...
               [], SWT, SWT_constants, interpolation_method, di_method, scattering_corr, ...
-              compute_ad_aphi);
+              compute_ad_aphi, TSG.qc.tsw);
           else
             [obj.prod.p, ~, obj.prod.QCfailed] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, [], obj.modelG50, obj.modelmphi, [], ...
               [], SWT, SWT_constants, interpolation_method, [], scattering_corr, ...
-              compute_ad_aphi);
+              compute_ad_aphi, TSG.qc.tsw);
           end
         case 'CDOM'
           if ~isfield(CDOM.prod, 'pd') && isempty(CDOM.qc.tsw)
@@ -155,12 +156,12 @@ classdef ACS < Instrument
             [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, obj.cal_param, obj.modelG50, obj.modelmphi, obj.bin.diw, ...
               cdom, SWT, SWT_constants, interpolation_method, di_method, scattering_corr, ...
-              compute_ad_aphi);
+              compute_ad_aphi, TSG.qc.tsw);
           else
             [obj.prod.p, ~, obj.prod.QCfailed] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, obj.cal_param, obj.modelG50, obj.modelmphi, [], ...
               cdom, SWT, SWT_constants, interpolation_method, [], scattering_corr, ...
-              compute_ad_aphi);
+              compute_ad_aphi, TSG.qc.tsw);
           end
         otherwise
           error('Method not supported.');
