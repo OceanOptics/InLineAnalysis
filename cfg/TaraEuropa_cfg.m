@@ -24,8 +24,8 @@ cfg.meta.measurement_depth = 2;
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-% PATH_ROOT = '/Users/emmanuelboss/Desktop/TaraEuropa';
-PATH_ROOT = '/Volumes/Samsung_T5/Data/TaraEuropa';
+PATH_ROOT = '/Users/emmanuelboss/Desktop/TaraEuropa';
+% PATH_ROOT = '/Volumes/Samsung_T5/Data/TaraEuropa';
 
 %%% TSG %%%
 model = 'SBE3845';
@@ -119,7 +119,7 @@ cfg.instruments.(['SUVF' SN]).sn = SN;
 cfg.instruments.(['SUVF' SN]).slope = 1;
 cfg.instruments.(['SUVF' SN]).dark = 0;
 cfg.instruments.(['SUVF' SN]).logger = 'Inlinino_base';
-cfg.instruments.(['SUVF' SN]).analog_channel = '';
+cfg.instruments.(['SUVF' SN]).analog_channel = 'C2';
 if strcmp(cfg.instruments.(['SUVF' SN]).logger, 'InlininoADU100')
   cfg.instruments.(['SUVF' SN]).ila_prefix = [cfg.instruments.FLOW.model cfg.instruments.FLOW.sn '_'];
   [~, raw_folder_name] = fileparts(cfg.instruments.FLOW.path.raw);
@@ -135,7 +135,7 @@ cfg.instruments.(['SUVF' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', r
                                   'wk',   fullfile(PATH_ROOT, 'wk', ['SUVF' SN]),...
                                   'prod', fullfile(PATH_ROOT, 'prod'),...
                                   'ui', fullfile(PATH_ROOT, 'ui', ['SUVF' SN]));
-cfg.instruments.(['SUVF' SN]).view = struct('varname', 'C2', 'varcol', 1);
+cfg.instruments.(['SUVF' SN]).view = struct('varname', 'fdom', 'varcol', 1);
 
 
 %%% LISST %%% - take from microbiome for 200X

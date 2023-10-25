@@ -68,7 +68,7 @@ classdef FTH < Instrument
         dt = (dt_st:1/obj.SAMPLING_FREQUENCY/3600/24:dt_end)';
         
         % delete data with duplicats timestamp
-        if ~ isempty(obj.data.dt)
+        if ~isempty(obj.data)
           % round data time vector to the second
           obj.data.dt = datenum(floor(datevec(obj.data.dt)));
           % delete duplicates
@@ -76,7 +76,7 @@ classdef FTH < Instrument
           indexToDump = not(ismember(1:numel(obj.data.dt),L));
           obj.data(indexToDump, :) = [];
         else
-          error('Raw data not loaded')
+          error('%s raw data not loaded', obj.model)
         end
         % interpolate flow rate data over continuous time vector
         spd_var = obj.data.Properties.VariableNames(contains(obj.data.Properties.VariableNames, 'spd'));

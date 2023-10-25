@@ -139,12 +139,6 @@ classdef InLineAnalysis < handle
         else
           fprintf('READ RAW: %s\n', i);
           obj.instrument.(i).ReadRaw(obj.cfg.days2run, obj.cfg.force_import, true);
-          if any(strcmp(fieldnames(obj.instrument.(i)), 'analog_channel'))
-            if ~isempty(obj.instrument.(i).analog_channel)
-              obj.instrument.(i).data.Properties.VariableNames{strcmp(obj.instrument.(i).data.Properties.VariableNames, obj.instrument.(i).analog_channel)} = ...
-                obj.instrument.(i).varname;
-            end
-          end
         end
       end
     end
@@ -247,10 +241,6 @@ classdef InLineAnalysis < handle
               fprintf(head, lambda.bb)
               fprintf(lin);
               fprintf(dat, Nbad.bb)
-%               for ii = 1:size(Nbad.bb,2)
-%                 fprintf('%4.2f%% of beta%i deleted from %s filtered data\n',...
-%                   Nbad.bb(ii), lambda.bb(ii), i);
-%               end
             end
           else
             fprintf('No filtered data loaded: Skip\n');

@@ -409,6 +409,17 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     'gamma_suspicious','poc_suspicious','chl_ap676lh_suspicious',...
     'chl_Halh_suspicious','HH_G50_mphi_suspicious'});
   
+  % delete cp spectra when any cp < -0.0015
+  todelete = any(p.cp < -0.0015, 2);
+  if sum(todelete) > 0
+    fprintf('%.2f%% (%i) spectra failed auto-QC: cp < -0.0015\n', ...
+      sum(todelete) / size(p, 1) * 100, sum(todelete))
+  end
+  flag.cp_neg(todelete) = true;
+  bad = [p(todelete, :) table(repmat({'cp < -0.0015'}, ...
+    sum(todelete), 1), 'VariableNames', {'QC_failed'})];
+  p.cp(todelete, :) = NaN;
+
   % flag ap spectra when ap430-700 < -0.0015
   toflag = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
   if sum(toflag) > 0
@@ -416,33 +427,18 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       sum(toflag) / size(p, 1) * 100, sum(toflag))
   end
   flag.ap430_700_neg(toflag) = true;
-  bad = [p(toflag, :) table(repmat({'ap 430-700 < -0.0015'}, ...
-    sum(toflag), 1), 'VariableNames', {'QC_failed'})];
+  % bad = [bad; p(toflag, :) table(repmat({'ap 430-700 < -0.0015'}, ...
+  %   sum(toflag), 1), 'VariableNames', {'QC_failed'})];
   % p.ap(toflag, :) = NaN;
   
-  % delete cp spectra when any cp < -0.0015
-  todelete = any(p.cp < -0.0015, 2);
-  if sum(todelete) > 0
-    fprintf('%.2f%% (%i) spectra failed auto-QC: cp < -0.0015\n', ...
-      sum(todelete) / size(p, 1) * 100, sum(todelete))
+  % flag ap spectra when any ap < -0.01
+  toflag = any(p.ap < -0.01 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
+  if sum(toflag) > 0
+    fprintf('%.2f%% (%i) spectra flagged: ap 430-700 < -0.01\n', ...
+      sum(toflag) / size(p, 1) * 100, sum(toflag))
   end
-  flag.cp_neg(toflag) = true;
-  bad = [bad; p(todelete, :) table(repmat({'cp < -0.0015'}, ...
-    sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-  % bad = [p(todelete, :) table(repmat({'cp < -0.0015'}, ...
-  %   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-  p.cp(todelete, :) = NaN;
-  
-  % delete ap spectra when any ap < -0.01
-  todelete = any(p.ap < -0.01 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
-  if sum(todelete) > 0
-    fprintf('%.2f%% (%i) spectra failed auto-QC: ap 430-700 < -0.01\n', ...
-      sum(todelete) / size(p, 1) * 100, sum(todelete))
-  end
-  flag.ap_neg(todelete) = true;
-  bad = [bad; p(todelete, :) table(repmat({'ap 430-700 < -0.01'}, ...
-    sum(todelete), 1), 'VariableNames', {'QC_failed'})];
-  % bad = [p(todelete, :) table(repmat({'cp < -0.0015'}, ...
+  flag.ap_neg(toflag) = true;
+  % bad = [bad; p(todelete, :) table(repmat({'ap 430-700 < -0.01'}, ...
   %   sum(todelete), 1), 'VariableNames', {'QC_failed'})];
   % p.ap(todelete, :) = NaN;
   
@@ -454,8 +450,8 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       sum(toflag) / size(p, 1) * 100, sum(toflag))
   end
   flag.ap_shape(toflag) = true;
-  bad = [bad; p(toflag, :) table(repmat({'ap650 > ap676: high NAP'}, ...
-    sum(toflag), 1), 'VariableNames', {'QC_failed'})];
+  % bad = [bad; p(toflag, :) table(repmat({'ap650 > ap676: high NAP'}, ...
+  %   sum(toflag), 1), 'VariableNames', {'QC_failed'})];
   % p.cp(toflag, :) = NaN;
   
   % flag attenuation spectra when cp > 10
@@ -465,8 +461,8 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       sum(toflag) / size(p, 1) * 100, sum(toflag))
   end
   flag.cp_over10(toflag) = true;
-  bad = [bad; p(toflag, :) table(repmat({'p.cp > 10'}, ...
-    sum(toflag), 1), 'VariableNames', {'QC_failed'})];
+  % bad = [bad; p(toflag, :) table(repmat({'p.cp > 10'}, ...
+  %   sum(toflag), 1), 'VariableNames', {'QC_failed'})];
   % p.cp(toflag, :) = NaN;
   
   % find wavelength below and above which ap and cp are unrealistic and replace by NaNs

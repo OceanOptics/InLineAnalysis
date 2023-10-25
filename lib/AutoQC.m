@@ -91,9 +91,9 @@ if contains(instrument, 'AC')
   diff_a = [diff(datanorm.a(:, lambda.a > 500 & lambda.a < 600),[],2) NaN(size(datanorm,1),1)];
   diff_c = [diff(datanorm.c(:, lambda.c > 500 & lambda.c < 600),[],2) NaN(size(datanorm,1),1)];
   
-  bad_a = max(abs(diff_a(:,wl_a > 560 & wl_a < 600)),[],2)...
+  bad_a = max(abs(diff_a(:,wl_a >= 550 & wl_a < 600)),[],2)...
     > tolerance.a*median(abs(diff_a(:,wl_a > 500 & wl_a < 550)),2);
-  bad_c = max(abs(diff_c(:,wl_c > 560 & wl_c < 600)),[],2)...
+  bad_c = max(abs(diff_c(:,wl_c >= 550 & wl_c < 600)),[],2)...
     > tolerance.c*median(abs(diff_c(:,wl_c > 500 & wl_c < 550)),2);
   if DI 
     % segment database per DI event
@@ -191,7 +191,7 @@ elseif contains(instrument, 'BB3')
   end
   
   Nbad.bb = sum(bad_bb) / size(data_in.beta,1) * 100;
-  bad = data_in(bad_bb, :);
+  bad = data_in(any(bad_bb, 2), :);
   data_out.beta(bad_bb) = NaN;
   data_out(all(isnan(data_out.beta), 2),:) = [];
   
@@ -239,7 +239,7 @@ elseif any(contains(instrument, {'HBB', 'HyperBB'}))
   end
 %   bad_bb = bad_bb_up + bad_bb_chl + bad_bb_down + bad_bb_time;
   bad_bb = bad_bb > 0;
-  bad = data_in(bad_bb, :);
+  bad = data_in(any(bad_bb,2), :);
   data_out.beta(bad_bb) = NaN;
   data_out(sum(isnan(data_out.beta), 2) > size(data_out.beta, 2) / 3, :) = [];
   % count only bad that were not already NaN (interpolation)

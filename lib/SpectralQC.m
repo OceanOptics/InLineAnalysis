@@ -54,9 +54,9 @@ else
   error('Intrument not supported')
 end
 
-ACsize_to_plot = 50000;
-BBsize_to_plot = 120000;
-LISSTsz_to_plot = 120000;
+ACsize_to_plot = 50000; % 50000
+BBsize_to_plot = 220000; % 120000
+LISSTsz_to_plot = 220000; % 120000
 
 user_selection = [];
 for j = 1:length(level)
@@ -79,12 +79,16 @@ for j = 1:length(level)
     tabletoplot(strcmp(tabletoplot, 'FiltStat')) = [];
   end
   sztoplot = table(0.4, 8, 8, 'VariableNames', {'AC', 'BB', 'LISST'});
+  szdt = NaN(size(tabletoplot, 1), 2);
   switch level{j}
     case 'raw'
-      szdt = NaN(size(tabletoplot, 1), 2);
       for i = 1:size(tabletoplot, 1)
-        szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
-        szdt(i, 2) = min(data.(level{j}).(tabletoplot{i}).dt);
+        if ~isempty(data.(level{j}).(tabletoplot{i}))
+          szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
+          szdt(i, 2) = min(data.(level{j}).(tabletoplot{i}).dt);
+        else
+          warning('Instrument %s level %s table %s empty: ignored', instrument, level{j}, tabletoplot{i})
+        end
       end
       day_to_plot = [max(szdt(:,1)) max(szdt(:,2)) + sztoplot.(instrument)];
       if contains(instrument,'AC')
@@ -107,10 +111,13 @@ for j = 1:length(level)
         end
       end
     case {'bin', 'qc'}
-      szdt = NaN(size(tabletoplot, 1), 2);
       for i = 1:size(tabletoplot, 1)
-        szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
-        szdt(i, 2) = max(data.(level{j}).(tabletoplot{i}).dt);
+        if ~isempty(data.(level{j}).(tabletoplot{i}))
+          szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
+          szdt(i, 2) = max(data.(level{j}).(tabletoplot{i}).dt);
+        else
+          warning('Instrument %s level %s table %s empty: ignored', instrument, level{j}, tabletoplot{i})
+        end
       end
       day_to_plot = [min(szdt(:,1)) max(szdt(:,2))];
       if contains(instrument,'AC')
@@ -133,10 +140,13 @@ for j = 1:length(level)
         end
       end
     case 'prod'
-      szdt = NaN(size(tabletoplot, 1), 2);
       for i = 1:size(tabletoplot, 1)
-        szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
-        szdt(i, 2) = max(data.(level{j}).(tabletoplot{i}).dt);
+        if ~isempty(data.(level{j}).(tabletoplot{i}))
+          szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
+          szdt(i, 2) = max(data.(level{j}).(tabletoplot{i}).dt);
+        else
+          warning('Instrument %s level %s table %s empty: ignored', instrument, level{j}, tabletoplot{i})
+        end
       end
       day_to_plot = [min(szdt(:,1)) max(szdt(:,2))];
       if contains(instrument,'AC')

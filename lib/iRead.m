@@ -135,8 +135,10 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
       % List all files in directory
       switch software
         case 'Compass_2.1rc_scheduled_bin'
+          fprintf('Looking for %s\n', fullfile(dir_in, [prefix '*' postfix '.bin']))
           l = dir(fullfile(dir_in, [prefix '*' postfix '.bin']));
         otherwise
+          fprintf('Looking for %s\n', fullfile(dir_in, [prefix '*' postfix '.dat']))
           l = dir(fullfile(dir_in, [prefix '*' postfix '.dat']));
       end
       if ~isempty(l)
@@ -161,54 +163,69 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
     case {'Inlinino', 'Inlinino_atlasTSG', 'InlininoADU100'}
       % List all files in directory
       filenames = struct2table(dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.csv']))).name;
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.csv']))
       if isempty(filenames)
         filenames = struct2table(dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.raw']))).name;
+        fprintf('No file found: looking for %s instead\n', fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.raw']))
       end
       if isempty(filenames)
         filenames = struct2table(dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.log']))).name;
+        fprintf('No file found: looking for %s instead\n', fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.log']))
       end
     case 'SBE45software'
       % List all files in directory
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.sbe45']))
       l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.sbe45']));
       filenames = {l.name}';
     case 'matlab_Emmanuel'
       % List all files in directory
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.mat']))
       l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.mat']));
       filenames = {l.name}';
     case 'FlowControl'
       % List all files in directory
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix dt_yyyydoy(dt) '*' postfix '.log']))
       l = dir(fullfile(dir_in, [prefix dt_yyyydoy(dt) '*' postfix '.log']));
       filenames = {l.name}';
     case 'DH4PreProc'
       % Get day of data +/- 1 day
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix dt_doy(dt-1) '*' postfix '.dat']))
       lp = dir(fullfile(dir_in, [prefix dt_doy(dt-1) '*' postfix '.dat']));
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix dt_doy(dt) '*' postfix '.dat']))
       l = dir(fullfile(dir_in, [prefix dt_doy(dt) '*' postfix '.dat']));
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix dt_doy(dt+1) '*' postfix '.dat']))
       la = dir(fullfile(dir_in, [prefix dt_doy(dt+1) '*' postfix '.dat']));
       filenames = {lp.name, l.name, la.name}';
     case 'AtlantisTSG'
       % List all files in directory
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix dt_yymmdd(dt) '*' postfix '.csv']))
       l = dir(fullfile(dir_in, [prefix dt_yymmdd(dt) '*' postfix '.csv']));
       filenames = {l.name}';
     case 'PourquoiPasTSG'
       % List all files in directory
+      fprintf('Looking for %s\n', fullfile(dir_in, [dt_yyyymmdd(dt) '*' postfix '.csv']))
       l = dir(fullfile(dir_in, [dt_yyyymmdd(dt) '*' postfix '.csv']));
       filenames = {l.name}';
     case 'RRevelleUnderway'
       % List all files in directory
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix dt_yymmdd(dt) '*' postfix '.MET']))
       l = dir(fullfile(dir_in, [prefix dt_yymmdd(dt) '*' postfix '.MET']));
       filenames = {l.name}';
     case 'MatlabTSG'
       % List all files in directory
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.txt']))
       l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.txt']));
       filenames = {l.name}';
     case 'internal_logger'
       % List all files in directory
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.RBN']))
       l = dir(fullfile(dir_in, [prefix dt_yyyymmdd(dt) '*' postfix '.RBN']));
       filenames = {l.name}';
     case 'TeraTerm'
       % TeraTerm filenames correspond to the time at which logging started
       % Data from a given day could be in any file preceding that date
       % List all files in directory
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix '*' postfix '.log*']))
       l = dir(fullfile(dir_in, [prefix '*' postfix '.log*']));
       % Get date of all files
       n = length(prefix);
@@ -224,6 +241,7 @@ function [filenames] = list_files_from_software(software, dir_in, prefix, dt, po
       % ALFA LabView filenames correspond to the time at which logging started
       % Data from a given day could be in any file preceding that date
       % List all files in directory
+      fprintf('Looking for %s\n', fullfile(dir_in, [prefix '*' postfix '_m.txt']))
       l = dir(fullfile(dir_in, [prefix '*' postfix '_m.txt']));
       % Get date of all files
       n = length(prefix);

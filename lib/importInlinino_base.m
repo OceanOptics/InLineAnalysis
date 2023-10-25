@@ -27,31 +27,63 @@ end
 
 % Get header
 hd = strip(strsplit(fgetl(fid), ','));
-pars = repmat({''}, size(hd));
-% rename variables
-for i = 1:size(hd, 2)
-  if strcmp(hd{i}, 'time')
-    hd{i} = 'dt';
-    pars{i} = '%s';
-  elseif strcmp(hd{i}, 'Switch')
-    hd{i} = 'swt';
-    pars{i} = '%s';
-  elseif strcmp(hd{i}, 'Flow(0)')
-    hd{i} = 'spd1';
-    pars{i} = '%f';
-  elseif strcmp(hd{i}, 'Flow(1)')
-    hd{i} = 'spd2';
-    pars{i} = '%f';
-  elseif strcmp(hd{i}, 'Flow(2)')
-    hd{i} = 'spd3';
-    pars{i} = '%f';
-  elseif strcmp(hd{i}, 'Flow(3)')
-    hd{i} = 'spd4';
-    pars{i} = '%f';
-  else
-    pars{i} = '%f';
+if strcmp(filename(end-3:end), '.csv')
+  pars = repmat({''}, size(hd));
+  % rename variables
+  for i = 1:size(hd, 2)
+    if strcmp(hd{i}, 'time')
+      hd{i} = 'dt';
+      pars{i} = '%s';
+    elseif strcmp(hd{i}, 'Switch')
+      hd{i} = 'swt';
+      pars{i} = '%s';
+    elseif strcmp(hd{i}, 'Flow(0)')
+      hd{i} = 'spd1';
+      pars{i} = '%f';
+    elseif strcmp(hd{i}, 'Flow(1)')
+      hd{i} = 'spd2';
+      pars{i} = '%f';
+    elseif strcmp(hd{i}, 'Flow(2)')
+      hd{i} = 'spd3';
+      pars{i} = '%f';
+    elseif strcmp(hd{i}, 'Flow(3)')
+      hd{i} = 'spd4';
+      pars{i} = '%f';
+    else
+      pars{i} = '%f';
+    end
+    hd{i} = strrep(strrep(hd{i}, '(', ''), ')', '');
   end
-  hd{i} = strrep(strrep(hd{i}, '(', ''), ')', '');
+elseif strcmp(filename(end-3:end), '.raw')
+  hd = strip(strsplit(fgetl(fid), ','));
+  hd = strip(strsplit(fgetl(fid), ','));
+  pars = repmat({''}, size(hd));
+  % rename variables
+  for i = 1:size(hd, 2)
+    if contains(hd{i}, '/') && contains(hd{i}, ':')
+      hd{i} = 'dt';
+      pars{i} = '%s';
+    elseif contains(hd{i}, 'True') && contains(hd{i}, 'False')
+      hd{i} = 'swt';
+      pars{i} = '%s';
+    elseif any(strcmp(hd, 'swt')) && i == 3
+      hd{i} = 'spd1';
+      pars{i} = '%f';
+    elseif any(strcmp(hd, 'swt')) && i == 4
+      hd{i} = 'analog_gain';
+      pars{i} = '%f';
+    elseif any(strcmp(hd, 'swt')) && i == 5
+      hd{i} = 'Analog2';
+      pars{i} = '%f';
+    elseif ~isempty(str2num(hd{i}))
+      hd{i} = ['Var' num2str(i)];
+      pars{i} = '%f';
+    else
+      hd{i} = ['Var' num2str(i)];
+      pars{i} = '%s';
+    end
+    hd{i} = strrep(strrep(hd{i}, '(', ''), ')', '');
+  end
 end
 % Set parser
 parser = strjoin(pars, '');
@@ -100,6 +132,14 @@ lambda = str2double(hd_digit(contains(hd, unique(hd_tx(not(ismember(1:numel(hd_t
 
 data = array2table(dat, 'VariableNames', hd);
 data.Properties.VariableUnits = unit;
+
+% merge into one column when spectral data
+if ~isempty(lambda)
+  merged_lambda = cat(2, dat(:, contains(hd, unique(hd_tx(not(ismember(1:numel(hd_tx), d)))))));
+  data(:, contains(hd, unique(hd_tx(not(ismember(1:numel(hd_tx), d)))))) = [];
+  data.(cell2mat(unique(hd_tx(not(ismember(1:numel(hd_tx), d)))))) = merged_lambda;
+  data.Properties.VariableUnits(end) = unique(unit(not(ismember(1:numel(hd_tx), d))));
+end
 
 % Remove last line if it's past midnight (bug in old Inlinino)
 if ~isempty(data) && size(data,1) > 1

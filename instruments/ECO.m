@@ -64,6 +64,9 @@ classdef ECO < Instrument
           error(['ECO: Unknown logger: ' obj.logger]);
       end
       if ~isempty(obj.data)
+        if ~isempty(obj.analog_channel)
+          obj.data = renamevars(obj.data, obj.analog_channel, obj.varname);
+        end
         % Keep only varname field
         foo = find(strcmp(obj.data.Properties.VariableNames, obj.varname));
         if ~isempty(foo); obj.data = obj.data(:,[1,foo]); end

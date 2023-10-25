@@ -9,7 +9,7 @@ ColorSet = lines(5);
 % . raw | o bin 
 sha_raw = '.';
 sha_bin = 'o';
-% blue total | red fitlered | yellow is transition | green is flagged | purple target
+% blue total | red fitlered | yellow bad (switch buffer + QCed)
 col_tot = ColorSet(1,:);
 col_filt = ColorSet(2,:);
 col_switch = ColorSet(3, :);
@@ -20,10 +20,12 @@ fh = fig(52); hold('on');
 yyaxis('left');
 
 % Plot second bin data
-%   plot(raw_tot.dt, raw_tot.(varname{1})(:,varindex), sha_raw, 'Color', col_tot);
-%   plot(raw_tot.dt, raw_tot.(varname{2})(:,varindex), sha_raw, 'Color', col_tot);
 sc = [];
 leg = {};
+if ~isempty(raw_bad)
+  sc(end+1) = scatter(raw_bad.dt, raw_bad.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_switch, 'MarkerEdgeAlpha', 0.5);
+  leg{end+1} = 'raw bad';
+end
 if ~isempty(raw_tot)
   sc(end+1) = scatter(raw_tot.dt, raw_tot.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_tot, 'MarkerEdgeAlpha', 0.5);
   leg{end+1} = 'raw total';
@@ -31,10 +33,6 @@ end
 if ~isempty(raw_filt)
   sc(end+1) = scatter(raw_filt.dt, raw_filt.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_filt, 'MarkerEdgeAlpha', 0.5);
   leg{end+1} = 'raw filtered';
-end
-if ~isempty(raw_bad)
-  sc(end+1) = scatter(raw_bad.dt, raw_bad.(varname)(:,varindex), sha_raw, 'MarkerEdgeColor', col_switch, 'MarkerEdgeAlpha', 0.5);
-  leg{end+1} = 'raw switch buffer';
 end
 
 % Plot tot binned data
@@ -46,7 +44,6 @@ if ~isempty(bin_tot_suspect)
   sc(end+1) = plot(bin_tot_suspect.dt, bin_tot_suspect.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', col_flag, 'MarkerFaceColor', col_flag);
   leg{end+1} = 'binned total suspect';
 end
-%   plot(bb3_tot_flag.dt(sel_tot_target), bb3_tot_flag.beta(sel_tot_target,1), 'o', 'MarkerEdgeColor', col_target);
 
 % Plot filt binned data
 if ~isempty(bin_filt_good)
@@ -57,7 +54,6 @@ if ~isempty(bin_filt_bad)
   sc(end+1) = plot(bin_filt_bad.dt, bin_filt_bad.(varname)(:,varindex), sha_bin, 'MarkerEdgeColor', col_flag, 'MarkerFaceColor', col_flag);
   leg{end+1} = 'binned filtered bad';
 end
-%   plot(bb3_filt_flag.dt(sel_filt_target), bb3_filt_flag.beta(sel_filt_target,1), 'o', 'MarkerEdgeColor', col_target);  legend('pass 2', 'flag 16 & 32');
 
 % set y limit to binned data in priority
 if ~autoscale

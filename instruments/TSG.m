@@ -83,7 +83,8 @@ classdef TSG < Instrument
               error('TSG: Unknown logger for %s.', obj.boat);
           end                           
         otherwise
-          error('TSG: Unknown boat.');
+          obj.data = iRead(@importInlinino_base, obj.path.raw, obj.path.wk, obj.prefix,...
+            days2run, 'Inlinino', force_import, ~write, true);
       end
     end
     

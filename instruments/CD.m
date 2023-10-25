@@ -7,7 +7,7 @@ classdef CD < ECO
   
   methods
     function obj = CD(cfg)
-      %CD Construct an instance of this class
+      % CD Construct an instance of this class
       
       % Object Initilization
       obj = obj@ECO(cfg);
