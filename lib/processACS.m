@@ -1295,7 +1295,7 @@ function [filt_interp, regress_stats] = fdom_agcgmodel(tot, filt, lambda, cdom, 
   % filt_interp.a(:, ~bad_fit) = filt_interp.fdom .* regress_stats.a.slope(~bad_fit)' + repmat(regress_stats.a.intercept(~bad_fit)', size(tot.a, 1), 1);
   % filt_interp.c(:, ~bad_fit) = filt_interp.fdom .* regress_stats.c.slope(~bad_fit)' + repmat(regress_stats.c.intercept(~bad_fit)', size(tot.c, 1), 1);
 
-  initial_filt_interpa = filt_interp.a
+  initial_filt_interpa = filt_interp.a;
 
   filt_interp.a = filt_interp.a + a_deltaT.*a_psiT + a_deltaS.*a_psiS;
   filt_interp.c = filt_interp.c + c_deltaT.*c_psiT + c_deltaS.*c_psiS;
