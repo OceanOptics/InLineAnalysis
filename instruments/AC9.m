@@ -100,7 +100,7 @@ classdef AC9 < Instrument
       end
     end
     
-    function Calibrate(obj, compute_dissolved, interpolation_method, CDOM, SWT, di_method, scattering_corr, compute_ad_aphi)
+    function Calibrate(obj, compute_dissolved, interpolation_method, CDOM, SWT, di_method, scattering_corr, compute_ad_aphi, TSG)
       lambda = struct('ref', obj.lambda_ref, 'a', obj.lambda_ref, 'c', obj.lambda_ref);
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       % Load model from Haëntjens et al. 2021v22 to estimate cross-sectional
@@ -123,21 +123,16 @@ classdef AC9 < Instrument
           if ~isfield(CDOM.prod, 'pd') && isempty(CDOM.qc.tsw)
             error('No CDOM data loaded: required for CDOM interpolation');
           end
-          if isempty(CDOM.qc.tsw)
-            cdom = CDOM.prod.pd;
-          else
-            cdom = CDOM.qc.tsw;            
-          end
           if compute_dissolved
             [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, obj.cal_param, obj.modelG50, obj.modelmphi, obj.bin.diw, ...
-              cdom, SWT, SWT_constants, interpolation_method, di_method, scattering_corr, ...
-              compute_ad_aphi);
+              CDOM, SWT, SWT_constants, interpolation_method, di_method, scattering_corr, ...
+              compute_ad_aphi, TSG);
           else
             [obj.prod.p, ~, obj.prod.QCfailed] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, obj.cal_param, obj.modelG50, obj.modelmphi, [], ...
-              cdom, SWT, SWT_constants, interpolation_method, [], scattering_corr, ...
-              compute_ad_aphi);
+              CDOM, SWT, SWT_constants, interpolation_method, [], scattering_corr, ...
+              compute_ad_aphi, TSG);
           end
         otherwise
           error('Method not supported.');

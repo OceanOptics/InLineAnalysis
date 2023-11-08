@@ -117,7 +117,7 @@ cfg.instruments.(['SUVF' SN]) = struct();
 cfg.instruments.(['SUVF' SN]).model = 'CD';
 cfg.instruments.(['SUVF' SN]).sn = SN;
 cfg.instruments.(['SUVF' SN]).slope = 1;
-cfg.instruments.(['SUVF' SN]).dark = 0;
+cfg.instruments.(['SUVF' SN]).dark = 0.076;
 cfg.instruments.(['SUVF' SN]).logger = 'Inlinino_base';
 cfg.instruments.(['SUVF' SN]).analog_channel = 'C2';
 if strcmp(cfg.instruments.(['SUVF' SN]).logger, 'InlininoADU100')
@@ -403,7 +403,10 @@ for i = 1:size(cfg.process.instruments2run)
                                       'interpolation_method', 'linear', ... % linear CDOM
                                       'CDOM_source', 'SUVF6244', ... % 
                                       'FLOW_source', 'FLOW', ...
-                                      'di_method', 'normal'); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
+                                      'di_method', 'normal');
+  % SUVF options
+  elseif any(contains(cfg.process.instruments2run{i}, {'WSCD','SUVF'}))
+    cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false);
   end
 end
 % cfg.process.calibrate.ACS57 = struct('compute_dissolved', false, ...

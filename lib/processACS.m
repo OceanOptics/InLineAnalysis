@@ -1,7 +1,16 @@
 function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, modelG50, modelmphi, di, ...
-  cdom_base, fth, fth_constants, interpolation_method, di_method, scattering_correction, compute_ad_aphi, tsg)
-
+  CDOM, fth, fth_constants, interpolation_method, di_method, scattering_correction, compute_ad_aphi, tsg)
   % NOTE: wavelength of c are interpolated to wavelength of a
+  % load psi_s & psi_t from Sullivan et al. 2006 for salinity & temprature correction
+  psi = table();
+  psi.wl = [400;402;404;406;408;410;412;414;416;418;420;422;424;426;428;430;432;434;436;438;440;442;444;446;448;450;452;454;456;458;460;462;464;466;468;470;472;474;476;478;480;482;484;486;488;490;492;494;496;498;500;502;504;506;508;510;512;514;516;518;520;522;524;526;528;530;532;534;536;538;540;542;544;546;548;550;552;554;556;558;560;562;564;566;568;570;572;574;576;578;580;582;584;586;588;590;592;594;596;598;600;602;604;606;608;610;612;614;616;618;620;622;624;626;628;630;632;634;636;638;640;642;644;646;648;650;652;654;656;658;660;662;664;666;668;670;672;674;676;678;680;682;684;686;688;690;692;694;696;698;700;702;704;706;708;710;712;714;716;718;720;722;724;726;728;730;732;734;736;738;740;742;744;746;748;750];
+  psi.psiT = [0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0003;0.0003;0.0004;0.0005;0.0006;0.0006;0.0007;0.0008;0.0009;0.001;0.001;0.001;0.001;0.001;0.0009;0.0009;0.0008;0.0007;0.0006;0.0006;0.0005;0.0004;0.0003;0.0003;0.0002;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0002;0.0002;0.0001;0.0001;0.0001;0;0;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;0;0;0.0001;0.0002;0.0003;0.0005;0.0007;0.0009;0.0013;0.0017;0.0021;0.0026;0.0032;0.0038;0.0045;0.0054;0.0063;0.0073;0.0083;0.0094;0.0104;0.0113;0.0121;0.0128;0.0133;0.0136;0.0136;0.0133;0.0129;0.0124;0.0116;0.0107];
+  psi.a_psiS = [3.0e-05;3.0e-05;3.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;0;0;0;0;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;0;1.0e-05;2.0e-05;3.0e-05;3.0e-05;4.0e-05;5.0e-05;5.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;5.0e-05;5.0e-05;5.0e-05;5.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;-1.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-6.0e-05;-7.0e-05;-8.0e-05;-9.0e-05;-0.00011;-0.00012;-0.00014;-0.00015;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00020;-0.00020;-0.00021;-0.00021;-0.00021;-0.00021;-0.00021;-0.00020;-0.00017;-0.00013;-8.0e-05;-1.0e-05;7.0e-05;0.00016;0.00026;0.00037;0.00046;0.00054;0.00061;0.00067];
+  psi.c_psiS = [-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-4.0e-05;-3.0e-05;-3.0e-05;-2.0e-05;-1.0e-05;0;1.0e-05;1.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-5.0e-05;-6.0e-05;-6.0e-05;-8.0e-05;-9.0e-05;-0.00010;-0.00011;-0.00013;-0.00014;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00021;-0.00022;-0.00022;-0.00023;-0.00023;-0.00023;-0.00024;-0.00024;-0.00024;-0.00024;-0.00022;-0.00021;-0.00017;-0.00012;-6.0e-05;2.0e-05;0.00012;0.00022;0.00031;0.00041;0.00049;0.00056;0.00062];
+  psi.sigma_psiT = [0.0002;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0;0.0001;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0002;0.0002;0.0003;0.0003;0.0004;0.0004;0.0004;0.0004;0.0005;0.0005;0.0006;0.0006;0.0007;0.0007;0.0007;0.0006;0.0005;0.0004;0.0003;0.0003;0.0004;0.0005;0.0006;0.0007;0.0008;0.0009];
+  psi.c_sigma_psiS = [4e-005;4e-005;4e-005;4e-005;4e-005;4e-005;4e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;0;-1e-005;-2e-005;-3e-005;-4e-005;-6e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;2e-005;2e-005;2e-005;3e-005;3e-005;3e-005];
+  psi.a_sigma_psiS = [3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;NaN;NaN;NaN;NaN;NaN;NaN;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;2e-005;2e-005;2e-005;3e-005];
+  
   %% ap & cp
   % check FTH data
   if ~exist('fth_constants', 'var')
@@ -38,6 +47,53 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     fprintf('Warning: %i identical dates in filtered data => deleted\n', sum(indexToDump))
     filt(indexToDump, :) = [];
   end
+  % check if fCDOM data loaded if fCDOM interpolation
+  if strcmp(interpolation_method, 'CDOM')
+    % Require both CDOM & Switch position
+    if ~isempty(CDOM.prod.a) || ~isempty(CDOM.qc.tsw)
+      if ~isempty(CDOM.prod.a)
+        cdom_base = CDOM.prod.a;
+      else
+        cdom_base = CDOM.qc.tsw;
+      end
+      if ~any(cdom_base.dt >= min([tot.dt; filt.dt]) & cdom_base.dt <= max([tot.dt; filt.dt]))
+        fprintf('Warning: fCDOM dates do not correspond to ACS dates: interpolation switched to "linear"\n')
+        interpolation_method = 'linear';
+      else
+        % remove duplicates
+        [~, L, ~] = unique(cdom_base.dt,'first');
+        indexToDump = not(ismember(1:numel(cdom_base.dt), L));
+        if sum(indexToDump) > 0
+          fprintf('Warning: %i identical dates in fCDOM data => deleted\n', sum(indexToDump))
+          cdom_base(indexToDump, :) = [];
+        end
+      end
+    else
+      fprintf('Warning: fCDOM data not loaded: interpolation switched to "linear"\n')
+      interpolation_method = 'linear';
+    end
+  end
+  % check if TSG data loaded
+  if ~isempty(tsg)
+    if ~isempty(tsg.prod.a)
+      tsg_data = tsg.prod.a;
+    else
+      tsg_data = tsg.qc.tsw;
+    end
+    if ~any(tsg_data.dt >= min([tot.dt; filt.dt]) & tsg_data.dt <= max([tot.dt; filt.dt]))
+      fprintf('Warning: TSG dates do not correspond to ACS dates: salinity correction not performed\n')
+      tsg_loaded = false;
+    else
+      tsg_loaded = true;
+      % remove duplicates
+      [~, L, ~] = unique(tsg_data.dt,'first');
+      indexToDump = not(ismember(1:numel(tsg_data.dt), L));
+      if sum(indexToDump) > 0
+        fprintf('Warning: %i identical dates in TSG data => deleted\n', sum(indexToDump))
+        tsg_data(indexToDump, :) = [];
+      end
+    end
+  end
   % interpolate fth.qc.tsw.swt onto binned data to fill missing flow data
   fth_interp = table([tot.dt; fth.qc.tsw.dt; filt.dt], 'VariableNames', {'dt'});
   [~,b] = sort(fth_interp.dt); % sort dates
@@ -52,243 +108,188 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   if sel_start(1) > sel_end(1); sel_end(1) = []; end
   if sel_start(end) > sel_end(end); sel_end(end+1) = size(fth_interp.swt,1); end
   if size(sel_start,1) ~= size(sel_end,1); error('Inconsistent fth data'); end
-  % interpolate filtered event
-  
-  % Compute filtered period median
-  filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
-  % if strcmp(interpolation_method, 'CDOM')
-  %   filt_avg.cdom = interp1(cdom.dt, cdom.fdom, filt_avg.dt, 'linear');
-  %   filt_avg.cdom = NaN(size(filt_avg,1),1);
-  % end
+
+  %%%%%%%%%%%%%%%%%%%%%%% Compute filtered average %%%%%%%%%%%%%%%%%%%%%%%
+  % TODO maybe: write a filter_average function that can be use with every instrument
+
+  % create filter average data table
+  filt_avg = table(NaN(size(sel_start)), 'VariableNames', {'dt'});
+  filt_avg.start = fth_interp.dt(sel_start);
+  filt_avg.end = fth_interp.dt(sel_end);
   filt_avg.a = NaN(size(filt_avg,1), size(lambda.a, 2));
   filt_avg.c = NaN(size(filt_avg,1), size(lambda.c, 2));
   filt_avg.a_avg_sd = NaN(size(filt_avg,1), size(lambda.a, 2));
   filt_avg.c_avg_sd = NaN(size(filt_avg,1), size(lambda.c, 2));
   filt_avg.a_avg_n = NaN(size(filt_avg,1), 1);
   filt_avg.c_avg_n = NaN(size(filt_avg,1), 1);
+
+  % create filter interpolation table
+  filt_interp = table(tot.dt, 'VariableNames', {'dt'});
+  filt_interp.a = NaN(size(tot.a));
+  filt_interp.c = NaN(size(tot.c));
+
+  % create ancillary table and prepare T/S if loaded
+  ancillary = table();
+  foo_dt = [datetime(min([tot.dt; filt.dt]), 'ConvertFrom', 'datenum') datetime(max([tot.dt; filt.dt]), 'ConvertFrom', 'datenum')];
+  ancillary.dt = datenum(dateshift((foo_dt(1):minutes(1):foo_dt(2))','start','minute'));
+  if tsg_loaded
+    % interpolate T and S on ancillary table
+    ancillary.t = interp1(tsg_data.dt, tsg_data.(tsg.temperature_variable), ancillary.dt, 'spline');
+    ancillary.t = fillmissing(ancillary.t, 'nearest');
+    ancillary.s = interp1(tsg_data.dt, tsg_data.s, ancillary.dt, 'spline');
+    ancillary.s = fillmissing(ancillary.s, 'nearest');
+
+    % replace interpolated values over gaps > 60 min by NaN
+    missing_tsg= ~ismember(ancillary.dt, tsg_data.dt);
+    t = [true; diff(missing_tsg) ~= 0];
+    k = diff(find([t; true])) .* missing_tsg(t);
+    long_nan = k(cumsum(t)) > 120;
+    ancillary.t(long_nan) = NaN;
+    ancillary.s(long_nan) = NaN;
+    % % fill long gaps with nearest values
+    % ancillary.t = fillmissing(ancillary.t, 'nearest');
+    % ancillary.s = fillmissing(ancillary.s, 'nearest');
+
+    % interpolate spline T on filt_interp table 
+    filt_interp = addvars(filt_interp, interp1(ancillary.dt, ancillary.t, filt_interp.dt, 'spline'), ...
+      'NewVariableNames', 't', 'After', 'dt');
+    % interpolate spline S on filt_interp table
+    filt_interp = addvars(filt_interp, interp1(ancillary.dt, ancillary.s, filt_interp.dt, 'spline'), ...
+      'NewVariableNames', 's', 'After', 'dt');
+
+    % interpolate T and S on filtered data 
+    filt = addvars(filt, interp1(ancillary.dt, ancillary.t, filt.dt, 'spline'), 'NewVariableNames', 't', 'After', 'dt');
+    filt = addvars(filt, interp1(tsg_data.dt, tsg_data.s, filt.dt, 'spline'), 'NewVariableNames', 's', 'After', 'dt');
+    
+    % add T and S variables on filt_avg table
+    filt_avg = addvars(filt_avg, NaN(size(filt_avg,1),1), 'NewVariableNames', 's', 'After', 'dt');
+    filt_avg = addvars(filt_avg, NaN(size(filt_avg,1),1), 'NewVariableNames', 't', 'After', 'dt');
+
+    % remove psiS and psiT with Tref = median(T) of whole processed section
+    Tref = median(ancillary.t, 'omitnan');
+    a_psiS = interp1(psi.wl, psi.a_psiS, lambda.a, 'spline');
+    c_psiS = interp1(psi.wl, psi.c_psiS, lambda.c, 'spline');
+    a_psiT = interp1(psi.wl, psi.psiT, lambda.a, 'spline');
+    c_psiT = interp1(psi.wl, psi.psiT, lambda.c, 'spline');
+    filt.a = filt.a - (a_psiS .* filt.s + a_psiT .* (filt.t - Tref));
+    filt.c = filt.c - (c_psiS .* filt.s + c_psiT .* (filt.t - Tref));
+    tot.a = tot.a - (a_psiS .* filt_interp.s + a_psiT .* (filt_interp.t - Tref));
+    tot.c = tot.c - (c_psiS .* filt_interp.s + c_psiT .* (filt_interp.t - Tref));
+  end
+
+  % prepare fCDOM data if CDOM interpolation
+  if strcmp(interpolation_method, 'CDOM')
+    % create new fdom table interpolating for gaps < 60 min
+    ancillary.fdom = interp1(cdom_base.dt, cdom_base.fdom, ancillary.dt, 'spline');
+    ancillary.fdom = fillmissing(ancillary.fdom, 'nearest');
+    % smooth cdom data removing frequencies higher than 10min
+    d = designfilt('lowpassiir','FilterOrder',1, 'PassbandFrequency',1/(60*10),'SampleRate', 1/60);
+    ancillary.fdom_10smooth = filtfilt(d, ancillary.fdom);
+
+    % replace interpolated values over gaps > 60 min by NaN
+    missing_cdom = ~ismember(ancillary.dt, cdom_base.dt);
+    t = [true; diff(missing_cdom) ~= 0];
+    k = diff(find([t; true])) .* missing_cdom(t);
+    long_nan = k(cumsum(t)) > 120;
+    ancillary.fdom(long_nan) = NaN;
+    ancillary.fdom_10smooth(long_nan) = NaN;
+    % fill long gaps with nearest values to force agcg_fdom_interpolation function to do linear interpolation
+    ancillary.fdom = fillmissing(ancillary.fdom, 'nearest');
+    ancillary.fdom_10smooth = fillmissing(ancillary.fdom_10smooth, 'nearest');
+
+    % interpolate spline and extrapolate nearest fdom on filt_interp table
+    filt_interp = addvars(filt_interp, interp1(ancillary.dt, ancillary.fdom, filt_interp.dt, 'spline'), ...
+      'NewVariableNames', 'fdom', 'After', 'dt');
+    filt_interp.fdom = fillmissing(filt_interp.fdom, 'nearest');
+
+    % interpolate fdom on filtered data
+    filt = addvars(filt, interp1(ancillary.dt, ancillary.fdom, filt.dt, 'spline'), ...
+      'NewVariableNames', 'fdom', 'After', 'dt');
+    filt.fdom = fillmissing(filt.fdom, 'nearest');
+
+    % add fdom variables on filt_avg table
+    filt_avg = addvars(filt_avg, NaN(size(filt_avg,1),1), 'NewVariableNames', 'fdom_10smooth', 'After', 'dt');
+    filt_avg = addvars(filt_avg, NaN(size(filt_avg,1),1), 'NewVariableNames', 'fdom', 'After', 'dt');
+  end
+
+  % figure; hold on
+  % yyaxis('left')
+  % scatter(datetime(filt.dt, 'ConvertFrom', 'datenum'), filt.t, 20, 'ro', 'filled')
+  % scatter(datetime(filt_interp.dt, 'ConvertFrom', 'datenum'), filt_interp.t, 20, 'b+')
+  % ylabel('Temperature')
+  % yyaxis('right')
+  % scatter(datetime(filt.dt, 'ConvertFrom', 'datenum'), filt.fdom, 20, 'co', 'filled')
+  % scatter(datetime(filt_interp.dt, 'ConvertFrom', 'datenum'), filt_interp.fdom, 20, 'co', 'filled')
+  % ylabel('fCDOM')
+  
   for i=1:size(sel_start, 1)
-  %   if strcmp(interpolation_method, 'CDOM')
-  %     sel_cdom = fth_interp.dt(sel_start(i)) <= cdom.dt & cdom.dt <= fth_interp.dt(sel_end(i));
-  %     filt_avg.cdom(i) = median(cdom.fdom(sel_cdom));
-  %   end
     sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
     foo = filt(sel_filt,:);
+    if strcmp(interpolation_method, 'CDOM') || tsg_loaded
+      sel_anc = fth_interp.dt(sel_start(i)) <= ancillary.dt & ancillary.dt <= fth_interp.dt(sel_end(i));
+      foo_anc = ancillary(sel_anc,:);
+    end
     if sum(sel_filt) == 1
+      filt_avg.dt(i) = foo.dt;
+      filt_avg.start(i) = foo.dt;
+      filt_avg.end(i) = foo.dt;
       filt_avg.a(i,:) = foo.a;
       filt_avg.c(i,:) = foo.c;
       filt_avg.a_avg_sd(i,:) = foo.a_avg_sd;
       filt_avg.c_avg_sd(i,:) = foo.c_avg_sd;
       filt_avg.a_avg_n(i) = foo.a_avg_n;
       filt_avg.c_avg_n(i) = foo.c_avg_n;
-    else
-      foo.a_avg_sd(foo.a > prctile(foo.a, 25, 1)) = NaN;
-      foo.c_avg_sd(foo.c > prctile(foo.c, 25, 1)) = NaN;
-      foo.a(foo.a > prctile(foo.a, 25, 1)) = NaN;
-      foo.c(foo.c > prctile(foo.c, 25, 1)) = NaN;
+      if tsg_loaded
+        filt_avg.t(i,:) = foo_anc.t;
+        filt_avg.s(i,:) = foo_anc.s;
+      end
+      if strcmp(interpolation_method, 'CDOM')
+        filt_avg.fdom(i,:) = foo_anc.fdom;
+        filt_avg.fdom_10smooth(i,:) = foo_anc.fdom_10smooth;
+      end
+    elseif sum(sel_filt) > 1
+      a_perc25 = foo.a > prctile(foo.a, 25, 1);
+      c_perc25 = foo.c > prctile(foo.c, 25, 1);
+      foo.a_avg_sd(a_perc25) = NaN;
+      foo.c_avg_sd(c_perc25) = NaN;
+      foo.a(a_perc25) = NaN;
+      foo.c(c_perc25) = NaN;
       % compute average of all values smaller than 25th percentile for each filter event
       filt_avg.a(i,:) = mean(foo.a, 1, 'omitnan');
       filt_avg.c(i,:) = mean(foo.c, 1, 'omitnan');
+      filt_avg.dt(i) = mean(foo.dt(any(a_perc25, 2) | any(c_perc25, 2)), 'omitnan');
+      filt_avg.start(i) = min(foo.dt(any(a_perc25, 2) | any(c_perc25, 2)));
+      filt_avg.end(i) = max(foo.dt(any(a_perc25, 2) | any(c_perc25, 2)));
       filt_avg.a_avg_sd(i,:) = mean(foo.a_avg_sd, 1, 'omitnan');
       filt_avg.c_avg_sd(i,:) = mean(foo.c_avg_sd, 1, 'omitnan');
       filt_avg.a_avg_n(i) = sum(foo.a_avg_n(any(~isnan(foo.a), 2)), 'omitnan');
       filt_avg.c_avg_n(i) = sum(foo.c_avg_n(any(~isnan(foo.c), 2)), 'omitnan');
-    end
-  end
-  filt_avg(all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2), :) = [];
-  
-  % check if cdom data loaded
-  if strcmp(interpolation_method, 'CDOM')
-    if ~isempty(cdom_base)
-      if ~any(cdom_base.dt >= min([tot.dt; filt.dt]) & cdom_base.dt <= max([tot.dt; filt.dt]))
-        fprintf('Warning: CDOM dates do not correspond to ACS dates: interpolation switched to "linear"\n')
-        interpolation_method = 'linear';
+      if tsg_loaded
+        foo_anc.t(foo_anc.t > prctile(foo_anc.t, 25, 1)) = NaN;
+        foo_anc.s(foo_anc.s > prctile(foo_anc.s, 25, 1)) = NaN;
+        % compute average of all values smaller than 25th percentile for each filter event
+        filt_avg.t(i,:) = mean(foo_anc.t, 1, 'omitnan');
+        filt_avg.s(i,:) = mean(foo_anc.s, 1, 'omitnan');
       end
-    else
-      fprintf('Warning: CDOM data not loaded: interpolation switched to "linear"\n')
-      interpolation_method = 'linear';
+      if strcmp(interpolation_method, 'CDOM')
+        foo_anc.fdom(foo_anc.fdom > prctile(foo_anc.fdom, 25, 1)) = NaN;
+        foo_anc.fdom_10smooth(foo_anc.fdom_10smooth > prctile(foo_anc.fdom_10smooth, 25, 1)) = NaN;
+        % compute average of all values smaller than 25th percentile for each filter event
+        filt_avg.fdom(i,:) = mean(foo_anc.fdom, 1, 'omitnan');
+        filt_avg.fdom_10smooth(i,:) = mean(foo_anc.fdom_10smooth, 1, 'omitnan');
+      end
     end
   end
+  % remove empty filter events
+  rm_filter_event = all(isnan(filt_avg.a), 2) | all(isnan(filt_avg.c), 2);
+  % sel_start(rm_filter_event) = [];
+  % sel_end(rm_filter_event) = [];
+  filt_avg(rm_filter_event, :) = [];
   
   switch interpolation_method
     case 'CDOM'
-      % Require both CDOM & Switch position
-      % remove duplicates
-      [~, L, ~] = unique(cdom_base.dt,'first');
-      indexToDump = not(ismember(1:numel(cdom_base.dt), L));
-      if sum(indexToDump) > 0
-        fprintf('Warning: %i identical dates in CDOM data => deleted\n', sum(indexToDump))
-        cdom_base(indexToDump, :) = [];
-      end
-
-      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEW METHOD %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      % Reconstruct ag and cg from fCDOM data
-
-      [filt_interp, regression_stats] = fdom_agcgmodel(tot, filt, lambda, cdom_base, tsg); % filt_avg
-
-  %     %%%%%%%%%%%%%%% OLD METHOD: TODO MERGE OLD AND NEW METHOD %%%%%%%%%%%%%%%
-  %     % use old method to follow variation of cdom in single filter events
-  %     % and use the proportion of fdom and ag cg to match the magnitude
-  %     cdom = table();
-  %     foo_dt = datetime(cdom_base.dt, 'ConvertFrom', 'datenum');
-  %     cdom.dt = (datenum(foo_dt(1):median(diff(foo_dt)):foo_dt(end)))';
-  %     cdom.fdom = interp1(cdom_base.dt, cdom_base.fdom, cdom.dt, 'linear');
-  %     % keep only leg data
-  %     cdom_base = cdom_base(cdom_base.dt >= min([tot.dt; filt.dt]) & cdom_base.dt <= max([tot.dt; filt.dt]), :);
-  %     cdom = cdom(cdom.dt >= min([tot.dt; filt.dt]) & cdom.dt <= max([tot.dt; filt.dt]), :);
-  % 
-  %     % smooth FDOM data
-  %     cdom_base.mv_fdom = movmean(cdom_base.fdom, 30);
-  %     cdom.mv_fdom = movmean(cdom.fdom, 10);
-  % %     cdom.fdom(~ismember(cdom.dt, cdom_base.dt),:) = NaN;
-  %     % interpolate FDOM onto filt_avg
-  %     filt_avg.cdom_b = interp1(cdom_base.dt, cdom_base.mv_fdom, filt_avg.dt, 'linear');
-  %     filt_avg.cdom_b(isnan(filt_avg.cdom_b)) = interp1(cdom_base.dt, cdom_base.mv_fdom, filt_avg.dt(isnan(filt_avg.cdom_b)), ...
-  %       'nearest', 'extrap');
-  %     filt_avg.cdom = interp1(cdom.dt, cdom.mv_fdom, filt_avg.dt, 'linear');
-  %     filt_avg.cdom(isnan(filt_avg.cdom)) = interp1(cdom.dt, cdom.mv_fdom, filt_avg.dt(isnan(filt_avg.cdom)), ...
-  %       'nearest', 'extrap');
-  % 
-  % %     figure()
-  % %     hold on
-  % %     cdom.mv_fdom
-  % %     scatter(datetime(cdom_base.dt, 'ConvertFrom', 'datenum'), cdom_base.fdom, 20, 'filled', 'k')
-  % %     scatter(datetime(cdom_base.dt, 'ConvertFrom', 'datenum'), cdom_base.mv_fdom, 20, 'filled', 'r')
-  % %     scatter(datetime(cdom.dt, 'ConvertFrom', 'datenum'), cdom.fdom, 20, 'filled', 'b')
-  % %     scatter(datetime(cdom.dt, 'ConvertFrom', 'datenum'), cdom.mv_fdom, 20, 'filled', 'o')
-  % %     legend('cdom_base.fdom', 'cdom_base.mv_fdom', 'cdom.fdom', 'cdom.mv_fdom')
-  % 
-  %     % Use simple mathematical function to interpolate based on CDOM
-  %     n_periods = size(filt_avg,1)-1;
-  %     filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-  %     filt_interp.cdom = interp1(cdom.dt, cdom.mv_fdom, tot.dt, 'linear');
-  %     filt_interp.cdom(isnan(filt_interp.cdom)) = interp1(cdom.dt, ...
-  %       cdom.mv_fdom, tot.dt(isnan(filt_interp.cdom)), 'nearest', 'extrap'); % as independent from tot|filt period
-  %     filt_interp.a = NaN(size(filt_interp,1),size(lambda.a, 2));
-  %     filt_interp.c = NaN(size(filt_interp,1),size(lambda.c, 2));
-  %     % For each period going from t0 to t1, starting and finishing by a filtered time
-  %     for i=1:n_periods
-  %       it0 = i; it1 = i + 1;
-  %       it = filt_avg.dt(it0) <= filt_interp.dt & filt_interp.dt <= filt_avg.dt(it1);
-  %       if any(it)
-  %         it_filt_interp = filt_interp(it,:);
-  % %         figure()
-  % %         scatter(it_filt_interp.cdom, tot.a(it,40), 20, 'filled')
-  % %         
-  % %         std(tot.a(it,:),[], 1)'
-  % % 
-  % %           figure();
-  % %           yyaxis('left')
-  % %           hold on
-  % %           scatter(filt_interp.dt, filt_interp.cdom, 30, 'filled', 'MarkerFaceColor', 'b','MarkerFaceAlpha', 0.5)
-  % %           scatter(filt_avg.dt, filt_avg.cdom, 30, 'filled', 'MarkerFaceColor', 'r', 'MarkerFaceAlpha', 0.5)
-  % %           yyaxis('right')
-  % %           hold on
-  % %           scatter(tot.dt, tot.a(:,40), 30, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5)
-  % % 
-  % %           Xt = (filt_avg.cdom(it1) - filt_interp.cdom(it)) / (filt_avg.cdom(it1) - filt_avg.cdom(it0));
-  % %           filt_interp.a(it,:) = Xt .* filt_avg.a(it0,:) + (1 - Xt) .* filt_avg.a(it1,:);
-  % %           filt_interp.c(it,:) = Xt .* filt_avg.c(it0,:) + (1 - Xt) .* filt_avg.c(it1,:);
-  %         % linearly interpolate cdom between filter average
-  %         dt_filtavg_it = filt_avg.dt(it0:it1,:);
-  %         cdom_filtavg_it = filt_avg.cdom(it0:it1,:);
-  %         if sum(isnan(cdom_filtavg_it)) == 1 && ~all(isnan(filt_interp.cdom(it,:)))
-  %           foo = it_filt_interp(~isnan(it_filt_interp.cdom),:);
-  %           cdom_filtavg_it(isnan(cdom_filtavg_it)) = foo.cdom(find(abs(foo.dt - dt_filtavg_it(isnan(cdom_filtavg_it))) == ...
-  %             min(abs(foo.dt - dt_filtavg_it(isnan(cdom_filtavg_it)))), 1, 'first'));
-  %         end
-  %         lin_cdom = interp1(dt_filtavg_it, cdom_filtavg_it, it_filt_interp.dt, 'linear');
-  %         % get cdom variance to the linear interpolation
-  %         Xt = lin_cdom ./ it_filt_interp.cdom;
-  %         % fill missing values in cdom variance by interpolating linearly
-  %         if any(isnan(Xt))
-  %           foo_Xt = [1; Xt; 1];
-  %           foo_Xt_dt = [dt_filtavg_it(1); it_filt_interp.dt; dt_filtavg_it(2)];
-  %           % remove duplicates
-  %           if foo_Xt_dt(1) == foo_Xt_dt(2)
-  %             foo_Xt_dt(1) = foo_Xt_dt(2) - median(diff(foo_Xt_dt), 'omitnan');
-  %           end
-  %           if foo_Xt_dt(end) == foo_Xt_dt(end-1)
-  %             foo_Xt_dt(end) = foo_Xt_dt(end-1) + median(diff(foo_Xt_dt), 'omitnan');
-  %           end
-  %           foo_Xt = fillmissing(foo_Xt, 'linear','SamplePoints',foo_Xt_dt);
-  %           Xt = foo_Xt(2:end-1);
-  %         end
-  %         % linearly interpolate a and c
-  %         lin_a = interp1(dt_filtavg_it, filt_avg.a(it0:it1,:), it_filt_interp.dt, 'linear');
-  %         lin_c = interp1(dt_filtavg_it, filt_avg.c(it0:it1,:), it_filt_interp.dt, 'linear');
-  %         % apply cdom variance to a and c if Xt not NaN
-  % %         if any(all(isnan(it_filt_interp.cdom)) | ...
-  % %             all(1 - min(it_filt_interp.cdom) / max(it_filt_interp.cdom) > 0.3 & ...
-  % %             sum(1 - min(filt_avg.a(it0:it1,:)) ./ max(filt_avg.a(it0:it1,:)) < 0.005) > size(filt_avg.a, 2)/2))
-  % %           filt_interp.a(it,:) = lin_a;
-  % %           filt_interp.c(it,:) = lin_c;
-  % %         else
-  % %           filt_interp.a(it,:) = lin_a ./ Xt;
-  % %           filt_interp.c(it,:) = lin_c ./ Xt;
-  % %         end
-  % 
-  %         foo_interp_a = NaN(size(lin_a));
-  %         foo_interp_c = NaN(size(lin_c));
-  % 
-  %         pos_interp_a = lin_a ./ Xt;
-  %         pos_interp_c = lin_c ./ Xt;
-  %         neg_interp_a = lin_a .* Xt;
-  %         neg_interp_c = lin_c .* Xt;
-  % 
-  %         foo_interp_a(lin_a > 0) = pos_interp_a(lin_a > 0);
-  %         foo_interp_c(lin_c > 0) = pos_interp_c(lin_c > 0);
-  % 
-  %         foo_interp_a(lin_a < 0) = neg_interp_a(lin_a < 0);
-  %         foo_interp_c(lin_c < 0) = neg_interp_c(lin_c < 0);
-  %         filt_interp.a(it, :) = foo_interp_a;
-  %         filt_interp.c(it, :) = foo_interp_c;
-  % %         idl = filt_interp.dt >= min(it_filt_interp.dt) & filt_interp.dt <= max(it_filt_interp.dt);
-  % %         visProd3D(lambda.a, filt_interp.dt(idl), filt_interp.a(idl,:), false, 'Wavelength', false, 23);
-  % %         visProd3D(lambda.a, it_filt_interp.dt, lin_a, false, 'Wavelength', false, 24);
-  % %         idp = tot.dt >= min(it_filt_interp.dt) & tot.dt <= max(it_filt_interp.dt);
-  % %         figure(25)
-  % %         scatter(datetime(tot.dt(idp), 'ConvertFrom', 'datenum'), filt_interp.cdom(idp), 20, 'filled')
-  % %         figure()
-  % %         clf
-  % %         subplot(1,2,1)
-  % %         yyaxis('left')
-  % %         hold on
-  % %         plot_dt = datetime(it_filt_interp.dt, 'ConvertFrom', 'datenum');
-  % %         scatter(plot_dt, ...
-  % %           filt_interp.a(it,40), 30, 'filled', 'MarkerFaceColor', 'b','MarkerFaceAlpha', 0.5)
-  % %         scatter(datetime(filt_avg.dt, 'ConvertFrom', 'datenum'), ...
-  % %           filt_avg.a(:,40), 30, 'filled', 'MarkerFaceColor', [255	193	37]/255,'MarkerFaceAlpha', 1)
-  % %         xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
-  % %         yyaxis('right')
-  % %         hold on
-  % %         scatter(plot_dt, ...
-  % %           it_filt_interp.cdom, 30, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5)
-  % %         xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
-  % %         subplot(1,2,2)
-  % %         yyaxis('left')
-  % %         hold on
-  % %         scatter(plot_dt, ...
-  % %           filt_interp.c(it,40), 30, 'filled', 'MarkerFaceColor', 'r','MarkerFaceAlpha', 0.5)
-  % %         scatter(datetime(filt_avg.dt, 'ConvertFrom', 'datenum'), ...
-  % %           filt_avg.c(:,40), 30, 'filled', 'MarkerFaceColor', [255	193	37]/255,'MarkerFaceAlpha', 1)
-  % %         xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
-  % %         yyaxis('right')
-  % %         hold on
-  % %         scatter(plot_dt, ...
-  % %           it_filt_interp.cdom, 30, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5)
-  % %         xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
-  %       end
-  %     end
-  %     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
-  %     figure()
-  %     hold on
-  %     cdom.mv_fdom
-  %     scatter(datetime(cdom_base.dt, 'ConvertFrom', 'datenum'), cdom_base.fdom, 20, 'filled', 'k')
-  %     scatter(datetime(cdom_base.dt, 'ConvertFrom', 'datenum'), cdom_base.mv_fdom, 20, 'filled', 'r')
-  %     scatter(datetime(cdom.dt, 'ConvertFrom', 'datenum'), cdom.fdom, 20, 'filled', 'b')
-  %     scatter(datetime(cdom.dt, 'ConvertFrom', 'datenum'), cdom.mv_fdom, 20, 'filled', 'o')
-  %     legend('cdom_base.fdom', 'cdom_base.mv_fdom', 'cdom.fdom', 'cdom.mv_fdom')
+      % interpolate ag and cg using fcdom
+      [filt_interp] = agcg_fdom_interpolation(filt_interp, filt, lambda, CDOM.dark, filt_avg);
   
       % TODO: propagate error from regression and filter event STD
       filt_interp.a_avg_sd = interp1(filt.dt, filt.a_avg_sd, filt_interp.dt, 'linear');
@@ -300,9 +301,18 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       filt_interp.c_avg_sd(all(isnan(tot.c),2), :) = NaN;
       filt_interp.c(all(isnan(tot.c),2), :) = NaN;
       
+      % % check interpolation if bad replace by linear interpolation TODO add
+      % % this in agcg_fdom_interpolation and apply it by section instead of by point
+      % test_interp = table();
+      % test_interp.ap = tot.a - filt_interp.a;
+      % test_interp.cp = tot.c - filt_interp.c;
+      % id_bad_interp_a = sum(test_interp.ap < 0, 2) > size(lambda.a, 2)/3;
+      % id_bad_interp_c = sum(test_interp.cp < 0, 2) > size(lambda.c, 2)/3;
+      % filt_interp.a(id_bad_interp_a, :) = filt_interp.lin_a(id_bad_interp_a, :);
+      % filt_interp.c(id_bad_interp_c, :) = filt_interp.lin_c(id_bad_interp_c, :);
+      
     case 'linear'
       % Interpolate filtered on total linearly
-      filt_interp = table(tot.dt, 'VariableNames', {'dt'});
       filt_interp.a = interp1(filt_avg.dt, filt_avg.a, filt_interp.dt, 'linear');
       filt_interp.c = interp1(filt_avg.dt, filt_avg.c, filt_interp.dt, 'linear');
       filt_interp.a_avg_sd = interp1(filt_avg.dt, filt_avg.a_avg_sd, filt_interp.dt, 'linear');
@@ -318,21 +328,17 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   tot(sel2rm,:) = [];
   filt_interp(sel2rm,:) = [];
   
-  if strcmp(interpolation_method, 'CDOM')
-    % remove cdom interpolation when there is no a and c data
-    cdom_base(~ismember(cdom_base.dt, filt_interp.dt), :) = [];
-  end
-  
   if exist('visFlag', 'file')
     fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'a', round(size(tot.a, 2)/2), [], []);
     title('Check filter event interpolation, press q to continue', 'FontSize', 14)
     if strcmp(interpolation_method, 'CDOM')
       ax1 = gca;
       ax1.YColor = [0	205	205]/255;
-      scatter(cdom_base.dt, cdom_base.fdom, 15, [0	205	205]/255, 'filled')
+      scatter(filt_interp.dt, filt_interp.fdom, '.', 'MarkerEdgeColor', [0	205	205]/255, 'MarkerEdgeAlpha', 0.5)
+      plot(filt_avg.dt, filt_avg.fdom, 'o', 'MarkerEdgeColor', 'k', 'MarkerFaceColor', [0	205	205]/255)
       ylabel('FDOM (volts)')
-      legend('Filtered interpolated', 'Total', 'Filtered median', 'smoothed FDOM',...
-        'AutoUpdate','off', 'FontSize', 12)
+      legend('Filtered interpolated', 'Total', 'Filtered percentile average', 'fCDOM', ...
+        'fCDOM filtered percentile average', 'AutoUpdate','off', 'FontSize', 12)
     else
       legend('Filtered interpolated', 'Total', 'Filtered median',...
         'AutoUpdate','off', 'FontSize', 12)
@@ -340,6 +346,23 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     guiSelectOnTimeSeries(fh);
   end
   
+% figure(1);
+% subplot(1, 3, 1)
+% scatter(filt_interp.a(filt_interp.lin_bool,40), filt_interp.s(filt_interp.lin_bool), 20, 'k+')
+% scatter(filt_interp.a(~filt_interp.lin_bool,40), filt_interp.s(~filt_interp.lin_bool), 20, 'bo', 'filled')
+% ylabel('Salinity')
+% xlabel('ag')
+% subplot(1, 3, 2)
+% scatter(filt_interp.c(filt_interp.lin_bool,40), filt_interp.s(filt_interp.lin_bool), 20, 'k+')
+% scatter(filt_interp.c(~filt_interp.lin_bool,40), filt_interp.s(~filt_interp.lin_bool), 20, 'bo', 'filled')
+% ylabel('Salinity')
+% xlabel('cg')
+% subplot(1, 3, 3)
+% scatter(filt_interp.fdom(filt_interp.lin_bool), filt_interp.s(filt_interp.lin_bool), 20, 'k+')
+% scatter(filt_interp.fdom(~filt_interp.lin_bool), filt_interp.s(~filt_interp.lin_bool), 20, 'bo', 'filled')
+% ylabel('Salinity')
+% xlabel('fdom')
+
   % Particulate = Total - FSW
   p = table(tot.dt, 'VariableNames', {'dt'});
   p.ap = tot.a - filt_interp.a;
@@ -353,26 +376,32 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     % cp Residual correction (for efficiency use the one computed from ap as it should be the same)
     fprintf(['ap ' scattering_correction ' residual temperature and scattering correction ... '])
     if strcmp(scattering_correction, 'Kostakis2022')
-      [p.ap, ~] = ResidualTemperatureAndScatteringCorrectionKostakis(p.ap, cp_for_apresiduals_corr, lambda.a);
+      [p.ap, ~] = ResidualTemperatureAndScatteringCorrectionKostakis(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
     elseif strcmp(scattering_correction, 'Zaneveld1994')
-      [p.ap, ~] = ResidualTemperatureAndScatteringCorrectionZaneveld(p.ap, cp_for_apresiduals_corr, lambda.a);
+      [p.ap, ~] = ResidualTemperatureAndScatteringCorrectionZaneveld(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
     end
     fprintf('Done\n')
     fprintf(['cp ' scattering_correction ' residual temperature and scattering correction ... '])
     if strcmp(scattering_correction, 'Kostakis2022')
-      [~, p.cp] = ResidualTemperatureAndScatteringCorrectionKostakis(ap_for_cpresiduals_corr, p.cp, lambda.c);
+      [~, p.cp] = ResidualTemperatureAndScatteringCorrectionKostakis(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
     elseif strcmp(scattering_correction, 'Zaneveld1994')
-      [~, p.cp] = ResidualTemperatureAndScatteringCorrectionZaneveld(ap_for_cpresiduals_corr, p.cp, lambda.c);
+      [~, p.cp] = ResidualTemperatureAndScatteringCorrectionZaneveld(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
     end
     fprintf('Done\n')
   else
     fprintf(['ap and cp ' scattering_correction ' residual temperature and scattering correction ... '])
     if strcmp(scattering_correction, 'Kostakis2022')
-      [p.ap, p.cp] = ResidualTemperatureAndScatteringCorrectionKostakis(p.ap, p.cp, lambda.ref);
+      [p.ap, p.cp] = ResidualTemperatureAndScatteringCorrectionKostakis(p.ap, p.cp, lambda.ref, psi);
     elseif strcmp(scattering_correction, 'Zaneveld1994')
-      [p.ap, p.cpp] = ResidualTemperatureAndScatteringCorrectionZaneveld(p.ap, p.cp, lambda.ref);
+      [p.ap, p.cp] = ResidualTemperatureAndScatteringCorrectionZaneveld(p.ap, p.cp, lambda.ref, psi);
     end
   end
+  
+  % Remove lines full of NaNs (Kostakis2022 potentially fail when temperature correct is too large
+  sel2rm = all(isnan(p.ap), 2) | all(isnan(p.cp), 2);
+  p(sel2rm, :) = [];
+  tot(sel2rm, :) = [];
+  filt_interp(sel2rm, :) = [];
 
   % Propagate error (using geometric mean of measurement errors)
   %   Note: Error is not propagated through Scattering & Residual temperature
@@ -727,7 +756,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     g.cg = interp1(lambda.c', g.cg', lambda.ref', 'linear', 'extrap')';
     fprintf('Correcting for temperature & salinity dependence ... ')
     % Temperature & Salinity Correction (No Scattering correction needed)
-    [g.ag, g.cg] = TemperatureAndSalinityDependence(g.ag, g.cg, lambda.a, lambda.c);
+    [g.ag, g.cg] = TemperatureAndSalinityDependence(g.ag, g.cg, lambda.a, lambda.c, psi);
   %   [g.ag, g.cg] = ResidualTemperatureAndScatteringCorrection(g.ag, g.cg, lambda.ref);
     fprintf('Done\n')
   
@@ -773,29 +802,18 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
 end
 
 
-%%
-function [a_corr, c_corr, a_slope, c_slope] = TemperatureAndSalinityDependence(a, c, wl_a, wl_c)
-  % Note that a and c does not have to be on the same wvelength, however the
-  %   function would need to be edited for that
-  % Sullivan et al. 2006 values
-  psi_wl = [400;402;404;406;408;410;412;414;416;418;420;422;424;426;428;430;432;434;436;438;440;442;444;446;448;450;452;454;456;458;460;462;464;466;468;470;472;474;476;478;480;482;484;486;488;490;492;494;496;498;500;502;504;506;508;510;512;514;516;518;520;522;524;526;528;530;532;534;536;538;540;542;544;546;548;550;552;554;556;558;560;562;564;566;568;570;572;574;576;578;580;582;584;586;588;590;592;594;596;598;600;602;604;606;608;610;612;614;616;618;620;622;624;626;628;630;632;634;636;638;640;642;644;646;648;650;652;654;656;658;660;662;664;666;668;670;672;674;676;678;680;682;684;686;688;690;692;694;696;698;700;702;704;706;708;710;712;714;716;718;720;722;724;726;728;730;732;734;736;738;740;742;744;746;748;750]';
-  psiT = [0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0003;0.0003;0.0004;0.0005;0.0006;0.0006;0.0007;0.0008;0.0009;0.001;0.001;0.001;0.001;0.001;0.0009;0.0009;0.0008;0.0007;0.0006;0.0006;0.0005;0.0004;0.0003;0.0003;0.0002;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0002;0.0002;0.0001;0.0001;0.0001;0;0;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;0;0;0.0001;0.0002;0.0003;0.0005;0.0007;0.0009;0.0013;0.0017;0.0021;0.0026;0.0032;0.0038;0.0045;0.0054;0.0063;0.0073;0.0083;0.0094;0.0104;0.0113;0.0121;0.0128;0.0133;0.0136;0.0136;0.0133;0.0129;0.0124;0.0116;0.0107]';
-  c_psiS = [-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-4.0e-05;-3.0e-05;-3.0e-05;-2.0e-05;-1.0e-05;0;1.0e-05;1.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-5.0e-05;-6.0e-05;-6.0e-05;-8.0e-05;-9.0e-05;-0.00010;-0.00011;-0.00013;-0.00014;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00021;-0.00022;-0.00022;-0.00023;-0.00023;-0.00023;-0.00024;-0.00024;-0.00024;-0.00024;-0.00022;-0.00021;-0.00017;-0.00012;-6.0e-05;2.0e-05;0.00012;0.00022;0.00031;0.00041;0.00049;0.00056;0.00062]';
-  a_psiS = [3.0e-05;3.0e-05;3.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;0;0;0;0;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;0;1.0e-05;2.0e-05;3.0e-05;3.0e-05;4.0e-05;5.0e-05;5.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;5.0e-05;5.0e-05;5.0e-05;5.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;-1.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-6.0e-05;-7.0e-05;-8.0e-05;-9.0e-05;-0.00011;-0.00012;-0.00014;-0.00015;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00020;-0.00020;-0.00021;-0.00021;-0.00021;-0.00021;-0.00021;-0.00020;-0.00017;-0.00013;-8.0e-05;-1.0e-05;7.0e-05;0.00016;0.00026;0.00037;0.00046;0.00054;0.00061;0.00067]';
+%% Temperature And Salinity Dependence correction
+function [a_corr, c_corr, a_slope, c_slope] = TemperatureAndSalinityDependence(a, c, wl_a, wl_c, psi)
+  % Note that a and c does not have to be on the same wavelength, however the function would need to be edited for that
+
   % Interpolate Sullivan values on the current ACS
-  a_psiT=interp1(psi_wl,psiT,wl_a,'spline'); % PCHIP or SPLINE -> better than linear
-  c_psiT=interp1(psi_wl,psiT,wl_c,'spline'); % PCHIP or SPLINE -> better than linear
-  a_psiS=interp1(psi_wl,a_psiS,wl_a,'spline');
-  c_psiS=interp1(psi_wl,c_psiS,wl_c,'spline');
+  a_psiT=interp1(psi.wl, psi.psiT, wl_a,'spline'); % PCHIP or SPLINE -> better than linear
+  c_psiT=interp1(psi.wl, psi.psiT, wl_c,'spline'); % PCHIP or SPLINE -> better than linear
+  a_psiS=interp1(psi.wl, psi.a_psiS, wl_a,'spline');
+  c_psiS=interp1(psi.wl, psi.c_psiS, wl_c,'spline');
   % Center psiS on 0 instead of +/- 0.001
   a_psiS = a_psiS - median(a_psiS(wl_a <= 590));
   c_psiS = c_psiS - median(c_psiS(wl_c <= 590));
-  % tmp = xlsread('Sullivan_etal_2006_instrumentspecific.xls');
-  % psi_wl = tmp(:,1);
-  % phiT=interp1(tmp(:,1),tmp(:,2),wl,'linear');
-  % c_phiS=interp1(tmp(:,1),tmp(:,4),wl,'linear');
-  % a_phiS=interp1(tmp(:,1),tmp(:,6),wl,'linear');
-  
   
   % Parameters of minization routine
   opts = optimset('fminsearch');      
@@ -860,15 +878,11 @@ function cost = costfun_TSD(x, a, psiT, psiS, wl)
 end
 
 
-%%
-function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrectionZaneveld(ap, cp, wl)
+%% Residual Temperature And Scattering Correction (Zaneveld)
+function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrectionZaneveld(ap, cp, wl, psi)
   % Function from Emmanuel Boss improved by Nils Haëntjens
   % Assumes negligible ap in NIR after Zaneveld 1994 method 3
-  
-  % Sullivan et al. 2006 values
-  psi_wl = [400;402;404;406;408;410;412;414;416;418;420;422;424;426;428;430;432;434;436;438;440;442;444;446;448;450;452;454;456;458;460;462;464;466;468;470;472;474;476;478;480;482;484;486;488;490;492;494;496;498;500;502;504;506;508;510;512;514;516;518;520;522;524;526;528;530;532;534;536;538;540;542;544;546;548;550;552;554;556;558;560;562;564;566;568;570;572;574;576;578;580;582;584;586;588;590;592;594;596;598;600;602;604;606;608;610;612;614;616;618;620;622;624;626;628;630;632;634;636;638;640;642;644;646;648;650;652;654;656;658;660;662;664;666;668;670;672;674;676;678;680;682;684;686;688;690;692;694;696;698;700;702;704;706;708;710;712;714;716;718;720;722;724;726;728;730;732;734;736;738;740;742;744;746;748;750]';
-  psiT = [0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0003;0.0003;0.0004;0.0005;0.0006;0.0006;0.0007;0.0008;0.0009;0.001;0.001;0.001;0.001;0.001;0.0009;0.0009;0.0008;0.0007;0.0006;0.0006;0.0005;0.0004;0.0003;0.0003;0.0002;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0002;0.0002;0.0001;0.0001;0.0001;0;0;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;0;0;0.0001;0.0002;0.0003;0.0005;0.0007;0.0009;0.0013;0.0017;0.0021;0.0026;0.0032;0.0038;0.0045;0.0054;0.0063;0.0073;0.0083;0.0094;0.0104;0.0113;0.0121;0.0128;0.0133;0.0136;0.0136;0.0133;0.0129;0.0124;0.0116;0.0107]';
-  psiT = interp1(psi_wl, psiT, wl);
+  psiT = interp1(psi.wl, psi.psiT, wl);
   
   % Parameters of minization routine
   opts = optimset('fminsearch');
@@ -902,15 +916,11 @@ function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrectionZaneveld
 end
 
 
-%% 
-function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrectionKostakis(ap, cp, wl)
+%% Residual Temperature And Scattering Correction (Kostakis)
+function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrectionKostakis(ap, cp, wl, psi)
   % Function from Emmanuel Boss after Kostakis et al. 2022
   % Allows absorption in NIR in case of high NAP
-  
-  % Sullivan et al. 2006 values
-  psi_wl = [400;402;404;406;408;410;412;414;416;418;420;422;424;426;428;430;432;434;436;438;440;442;444;446;448;450;452;454;456;458;460;462;464;466;468;470;472;474;476;478;480;482;484;486;488;490;492;494;496;498;500;502;504;506;508;510;512;514;516;518;520;522;524;526;528;530;532;534;536;538;540;542;544;546;548;550;552;554;556;558;560;562;564;566;568;570;572;574;576;578;580;582;584;586;588;590;592;594;596;598;600;602;604;606;608;610;612;614;616;618;620;622;624;626;628;630;632;634;636;638;640;642;644;646;648;650;652;654;656;658;660;662;664;666;668;670;672;674;676;678;680;682;684;686;688;690;692;694;696;698;700;702;704;706;708;710;712;714;716;718;720;722;724;726;728;730;732;734;736;738;740;742;744;746;748;750]';
-  psiT = [0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0003;0.0003;0.0004;0.0005;0.0006;0.0006;0.0007;0.0008;0.0009;0.001;0.001;0.001;0.001;0.001;0.0009;0.0009;0.0008;0.0007;0.0006;0.0006;0.0005;0.0004;0.0003;0.0003;0.0002;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0002;0.0002;0.0001;0.0001;0.0001;0;0;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;0;0;0.0001;0.0002;0.0003;0.0005;0.0007;0.0009;0.0013;0.0017;0.0021;0.0026;0.0032;0.0038;0.0045;0.0054;0.0063;0.0073;0.0083;0.0094;0.0104;0.0113;0.0121;0.0128;0.0133;0.0136;0.0136;0.0133;0.0129;0.0124;0.0116;0.0107]';
-  psiT = interp1(psi_wl, psiT, wl);
+  psiT = interp1(psi.wl, psi.psiT, wl);
   
   % Parameters of minization routine
   opts = optimset('fminsearch');
@@ -939,7 +949,11 @@ function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrectionKostakis
   for k = sel'
     deltaT(k) = fminsearch(@costFun_RTSC, 0, opts, ap(k,:), bp(k,:), psiT, iNIR, iref);         
   end
-  ap_corr = ap - psiT.*deltaT - (ap(:,iref) - psiT(iref).*deltaT) + 0.212*(ap(:,iref) - psiT(iref).*deltaT).^1.135; 
+  % split up temperature correction base and exponent and replace negative base by NaN to avoid complex solution leakage
+  Tb = 0.212*(ap(:,iref) - psiT(iref).*deltaT);
+  Tb(Tb < 0) = NaN;
+  % apply correction
+  ap_corr = ap - psiT.*deltaT - (ap(:,iref) - psiT(iref).*deltaT) + Tb.^1.135;
   cp_corr = cp - psiT.*deltaT;
 end
 
@@ -948,24 +962,16 @@ function cost = costFun_RTSC(deltaT, ap, bp, psiT, iNIR, iref)
 end
 
 
-%%
-function [a_ts, c_ts] = TemperatureAndSalinityCorrection(a, c, a_wl, c_wl, delta_t, delta_s)
-  wl_psi = [400;402;404;406;408;410;412;414;416;418;420;422;424;426;428;430;432;434;436;438;440;442;444;446;448;450;452;454;456;458;460;462;464;466;468;470;472;474;476;478;480;482;484;486;488;490;492;494;496;498;500;502;504;506;508;510;512;514;516;518;520;522;524;526;528;530;532;534;536;538;540;542;544;546;548;550;552;554;556;558;560;562;564;566;568;570;572;574;576;578;580;582;584;586;588;590;592;594;596;598;600;602;604;606;608;610;612;614;616;618;620;622;624;626;628;630;632;634;636;638;640;642;644;646;648;650;652;654;656;658;660;662;664;666;668;670;672;674;676;678;680;682;684;686;688;690;692;694;696;698;700;702;704;706;708;710;712;714;716;718;720;722;724;726;728;730;732;734;736;738;740;742;744;746;748;750]';
-  psi_t = [0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0003;0.0003;0.0004;0.0005;0.0006;0.0006;0.0007;0.0008;0.0009;0.001;0.001;0.001;0.001;0.001;0.0009;0.0009;0.0008;0.0007;0.0006;0.0006;0.0005;0.0004;0.0003;0.0003;0.0002;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0002;0.0002;0.0001;0.0001;0.0001;0;0;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;0;0;0.0001;0.0002;0.0003;0.0005;0.0007;0.0009;0.0013;0.0017;0.0021;0.0026;0.0032;0.0038;0.0045;0.0054;0.0063;0.0073;0.0083;0.0094;0.0104;0.0113;0.0121;0.0128;0.0133;0.0136;0.0136;0.0133;0.0129;0.0124;0.0116;0.0107]';
-  c_psi_s = [-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-4.0e-05;-3.0e-05;-3.0e-05;-2.0e-05;-1.0e-05;0;1.0e-05;1.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-5.0e-05;-6.0e-05;-6.0e-05;-8.0e-05;-9.0e-05;-0.00010;-0.00011;-0.00013;-0.00014;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00021;-0.00022;-0.00022;-0.00023;-0.00023;-0.00023;-0.00024;-0.00024;-0.00024;-0.00024;-0.00022;-0.00021;-0.00017;-0.00012;-6.0e-05;2.0e-05;0.00012;0.00022;0.00031;0.00041;0.00049;0.00056;0.00062]';
-  a_psi_s = [3.0e-05;3.0e-05;3.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;0;0;0;0;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;0;1.0e-05;2.0e-05;3.0e-05;3.0e-05;4.0e-05;5.0e-05;5.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;5.0e-05;5.0e-05;5.0e-05;5.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;-1.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-6.0e-05;-7.0e-05;-8.0e-05;-9.0e-05;-0.00011;-0.00012;-0.00014;-0.00015;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00020;-0.00020;-0.00021;-0.00021;-0.00021;-0.00021;-0.00021;-0.00020;-0.00017;-0.00013;-8.0e-05;-1.0e-05;7.0e-05;0.00016;0.00026;0.00037;0.00046;0.00054;0.00061;0.00067]';
-  %sigma_psi_t = [0.0002;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0;0.0001;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0002;0.0002;0.0003;0.0003;0.0004;0.0004;0.0004;0.0004;0.0005;0.0005;0.0006;0.0006;0.0007;0.0007;0.0007;0.0006;0.0005;0.0004;0.0003;0.0003;0.0004;0.0005;0.0006;0.0007;0.0008;0.0009;];
-  %c_sigma_psi_s = [4e-005;4e-005;4e-005;4e-005;4e-005;4e-005;4e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;0;-1e-005;-2e-005;-3e-005;-4e-005;-6e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;2e-005;2e-005;2e-005;3e-005;3e-005;3e-005;];
-  %a_sigma_psi_s = [3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;3e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;2e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;NaN;NaN;NaN;NaN;NaN;NaN;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;1e-005;2e-005;2e-005;2e-005;3e-005;];
-  %values from Sullivan et al 2006 (Applied Optics)
-  
+%% Temperature And Salinity Correction
+function [a_ts, c_ts] = TemperatureAndSalinityCorrection(a, c, a_wl, c_wl, delta_t, delta_s, psi)
+
   %interpolate literature psiT values to acs wavelengths
-  a_psi_t = interp1(wl_psi,psi_t,a_wl,'linear','extrap');
-  c_psi_t = interp1(wl_psi,psi_t,c_wl,'linear','extrap');
-  a_psi_s = interp1(wl_psi,a_psi_s,a_wl,'linear','extrap');
-  c_psi_s = interp1(wl_psi,c_psi_s,c_wl,'linear','extrap');
-  %a_sigma_psi_t = interp1(wl_psi,a_sigma_psi_s,wl_a,'linear','extrap');
-  %c_sigma_psi_t = interp1(wl_psi,c_sigma_psi_s,wl_c,'linear','extrap');
+  a_psi_t = interp1(psi.wl, psi.psiT, a_wl, 'linear', 'extrap');
+  c_psi_t = interp1(psi.wl, psi.psiT, c_wl, 'linear', 'extrap');
+  a_psi_s = interp1(psi.wl, psi.a_psiS, a_wl, 'linear', 'extrap');
+  c_psi_s = interp1(psi.wl, psi.c_psiS, c_wl, 'linear', 'extrap');
+  %a_sigma_psi_t = interp1(psi.wl, psi.a_sigma_psiS, wl_a, 'linear', 'extrap');
+  %c_sigma_psi_t = interp1(psi.wl, psi.c_sigma_psiS, wl_c, 'linear', 'extrap');
   
   %correct acdata_raw for temp-dependent water absorbance, propagate error
   %into del_raw.  Output acdata_t and del_t.
@@ -1087,10 +1093,8 @@ function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
   p.ap_sd(:, all(isnan(p.ap),1)) = [];
   p.ap(:, all(isnan(p.ap),1)) = [];
   
-  % Peak center values ("peak_loc") determined using a interative
-  % approach that allows the location to vary (uses the matlab
-  % function LSQNONLIN), and are rounded to nearest integer.
-  % Sigma values ("lsqsig") are determined similarly. FWHM = sigma*2.355
+  % Peak center values ("peak_loc") determined using a interative approach that allows the location to vary (uses the matlab
+  % function LSQNONLIN), and are rounded to nearest integer. Sigma values ("lsqsig") are determined similarly. FWHM = sigma*2.355
   peak_loc = [406,434,453,470,492,523,550,584,617,638,660,675];
   lsqsig = [16,12,12,13,16,14,14,16,13,11,11,10];
   onenm = 400:1:720;
@@ -1103,10 +1107,6 @@ function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
   
   % interpolate the un-smoothed ap spectra to one nm resolution
   acorr2onenm = interp1(lambda, ap_filled', onenm, 'spline');
-  
-  % visProd3D(onenm, p.dt, ...
-  %   acorr2onenm', false, 'Wavelength', false, 72);
-  % zlabel('a_p (m^{-1})'); xlabel('{\lambda} (nm)'); ylabel('Time');
   
   % define the matrix of component Gaussian functions using the peaks
   % and widths (sigma) above
@@ -1126,20 +1126,10 @@ function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
   sumspec_temp = NaN(size(coef2,1), size(p,1));
   % compspec_temp = NaN(size(coef2,1), size(coef2,2), size(p,1));
   
-  % visProd3D(peak_loc, p.dt, ...
-  %   popo(:, 2:end), false, 'Wavelength', false, 73);
-  % zlabel('a_p (m^{-1})'); xlabel('{\lambda} (nm)'); ylabel('Time');
-  % 
-  % visProd3D(peak_loc, p.dt, ...
-  %   amps(:, 2:end), false, 'Wavelength', false, 74);
-  % zlabel('a_p (m^{-1})'); xlabel('{\lambda} (nm)'); ylabel('Time');
-  
   parfor i = 1:size(acorr2onenm_new,2)
-    
     coef2_new = coef2 ./ ap_sd_int(:,i);
     % Inversion analysis
-      amps(i, :) = lsqnonneg(coef2_new, acorr2onenm_new(:, i));
-  
+    amps(i, :) = lsqnonneg(coef2_new, acorr2onenm_new(:, i));
     % Using the inverted amplitudes, build a matrix of new component
     % spectra (compspec) and the sum of the Gaussian and nap functions (sumspec):
     sumspec_temp(:, i) = sum(amps(i, :) .* coef2, 2);
@@ -1163,10 +1153,9 @@ function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
   if compute_ad_aphi
     % Compute a non-algal and a phytoplankton from Zheng, G., and D. Stramski (2013) model
     % Reference: 
-    % Zheng, G., and D. Stramski (2013), A model based on stacked-constraints approach for partitioning the light absorption coefficient of seawater 
+    % - Zheng, G., and D. Stramski (2013), A model based on stacked-constraints approach for partitioning the light absorption coefficient of seawater 
     % into phytoplankton and non-phytoplankton components, J. Geophys. Res. Oceans, 118, 2155?2174, doi:10.1002/jgrc.20115.
-    %
-    % Zheng, G., and D. Stramski (2013), A model for partitioning the light absorption coefficient of suspended marine particles into phytoplankton 
+    % - Zheng, G., and D. Stramski (2013), A model for partitioning the light absorption coefficient of suspended marine particles into phytoplankton 
     % and nonalgal components, J. Geophys. Res. Oceans, 118, 2977?2991, doi:10.1002/jgrc.20206.
     wl_ZS13 = [400 412 420 430 443 450 467 490 500 510 550 555 630 650 670 700];
     qwl = unique([wl_ZS13(:)' 442 676]);
@@ -1197,360 +1186,447 @@ function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
   fprintf('Done\n')
 end
 
+function [filt_interp] = agcg_fdom_interpolation(filt_interp, filt, lambda, cdom_dark, filt_avg)
+  % Reconstruct ag and cg from fCDOM data
+  [filt_avg, filt_interp, ~] = fdom_agcg_model(filt, filt_interp, lambda, filt_avg); % regression_stats
+  n_periods = size(filt_avg,1)-1;
+  filt_interp.lin_bool = false(size(filt_interp.fdom));
 
-%%
-function [filt_interp, regress_stats] = fdom_agcgmodel(tot, filt, lambda, cdom, tsg) % filt_avg
+  % visProd3D(lambda.a, filt_interp.dt, filt_interp.intercept_interp_a, false, 'Wavelength', false, 27);
+  % title('intercept a')
+  % visProd3D(lambda.a, filt_interp.dt, filt_interp.intercept_interp_c, false, 'Wavelength', false, 28);
+  % title('intercept c')
+  % 
+  % visProd3D(lambda.a, filt_interp.dt, filt_interp.slope_interp_a, false, 'Wavelength', false, 27);
+  % title('slope a')
+  % visProd3D(lambda.a, filt_interp.dt, filt_interp.slope_interp_c, false, 'Wavelength', false, 28);
+  % title('slope c')
 
-    % TODO clean this up and decide if we should pass all variables 
-    % in as arguments or in global context
-    % Sullivan et al. 2006 values
-    psi_wl = [400;402;404;406;408;410;412;414;416;418;420;422;424;426;428;430;432;434;436;438;440;442;444;446;448;450;452;454;456;458;460;462;464;466;468;470;472;474;476;478;480;482;484;486;488;490;492;494;496;498;500;502;504;506;508;510;512;514;516;518;520;522;524;526;528;530;532;534;536;538;540;542;544;546;548;550;552;554;556;558;560;562;564;566;568;570;572;574;576;578;580;582;584;586;588;590;592;594;596;598;600;602;604;606;608;610;612;614;616;618;620;622;624;626;628;630;632;634;636;638;640;642;644;646;648;650;652;654;656;658;660;662;664;666;668;670;672;674;676;678;680;682;684;686;688;690;692;694;696;698;700;702;704;706;708;710;712;714;716;718;720;722;724;726;728;730;732;734;736;738;740;742;744;746;748;750]';
-    psiT = [0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0003;0.0003;0.0004;0.0005;0.0006;0.0006;0.0007;0.0008;0.0009;0.001;0.001;0.001;0.001;0.001;0.0009;0.0009;0.0008;0.0007;0.0006;0.0006;0.0005;0.0004;0.0003;0.0003;0.0002;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0002;0.0002;0.0001;0.0001;0.0001;0;0;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;0;0;0.0001;0.0002;0.0003;0.0005;0.0007;0.0009;0.0013;0.0017;0.0021;0.0026;0.0032;0.0038;0.0045;0.0054;0.0063;0.0073;0.0083;0.0094;0.0104;0.0113;0.0121;0.0128;0.0133;0.0136;0.0136;0.0133;0.0129;0.0124;0.0116;0.0107]';
-    c_psiS = [-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-4.0e-05;-3.0e-05;-3.0e-05;-2.0e-05;-1.0e-05;0;1.0e-05;1.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-5.0e-05;-6.0e-05;-6.0e-05;-8.0e-05;-9.0e-05;-0.00010;-0.00011;-0.00013;-0.00014;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00021;-0.00022;-0.00022;-0.00023;-0.00023;-0.00023;-0.00024;-0.00024;-0.00024;-0.00024;-0.00022;-0.00021;-0.00017;-0.00012;-6.0e-05;2.0e-05;0.00012;0.00022;0.00031;0.00041;0.00049;0.00056;0.00062]';
-    a_psiS = [3.0e-05;3.0e-05;3.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;0;0;0;0;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;0;1.0e-05;2.0e-05;3.0e-05;3.0e-05;4.0e-05;5.0e-05;5.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;5.0e-05;5.0e-05;5.0e-05;5.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;-1.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-6.0e-05;-7.0e-05;-8.0e-05;-9.0e-05;-0.00011;-0.00012;-0.00014;-0.00015;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00020;-0.00020;-0.00021;-0.00021;-0.00021;-0.00021;-0.00021;-0.00020;-0.00017;-0.00013;-8.0e-05;-1.0e-05;7.0e-05;0.00016;0.00026;0.00037;0.00046;0.00054;0.00061;0.00067]';
-    
-    wl_a = lambda.a;
-    wl_c = lambda.c;
-    
-    % Interpolate Sullivan values on the current ACS
-    a_psiT=interp1(psi_wl,psiT,wl_a,'spline'); % PCHIP or SPLINE -> better than linear
-    c_psiT=interp1(psi_wl,psiT,wl_c,'spline'); % PCHIP or SPLINE -> better than linear
-    a_psiS=interp1(psi_wl,a_psiS,wl_a,'spline');
-    c_psiS=interp1(psi_wl,c_psiS,wl_c,'spline');
-    % Center psiS on 0 instead of +/- 0.001
-    a_psiS = a_psiS - median(a_psiS(wl_a <= 590));
-    c_psiS = c_psiS - median(c_psiS(wl_c <= 590));
+  % % interpolate based on fCDOM: Emmanuel's method (local)
+  % % allocate fdom0, a0, and c0 varialbes
+  % filt_interp.fdom0 = NaN(size(filt_interp.fdom));
+  % filt_interp.a0 = NaN(size(filt_interp.a));
+  % filt_interp.c0 = NaN(size(filt_interp.c));
+  % 
+  % % interpolate based on fCDOM: Emmanuel's method
+  % delta_acf = table(NaN(n_periods, 1), 'VariableNames', {'dt'});
+  % delta_acf.delta_af = NaN(n_periods, size(filt_avg.a, 2));
+  % delta_acf.delta_cf = NaN(n_periods, size(filt_avg.a, 2));
+  % % Prepare coefficients for each total period going from t0 to t1, starting and finishing by a filtered time
+  % for i=1:n_periods
+  %   it0 = i; it1 = i + 1;
+  %   it = filt_avg.dt(it0) <= filt_interp.dt & filt_interp.dt <= filt_avg.dt(it1);
+  %   if any(it)
+  %     % interpolation based on fCDOM - fCDOM_dark > 20% of fCDOM_dark
+  %     if any((filt_interp.fdom(it) - cdom_dark) / cdom_dark > 0.2)
+  %       % prepare delta a / delta f and delta c / delta f
+  %       delta_acf.dt(i) = mean([filt_avg.dt(it0) filt_avg.dt(it1)], 'omitnan');
+  %       delta_acf.delta_af(i, :) = (filt_avg.a(it1,:) - filt_avg.a(it0,:)) / (filt_avg.fdom_10smooth(it1) - filt_avg.fdom_10smooth(it0));
+  %       delta_acf.delta_cf(i, :) = (filt_avg.c(it1,:) - filt_avg.c(it0,:)) / (filt_avg.fdom_10smooth(it1) - filt_avg.fdom_10smooth(it0));
+  %       % prepare fdom0, a0 and c0
+  %       filt_interp.fdom0(it) = repmat(filt_avg.fdom_10smooth(it0), sum(it), 1);
+  %       filt_interp.a0(it,:) = repmat(filt_avg.a(it0,:), sum(it), 1);
+  %       filt_interp.c0(it,:) = repmat(filt_avg.c(it0,:), sum(it), 1);
+  %       filt_interp.lin_bool(it) = false;
+  %     else
+  %       filt_interp.lin_bool(it) = true;
+  %     end
+  %   end
+  % end
+  % delta_acf(all(isnan(delta_acf.delta_af), 2) | all(isnan(delta_acf.delta_cf), 2), :) = [];
+  % % interpolated delta a / delta fdom over total events
+  % filt_interp.delta_af = interp1(delta_acf.dt, delta_acf.delta_af, filt_interp.dt, 'linear');
+  % filt_interp.delta_af = fillmissing(filt_interp.delta_af, 'nearest');
+  % filt_interp.delta_cf = interp1(delta_acf.dt, delta_acf.delta_cf, filt_interp.dt, 'linear');
+  % filt_interp.delta_cf = fillmissing(filt_interp.delta_cf, 'nearest');
+  % % extrapolate a0, c0, fdom0
+  % filt_interp.fdom0 = fillmissing(filt_interp.fdom0, 'nearest');
+  % filt_interp.a0 = fillmissing(filt_interp.a0, 'nearest');
+  % filt_interp.c0 = fillmissing(filt_interp.c0, 'nearest');
+  % % compute ag and cg
+  % filt_interp.a = filt_interp.a0 + filt_interp.delta_af .* (filt_interp.fdom - filt_interp.fdom0);
+  % filt_interp.c = filt_interp.c0 + filt_interp.delta_cf .* (filt_interp.fdom - filt_interp.fdom0);
+  % % linearly interpolate ag and cg
+  % filt_interp.lin_a = interp1(filt_avg.dt, filt_avg.a, filt_interp.dt, 'linear');
+  % filt_interp.lin_c = interp1(filt_avg.dt, filt_avg.c, filt_interp.dt, 'linear');
+  % % replace fdom interpolation by linear for filter events where fdom is constant
+  % filt_interp.a(filt_interp.lin_bool) = filt_interp.lin_a(filt_interp.lin_bool);
+  % filt_interp.c(filt_interp.lin_bool) = filt_interp.lin_c(filt_interp.lin_bool);
 
-  % keep only leg data
-  cdom = cdom(cdom.dt >= min([tot.dt; filt.dt]) & cdom.dt <= max([tot.dt; filt.dt]), :);
+  % visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 27);
+  % title('ag fdom interpolated')
+  % visProd3D(lambda.a, filt_interp.dt, filt_interp.lin_a, false, 'Wavelength', false, 28);
+  % title('ag linearly interpolated')
+  % 
+  % visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 29);
+  % title('cg fdom interpolated')
+  % visProd3D(lambda.c, filt_interp.dt, filt_interp.lin_c, false, 'Wavelength', false, 30);
+  % title('cg linearly interpolated')
 
-  % TODO why do this here and then again with filt_interp below?
-  % fill regression variable missing data with spline interpolation and nearest extrapolation
-  filt.fdom = interp1(cdom.dt, cdom.fdom, filt.dt, 'spline');
-  filt.fdom(isnan(filt.fdom)) = interp1(filt.dt, filt.fdom, filt.dt(isnan(filt.fdom)), 'nearest', 'extrap');
-  % fill regression variable missing data with spline interpolation and nearest extrapolation
-  filt.t = interp1(tsg.dt, tsg.t, filt.dt, 'spline');
-  filt.t(isnan(filt.t)) = interp1(filt.dt, filt.t, filt.dt(isnan(filt.t)), 'nearest', 'extrap');
-  % fill regression variable missing data with spline interpolation and nearest extrapolation
-  filt.s = interp1(tsg.dt, tsg.s, filt.dt, 'spline');
-  filt.s(isnan(filt.s)) = interp1(filt.dt, filt.s, filt.dt(isnan(filt.s)), 'nearest', 'extrap');
+  % interpolate ag and cg based on fdom: Guillaume's method (global)
+  for i=1:n_periods
+    it0 = i; it1 = i + 1;
+    it = filt_avg.dt(it0) <= filt_interp.dt & filt_interp.dt <= filt_avg.dt(it1);
+    if any(it)
+      it_filt_interp = filt_interp(it,:);
+      % interpolation based on fCDOM - fCDOM_dark > 20% of fCDOM_dark
+      if any((filt_interp.fdom(it) - cdom_dark) / cdom_dark > 0.5)
+        % compute interpolated ag factor
+        ag_fact0 = (filt_avg.a(it0,:) - filt_avg.intercept_a(it0,:)) ./ filt_avg.fdom_10smooth(it0);
+        ag_fact1 = (filt_avg.a(it1,:) - filt_avg.intercept_a(it1,:)) ./ filt_avg.fdom_10smooth(it1);
+        ag_fact = interp1(filt_avg.dt(it0:it1,:), [ag_fact0; ag_fact1], it_filt_interp.dt, 'linear');
+        % % compute interpolated cg factor
+        % cg_fact0 = (filt_avg.c(it0,:) - filt_avg.intercept_c(it0,:)) ./ filt_avg.fdom_10smooth(it0);
+        % cg_fact1 = (filt_avg.c(it1,:) - filt_avg.intercept_c(it1,:)) ./ filt_avg.fdom_10smooth(it1);
+        % cg_fact = interp1(filt_avg.dt(it0:it1,:), [cg_fact0; cg_fact1], it_filt_interp.dt, 'linear');
+        % compute ag and cg
+        filt_interp.a(it, :) = filt_avg.a(it0,:) + ag_fact .* (filt_interp.fdom(it,:) - filt_avg.fdom_10smooth(it0,:));
+        filt_interp.c(it, :) = filt_avg.c(it0,:) + ag_fact .* (filt_interp.fdom(it,:) - filt_avg.fdom_10smooth(it0,:));
+        filt_interp.lin_bool(it) = false;
+      else
+        % linearly interpolate ag and cg if fdom is constant between it0 and it1
+        filt_interp.a(it, :) = interp1(filt_avg.dt(it0:it1,:), filt_avg.a(it0:it1,:), it_filt_interp.dt, 'linear');
+        filt_interp.c(it, :) = interp1(filt_avg.dt(it0:it1,:), filt_avg.c(it0:it1,:), it_filt_interp.dt, 'linear');
+        filt_interp.lin_bool(it) = true;
+      end
+    end
+  end
 
-  % now correct for t and s impact on a and c
-  % TODO making an assumption here that we're referencing just the first in this
-  % stack as t_0, also we don't need diff deltas for a and c right EB?
-  a_deltaT = filt.t - filt.t(1);
-  c_deltaT = filt.t - filt.t(1);
+  % figure; hold on
+  % scatter(datetime(filt_interp.dt, 'convertfrom', 'datenum'), ag_fact_tot(:,70), 20, 'ko')
+  % scatter(datetime(filt_interp.dt(~filt_interp.lin_bool), 'convertfrom', 'datenum'), filt_interp.delta_af(~filt_interp.lin_bool,70), 20, 'r+')
+  % 
+  % figure; hold on
+  % scatter(filt_interp.dt, cg_fact_tot(:,70), 20, 'ko')
+  % scatter(filt_interp.dt(~filt_interp.lin_bool), filt_interp.delta_cf(~filt_interp.lin_bool,70), 20, 'r+')
 
-  a_deltaS = filt.s - filt.s(1);
-  c_deltaS = filt.s - filt.s(1);
+  % visProd3D(lambda.a, filt_interp.dt(it), filt_interp.a(it,:), false, 'Wavelength', false, i+1);
+  % title('ag fdom interpolated')
+  % visProd3D(lambda.a, filt_interp.dt(it), filt_interp.lin_a(it,:), false, 'Wavelength', false, i+2);
+  % title('ag linearly interpolated')
+  % 
+  % visProd3D(lambda.c, filt_interp.dt(it), filt_interp.c(it,:), false, 'Wavelength', false, i+3);
+  % title('cg fdom interpolated')
+  % visProd3D(lambda.c, filt_interp.dt(it), filt_interp.lin_c(it,:), false, 'Wavelength', false, i+4);
+  % title('cg linearly interpolated')
+  % 
+  % visProd3D(lambda.a, filt_interp.dt(it), filt_interp.a(it,:) - filt_interp.lin_a(it,:), false, 'Wavelength', false, i+5);
+  % title('ag difference')
+  % visProd3D(lambda.a, filt_interp.dt(it), filt_interp.c(it,:) - filt_interp.lin_c(it,:), false, 'Wavelength', false, i+6);
+  % title('cg difference')
+  % 
+  % cdom = table();
+  % cdom.dt = datetime([filt.dt; filt_interp.dt], 'ConvertFrom', 'datenum');
+  % cdom.fdom = [filt.fdom; filt_interp.fdom];
+  % 
+  % figure;
+  % scatter(cdom.dt, cdom.fdom, 20, 'filled')
 
-  initial_filta = filt.a;
 
-  filt.a = filt.a - a_deltaT.*a_psiT - a_deltaS.*a_psiS;
-  filt.c = filt.c - c_deltaT.*c_psiT - c_deltaS.*c_psiS;
 
-  figure; hold on
-  plot(lambda.a,initial_filta - filt.a,'k')
-  title('difference between initial filt.a and corrected filt.a')
+  % idp = filt_interp.dt >= min(it_filt_interp.dt) & filt_interp.dt <= max(it_filt_interp.dt);
+  % figure(i+7)
+  % scatter(datetime(filt_interp.dt(idp), 'ConvertFrom', 'datenum'), filt_interp.fdom(idp), 20, 'filled')
+  % ylabel('fdom smoothed')
+  % 
+  % wl_toplot = 40;
+  % % figure(1)
+  % figure(i+10)
+  % clf
+  % subplot(1,2,1)
+  % yyaxis('left')
+  % hold on
+  % plot_dt = datetime(it_filt_interp.dt, 'ConvertFrom', 'datenum');
+  % scatter(plot_dt, ...
+  %   filt_interp.a(it,wl_toplot), 40, 'filled', 'MarkerFaceColor', 'b','MarkerFaceAlpha', 0.5)
+  % scatter(datetime(filt_avg.dt, 'ConvertFrom', 'datenum'), ...
+  %   filt_avg.a(:,wl_toplot), 100, 'filled', 'MarkerFaceColor', [255	193	37]/255,'MarkerFaceAlpha', 1)
+  % xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
+  % ylabel('ag')
+  % yyaxis('right')
+  % hold on
+  % scatter(datetime(cdom.dt, 'ConvertFrom', 'datenum'), ...
+  %   cdom.fdom, 40, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5, 'Marker', 'd')
+  % xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
+  % ylabel('fdom')
+  % legend('ag fdom interpolated', 'ag filter average', 'fdom smoothed', 'Location', 'Best')
+  % subplot(1,2,2)
+  % yyaxis('left')
+  % hold on
+  % scatter(plot_dt, ...
+  %   filt_interp.c(it,wl_toplot), 40, 'filled', 'MarkerFaceColor', 'r','MarkerFaceAlpha', 0.5)
+  % scatter(datetime(filt_avg.dt, 'ConvertFrom', 'datenum'), ...
+  %   filt_avg.c(:,wl_toplot), 100, 'filled', 'MarkerFaceColor', [255	193	37]/255,'MarkerFaceAlpha', 1)
+  % xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
+  % ylabel('cg')
+  % yyaxis('right')
+  % hold on
+  % scatter(datetime(cdom.dt, 'ConvertFrom', 'datenum'), ...
+  %   cdom.fdom, 40, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5, 'Marker', 'd')
+  % xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
+  % ylabel('fdom')
+  % legend('cg fdom interpolated', 'cg filter average', 'fdom smoothed', 'Location', 'Best')
+
+  % linearly interpolate a and c
+  filt_interp.lin_a = interp1(filt_avg.dt, filt_avg.a, filt_interp.dt, 'linear');
+  filt_interp.lin_c = interp1(filt_avg.dt, filt_avg.c, filt_interp.dt, 'linear');
+
+  % visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 23);
+  % title('ag fdom interpolated')
+  % visProd3D(lambda.a, filt_interp.dt, filt_interp.lin_a, false, 'Wavelength', false, 24);
+  % title('ag linearly interpolated')
+  % 
+  % visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 25);
+  % title('cg fdom interpolated')
+  % visProd3D(lambda.c, filt_interp.dt, filt_interp.lin_c, false, 'Wavelength', false, 26);
+  % title('cg linearly interpolated')
+
+end
+
+%% 
+function [filt_avg, filt_interp, regress_stats] = fdom_agcg_model(filt, filt_interp, lambda, filt_avg)
   
+
+
+  % filt.dt = datetime(filt.dt, 'ConvertFrom', 'datenum');
+  % cluster
+  clusters = table();
+  % clusters.a = NaN(size(filt.a));
+  % clusters.c = NaN(size(filt.c));
+  % for i = id450_a
+  %   clusters.a(:,i) = kmeans(filt.a(:, i) ./ filt.fdom, 3);
+  %   clusters.c(:,i) = kmeans(filt.c(:, i) ./ filt.fdom, 3);
+  %   % figure; hold on
+  %   % gscatter(filt.a(:,i), filt.fdom, clusters.a(:,i), [], 'xod')
+  % end
+
+
+  % id450_a = find(lambda.a > 450 & lambda.a < 550);
+  id450_a = abs(lambda.a - 450) == min(abs(lambda.a - 450));
+  id450_c = abs(lambda.c - 450) == min(abs(lambda.c - 450));
+  
+  % number of clusters to try
+  klist = 1:5;
+  kmeanfunc = @(X,K)(kmeans(X, K));
+  % evaluate optimum number of cluster for a
+  eva = evalclusters(filt.a(:, id450_a) ./ filt.fdom, kmeanfunc, 'silhouette','klist', klist);
+  clusters.a = kmeans(filt.a(:, id450_a) ./ filt.fdom, eva.OptimalK);
+  % evaluate optimum number of cluster for a
+  eva = evalclusters(filt.c(:, id450_c) ./ filt.fdom, kmeanfunc, 'silhouette','klist', klist);
+  clusters.c = kmeans(filt.c(:, id450_c) ./ filt.fdom, eva.OptimalK);
+
+  % col = distinguishable_colors(3);
+
+  % figure; hold on
+  % scatter(lambda.a, filt.a(clusters.a == 1, :) ./ filt.fdom(clusters.a == 1), ...
+  %   'MarkerEdgeColor', col(1, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'x')
+  % scatter(lambda.a, filt.a(clusters.a == 2, :) ./ filt.fdom(clusters.a == 2), ...
+  %   'MarkerEdgeColor', col(2, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'o')
+  % scatter(lambda.a, filt.a(clusters.a == 3, :) ./ filt.fdom(clusters.a == 3), ...
+  %   'MarkerEdgeColor', col(3, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'd')
+  % 
+  % figure; hold on
+  % scatter(lambda.c, filt.c(clusters.c == 1, :) ./ filt.fdom(clusters.c == 1), ...
+  %   'MarkerEdgeColor', col(1, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'x')
+  % scatter(lambda.c, filt.c(clusters.c == 2, :) ./ filt.fdom(clusters.c == 2), ...
+  %   'MarkerEdgeColor', col(2, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'o')
+  % scatter(lambda.c, filt.c(clusters.c == 3, :) ./ filt.fdom(clusters.c == 3), ...
+  %   'MarkerEdgeColor', col(3, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'd')
+
   % regress a&c with fdom
   regress_stats = struct();
-  [regress_stats.a, regress_stats.c] = regress_acfilt(filt, lambda, filt, 'fdom');
+  [regress_stats.a, regress_stats.c] = regress_acfilt(filt, lambda, filt, 'fdom', clusters);
 
   % find wavelength where fdom fit and temperature fit work poorly
-  bad_fit = all(regress_stats.a.R2 < prctile(regress_stats.a.R2, 5), 2);
-
-  filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-  filt_interp.a = NaN(size(tot.a));
-  filt_interp.c = NaN(size(tot.c));
-  filt_interp.t = NaN(size(tot.dt));
-  filt_interp.s = NaN(size(tot.dt));
-
-  filt_interp.t = interp1(tsg.dt, tsg.t, filt_interp.dt, 'spline');
-  filt_interp.t(isnan(filt_interp.t)) = interp1(filt_interp.dt, filt_interp.t, filt_interp.dt(isnan(filt_interp.t)), 'nearest', 'extrap');
-  filt_interp.s = interp1(tsg.dt, tsg.s, filt_interp.dt, 'spline');
-  filt_interp.s(isnan(filt_interp.s)) = interp1(filt_interp.dt, filt_interp.s, filt_interp.dt(isnan(filt_interp.s)), 'nearest', 'extrap');
-
-  % fill regression variable missing data with spline interpolation and nearest extrapolation
-  filt_interp.fdom = interp1(cdom.dt, cdom.fdom, filt_interp.dt, 'spline');
-  filt_interp.fdom(isnan(filt_interp.fdom)) = interp1(filt_interp.dt, filt_interp.fdom, filt_interp.dt(isnan(filt_interp.fdom)), 'nearest', 'extrap');
-
-  % TODO making an assumption here that we're referencing just the first in this
-  % stack as t_0, also we don't need diff deltas for a and c right EB?
-
-  a_deltaT = filt_interp.t - filt_interp.t(1);
-  c_deltaT = filt_interp.t - filt_interp.t(1);
-
-  a_deltaS = filt_interp.s - filt_interp.s(1);
-  c_deltaS = filt_interp.s - filt_interp.s(1);
-
+  bad_fit_a = all(regress_stats.a.R2 < prctile(regress_stats.a.R2, 5, 1), 2);
+  bad_fit_c = all(regress_stats.c.R2 < prctile(regress_stats.c.R2, 5, 1), 2);
+  
   %%% apply the regression to get a and c dissolved from fdom
+  groups_a = unique(clusters.a(~isnan(clusters.a)));
+  groups_c = unique(clusters.c(~isnan(clusters.c)));
 
-  % reconstruct a and c filtered from fdom
-  % TODO remember here I've removed the bad fit component
-  % filt_interp.a = filt_interp.fdom .* regress_stats.a.slope(~bad_fit)' + repmat(regress_stats.a.intercept(~bad_fit)', size(tot.a, 1), 1);
-  filt_interp.a = filt_interp.fdom .* regress_stats.a.slope' + repmat(regress_stats.a.intercept', size(tot.a, 1), 1);
-  % filt_interp.c = filt_interp.fdom .* regress_stats.c.slope(~bad_fit)' + repmat(regress_stats.c.intercept(~bad_fit)', size(tot.c, 1), 1);
-  filt_interp.c = filt_interp.fdom .* regress_stats.c.slope' + repmat(regress_stats.c.intercept', size(tot.c, 1), 1);
-  % filt_interp.a(:, ~bad_fit) = filt_interp.fdom .* regress_stats.a.slope(~bad_fit)' + repmat(regress_stats.a.intercept(~bad_fit)', size(tot.a, 1), 1);
-  % filt_interp.c(:, ~bad_fit) = filt_interp.fdom .* regress_stats.c.slope(~bad_fit)' + repmat(regress_stats.c.intercept(~bad_fit)', size(tot.c, 1), 1);
+  % Weight cluster for each filter event
+  cluster_weighted = table(filt_avg.dt, 'VariableNames', {'dt'});
+  cluster_weighted.a = NaN(size(cluster_weighted,1), size(groups_a, 1));
+  cluster_weighted.c = NaN(size(cluster_weighted,1), size(groups_c, 1));
+  for i=1:size(filt_avg, 1)
+    sel_filt = filt_avg.start(i) <= filt.dt & filt.dt <= filt_avg.end(i);
+    foo = clusters(sel_filt,:);
+    for j = 1:size(groups_a,1)
+      cluster_weighted.a(i,j) = sum(foo.a == groups_a(j)) ./ sum(~isnan(foo.a));
+    end
+    for j = 1:size(groups_c,1)
+      cluster_weighted.c(i,j) = sum(foo.c == groups_c(j)) ./ sum(~isnan(foo.c));
+    end
+  end
+  % weigth a slope and intercept
+  cluster_weighted.slope_a = zeros(size(cluster_weighted, 1), size(regress_stats.a, 1));
+  cluster_weighted.intercept_a = zeros(size(cluster_weighted, 1), size(regress_stats.a, 1));
+  for j = 1:size(groups_a, 1)
+    cluster_weighted.slope_a = cluster_weighted.slope_a + regress_stats.a.slope(:,j)'.*cluster_weighted.a(:,j);
+    cluster_weighted.intercept_a = cluster_weighted.intercept_a + regress_stats.a.intercept(:,j)'.*cluster_weighted.a(:,j);
+  end
+  % weigth c slope and intercept
+  cluster_weighted.slope_c = zeros(size(cluster_weighted, 1), size(regress_stats.c, 1));
+  cluster_weighted.intercept_c = zeros(size(cluster_weighted, 1), size(regress_stats.c, 1));
+  for j = 1:size(groups_c, 1)
+    cluster_weighted.slope_c = cluster_weighted.slope_c + regress_stats.c.slope(:,j)'.*cluster_weighted.c(:,j);
+    cluster_weighted.intercept_c = cluster_weighted.intercept_c + regress_stats.c.intercept(:,j)'.*cluster_weighted.c(:,j);
+  end
+  % interpolate slope and intercept cluster specific onto filt_interp.dt
+  filt_interp.slope_interp_a = interp1(cluster_weighted.dt, cluster_weighted.slope_a, filt_interp.dt, 'spline');
+  filt_interp.slope_interp_a = fillmissing(filt_interp.slope_interp_a, 'nearest');
+  filt_interp.intercept_interp_a = interp1(cluster_weighted.dt, cluster_weighted.intercept_a, filt_interp.dt, 'spline');
+  filt_interp.intercept_interp_a = fillmissing(filt_interp.intercept_interp_a, 'nearest');
+  filt_interp.slope_interp_c = interp1(cluster_weighted.dt, cluster_weighted.slope_c, filt_interp.dt, 'spline');
+  filt_interp.slope_interp_c = fillmissing(filt_interp.slope_interp_c, 'nearest');
+  filt_interp.intercept_interp_c = interp1(cluster_weighted.dt, cluster_weighted.intercept_c, filt_interp.dt, 'spline');
+  filt_interp.intercept_interp_c = fillmissing(filt_interp.intercept_interp_c, 'nearest');
+  
+  filt_avg.slope_a = cluster_weighted.slope_a;
+  filt_avg.intercept_a = cluster_weighted.intercept_a;
+  filt_avg.slope_c = cluster_weighted.slope_c;
+  filt_avg.intercept_c = cluster_weighted.intercept_c;
+  
+  % % reconstruct a filtered from fdom
+  % % TODO remember here I've removed the bad fit component
+  % % filt_interp.a = filt_interp.fdom .* filt_interp.slope_interp_a(:, ~bad_fit_a) + filt_interp.intercept_interp_a(:, ~bad_fit_a);
+  % % filt_interp.a(:, ~bad_fit_a) = filt_interp.fdom .* filt_interp.slope_interp_a(:, ~bad_fit_a) + filt_interp.intercept_interp_a(:, ~bad_fit_a);
+  % filt_interp.a = filt_interp.fdom .* filt_interp.slope_interp_a + filt_interp.intercept_interp_a;
+  % % reconstruct c filtered from fdom
+  % % filt_interp.c = filt_interp.fdom .* filt_interp.slope_interp_c(:, ~bad_fit_c) + filt_interp.intercept_interp_c(:, ~bad_fit_c);
+  % % filt_interp.c(:, ~bad_fit_c) = filt_interp.fdom .* filt_interp.slope_interp_c(:, ~bad_fit_c) + filt_interp.intercept_interp_c(:, ~bad_fit_c);
+  % filt_interp.c = filt_interp.fdom .* filt_interp.slope_interp_c + filt_interp.intercept_interp_c;
 
-  initial_filt_interpa = filt_interp.a;
 
-  filt_interp.a = filt_interp.a + a_deltaT.*a_psiT + a_deltaS.*a_psiS;
-  filt_interp.c = filt_interp.c + c_deltaT.*c_psiT + c_deltaS.*c_psiS;
+  % for i = 1:size(lambda.a, 2)
+  %   % reconstruct a filtered from fdom
+  %   % TODO remember here I've removed the bad fit component
+  %   for j = 1:size(groups_a, 1)
+  %     id_grp_a = clusters.a == groups_a(j);
+  %     % filt_interp.a(id_grp_a, :) = filt_interp.fdom(id_grp_a) .* regress_stats.a.slope(~bad_fit_a,j)' + repmat(regress_stats.a.intercept(~bad_fit_a,j)', sum(id_grp_a), 1);
+  %     % filt_interp.a(id_grp_a, ~bad_fit_a) = filt_interp.fdom(id_grp_a) .* regress_stats.a.slope(~bad_fit_a,j)' + repmat(regress_stats.a.intercept(~bad_fit_a,j)', sum(id_grp_a), 1);
+  %     filt_interp.a(id_grp_a, :) = filt_interp.fdom(id_grp_a) .* regress_stats.a.slope(:,j)' + repmat(regress_stats.a.intercept(:,j)', sum(id_grp_a), 1);
+  %   end
+  %   % reconstruct c filtered from fdom
+  %   for j = 1:size(groups_c, 1)
+  %     id_grp_c = clusters.c == groups_c(j);
+  %     % filt_interp.c(id_grp_c, :) = filt_interp.fdom(id_grp_c) .* regress_stats.c.slope(~bad_fit_c,j)' + repmat(regress_stats.c.intercept(~bad_fit_c,j)', sum(id_grp_c), 1);
+  %     % filt_interp.c(id_grp_c, ~bad_fit_c) = filt_interp.fdom(id_grp_c) .* regress_stats.c.slope(~bad_fit_c,j)' + repmat(regress_stats.c.intercept(~bad_fit_c,j)', sum(id_grp_c), 1);
+  %     filt_interp.c(id_grp_c, :) = filt_interp.fdom(id_grp_c) .* regress_stats.c.slope(:,j)' + repmat(regress_stats.c.intercept(:,j)', sum(id_grp_c), 1);
+  %   end
+  % end
 
-  figure; hold on
-  plot(lambda.a,initial_filt_interpa - filt_interp.a,'k')
-  yline(0)
-  title('difference between initial filt_interp.a and corrected filt_interp.a')
+
+  % % % reconstruct a and c filtered from fdom
+  % % % TODO remember here I've removed the bad fit component
+  % % % filt_interp.a = filt_interp.fdom .* regress_stats.a.slope(~bad_fit)' + repmat(regress_stats.a.intercept(~bad_fit)', size(tot.a, 1), 1);
+  % % filt_interp.a = filt_interp.fdom .* regress_stats.a.slope' + repmat(regress_stats.a.intercept', size(tot.a, 1), 1);
+  % % % filt_interp.c = filt_interp.fdom .* regress_stats.c.slope(~bad_fit)' + repmat(regress_stats.c.intercept(~bad_fit)', size(tot.c, 1), 1);
+  % % filt_interp.c = filt_interp.fdom .* regress_stats.c.slope' + repmat(regress_stats.c.intercept', size(tot.c, 1), 1);
+  % % % filt_interp.a(:, ~bad_fit) = filt_interp.fdom .* regress_stats.a.slope(~bad_fit)' + repmat(regress_stats.a.intercept(~bad_fit)', size(tot.a, 1), 1);
+  % % % filt_interp.c(:, ~bad_fit) = filt_interp.fdom .* regress_stats.c.slope(~bad_fit)' + repmat(regress_stats.c.intercept(~bad_fit)', size(tot.c, 1), 1);
+
 
   % % fill missing modelled data for bad fit wavelength with spline interpolation
   % filt_interp.a(:, bad_fit) = interp1(lambda.a, filt_interp.a', lambda.a(bad_fit), 'spline')';
   % filt_interp.c(:, bad_fit) = interp1(lambda.c, filt_interp.c', lambda.c(bad_fit), 'spline')';
 
 
-  % compare filter even measured and modelled
-      % % compute a&c filt avg from best regression (fcdom / temperature / fcdom*temperature)
-      % filt_avg_mod = table(filt_avg.dt, 'VariableNames', {'dt'});
-      % filt_avg_mod.a = NaN(size(filt_avg.a));
-      % filt_avg_mod.c = NaN(size(filt_avg.c));
-      % % fill regression variable missing data with spline interpolation and nearest extrapolation
-      % filt_avg_mod.fdom = interp1(cdom.dt, cdom.fdom, filt_avg.dt, 'spline');
-      % filt_avg_mod.fdom(isnan(filt_avg_mod.fdom)) = interp1(filt_avg_mod.dt, filt_avg_mod.fdom, filt_avg.dt(isnan(filt_avg_mod.fdom)), 'nearest', 'extrap');
-      % % reconstruct a and c filtered from fdom
-      % filt_avg_mod.a = filt_avg_mod.fdom .* regress_stats.a.slope' + repmat(regress_stats.a.intercept', size(filt_avg.a, 1), 1);
-      % filt_avg_mod.c = filt_avg_mod.fdom .* regress_stats.c.slope' + repmat(regress_stats.c.intercept', size(filt_avg.c, 1), 1);
-      % % filt_avg_mod.a(:, ~bad_fit) = filt_avg_mod.fdom .* regress_stats.a.slope(~bad_fit)' + repmat(regress_stats.a.intercept(~bad_fit)', size(filt_avg.a, 1), 1);
-      % % filt_avg_mod.c(:, ~bad_fit) = filt_avg_mod.fdom .* regress_stats.c.slope(~bad_fit)' + repmat(regress_stats.c.intercept(~bad_fit)', size(filt_avg.c, 1), 1);
-      % % 
-      % % % fill missing modelled data for bad fit wavelength with spline interpolation
-      % % filt_avg_mod.a(:, bad_fit) = interp1(lambda.a, filt_avg_mod.a', lambda.a(bad_fit), 'spline')';
-      % % filt_avg_mod.c(:, bad_fit) = interp1(lambda.c, filt_avg_mod.c', lambda.c(bad_fit), 'spline')';
-      % 
-      % figure;
-      % hold on
-      % scatter(lambda.a, regress_stats.a.slope, 20, [113	113	198]/255, 'filled')
-      % scatter(lambda.c, regress_stats.c.slope, 20, [113	113	198]/255)
-      % legend('slope of c_{filt} to fCDOM', 'slope of a_{filt} to fCDOM', 'FontSize', 16, 'Location', 'Northwest')
-      % ylabel('slope of a_{filt} and c_{filt} to fCDOM', 'FontSize', 16)
-      % xlabel("wavelength (nm)")
-      % 
-      % % % percentage difference between modelled a and c from fdom and a and c
-      % filt_diff = table();
-      % filt_diff.a = abs((filt_avg_mod.a - filt_avg.a) ./ filt_avg.a) * 100;
-      % filt_diff.c = abs((filt_avg_mod.c - filt_avg.c) ./ filt_avg.c) * 100;
-      % avg_diff_a = mean(filt_diff.a, 'omitnan');
-      % avg_diff_c = mean(filt_diff.c, 'omitnan');
-      % std_diff_a = std(filt_diff.a, 'omitnan');
-      % std_diff_c = std(filt_diff.c, 'omitnan');
-      % 
-      % figure; hold on
-      % plot(lambda.a, avg_diff_a, '-b')
-      % plot(lambda.c, avg_diff_c, '-r')
-      % ylabel('percentage difference a&c filtered fdom and measured')
-      % legend('percentage difference a', 'percentage difference c')
-      % 
-      % visProd3D(lambda.a, filt_avg_mod.dt, filt_avg_mod.a, false, 'Wavelength', false, 23);
-      % visProd3D(lambda.c, filt_avg_mod.dt, filt_avg_mod.c, false, 'Wavelength', false, 24);
-      % 
-      % visProd3D(lambda.a, filt_avg.dt, filt_avg.a, false, 'Wavelength', false, 25);
-      % visProd3D(lambda.c, filt_avg.dt, filt_avg.c, false, 'Wavelength', false, 26);
-      % 
-      % visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 23);
-      % visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 24);
-      % 
-      % visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 25);
-      % visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 26);
+  % % compare filter even measured and modelled
+  %     % compute a&c filt avg from best regression (fcdom / temperature / fcdom*temperature)
+  %     filt_avg_mod = table(filt_avg.dt, 'VariableNames', {'dt'});
+  %     filt_avg_mod.a = NaN(size(filt_avg.a));
+  %     filt_avg_mod.c = NaN(size(filt_avg.c));
+  %     % fill regression variable missing data with spline interpolation and nearest extrapolation
+  %     filt_avg_mod.fdom = interp1(cdom.dt, cdom.fdom, filt_avg.dt, 'spline');
+  %     filt_avg_mod.fdom(isnan(filt_avg_mod.fdom)) = interp1(filt_avg_mod.dt, filt_avg_mod.fdom, filt_avg.dt(isnan(filt_avg_mod.fdom)), 'nearest', 'extrap');
+  %     % reconstruct a and c filtered from fdom
+  %     filt_avg_mod.a = filt_avg_mod.fdom .* regress_stats.a.slope' + repmat(regress_stats.a.intercept', size(filt_avg.a, 1), 1);
+  %     filt_avg_mod.c = filt_avg_mod.fdom .* regress_stats.c.slope' + repmat(regress_stats.c.intercept', size(filt_avg.c, 1), 1);
+  %     % filt_avg_mod.a(:, ~bad_fit) = filt_avg_mod.fdom .* regress_stats.a.slope(~bad_fit)' + repmat(regress_stats.a.intercept(~bad_fit)', size(filt_avg.a, 1), 1);
+  %     % filt_avg_mod.c(:, ~bad_fit) = filt_avg_mod.fdom .* regress_stats.c.slope(~bad_fit)' + repmat(regress_stats.c.intercept(~bad_fit)', size(filt_avg.c, 1), 1);
+  %     % 
+  %     % % fill missing modelled data for bad fit wavelength with spline interpolation
+  %     % filt_avg_mod.a(:, bad_fit) = interp1(lambda.a, filt_avg_mod.a', lambda.a(bad_fit), 'spline')';
+  %     % filt_avg_mod.c(:, bad_fit) = interp1(lambda.c, filt_avg_mod.c', lambda.c(bad_fit), 'spline')';
+  % 
+  %     figure;
+  %     hold on
+  %     scatter(lambda.a, regress_stats.a.slope, 20, [113	113	198]/255, 'filled')
+  %     scatter(lambda.c, regress_stats.c.slope, 20, [113	113	198]/255)
+  %     legend('slope of c_{filt} to fCDOM', 'slope of a_{filt} to fCDOM', 'FontSize', 16, 'Location', 'Northwest')
+  %     ylabel('slope of a_{filt} and c_{filt} to fCDOM', 'FontSize', 16)
+  %     xlabel("wavelength (nm)")
+  % 
+  %     % % percentage difference between modelled a and c from fdom and a and c
+  %     filt_diff = table();
+  %     filt_diff.a = abs((filt_avg_mod.a - filt_avg.a) ./ filt_avg.a) * 100;
+  %     filt_diff.c = abs((filt_avg_mod.c - filt_avg.c) ./ filt_avg.c) * 100;
+  %     avg_diff_a = mean(filt_diff.a, 'omitnan');
+  %     avg_diff_c = mean(filt_diff.c, 'omitnan');
+  %     std_diff_a = std(filt_diff.a, 'omitnan');
+  %     std_diff_c = std(filt_diff.c, 'omitnan');
+  % 
+  %     figure; hold on
+  %     plot(lambda.a, avg_diff_a, '-b')
+  %     plot(lambda.c, avg_diff_c, '-r')
+  %     ylabel('percentage difference a&c filtered fdom and measured')
+  %     legend('percentage difference a', 'percentage difference c')
+  % 
+  %     visProd3D(lambda.a, filt_avg_mod.dt, filt_avg_mod.a, false, 'Wavelength', false, 23);
+  %     visProd3D(lambda.c, filt_avg_mod.dt, filt_avg_mod.c, false, 'Wavelength', false, 24);
+  % 
+  %     visProd3D(lambda.a, filt_avg.dt, filt_avg.a, false, 'Wavelength', false, 25);
+  %     visProd3D(lambda.c, filt_avg.dt, filt_avg.c, false, 'Wavelength', false, 26);
+  % 
+  %     visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 23);
+  %     visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 24);
+  % 
+  %     visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 25);
+  %     visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 26);
 end
 
 
-
-
-
-% function [filt_interp, regress_stats] = fdom_agcgmodel(tot, filt, filt_avg, lambda, param, cdom, tsg)
-%   % load psi_s to remove salinity effect
-%   wl_psi = [400;402;404;406;408;410;412;414;416;418;420;422;424;426;428;430;432;434;436;438;440;442;444;446;448;450;452;454;456;458;460;462;464;466;468;470;472;474;476;478;480;482;484;486;488;490;492;494;496;498;500;502;504;506;508;510;512;514;516;518;520;522;524;526;528;530;532;534;536;538;540;542;544;546;548;550;552;554;556;558;560;562;564;566;568;570;572;574;576;578;580;582;584;586;588;590;592;594;596;598;600;602;604;606;608;610;612;614;616;618;620;622;624;626;628;630;632;634;636;638;640;642;644;646;648;650;652;654;656;658;660;662;664;666;668;670;672;674;676;678;680;682;684;686;688;690;692;694;696;698;700;702;704;706;708;710;712;714;716;718;720;722;724;726;728;730;732;734;736;738;740;742;744;746;748;750]';
-%   % psi_t = [0.0001;0.0001;0.0001;0.0001;0;0;0;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0003;0.0003;0.0004;0.0005;0.0006;0.0006;0.0007;0.0008;0.0009;0.001;0.001;0.001;0.001;0.001;0.0009;0.0009;0.0008;0.0007;0.0006;0.0006;0.0005;0.0004;0.0003;0.0003;0.0002;0.0001;0.0001;0;0;0;0;0;0;0;0;0;0.0001;0.0001;0.0001;0.0002;0.0002;0.0002;0.0001;0.0001;0.0001;0;0;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;-0.0001;0;0;0.0001;0.0002;0.0003;0.0005;0.0007;0.0009;0.0013;0.0017;0.0021;0.0026;0.0032;0.0038;0.0045;0.0054;0.0063;0.0073;0.0083;0.0094;0.0104;0.0113;0.0121;0.0128;0.0133;0.0136;0.0136;0.0133;0.0129;0.0124;0.0116;0.0107]';
-%   c_psi_s = [-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-3.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-4.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-5.0e-05;-4.0e-05;-3.0e-05;-3.0e-05;-2.0e-05;-1.0e-05;0;1.0e-05;1.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-5.0e-05;-6.0e-05;-6.0e-05;-8.0e-05;-9.0e-05;-0.00010;-0.00011;-0.00013;-0.00014;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00021;-0.00022;-0.00022;-0.00023;-0.00023;-0.00023;-0.00024;-0.00024;-0.00024;-0.00024;-0.00022;-0.00021;-0.00017;-0.00012;-6.0e-05;2.0e-05;0.00012;0.00022;0.00031;0.00041;0.00049;0.00056;0.00062]';
-%   a_psi_s = [3.0e-05;3.0e-05;3.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;0;0;0;0;0;0;0;0;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;-1.0e-05;0;1.0e-05;2.0e-05;3.0e-05;3.0e-05;4.0e-05;5.0e-05;5.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;6.0e-05;5.0e-05;5.0e-05;5.0e-05;5.0e-05;4.0e-05;4.0e-05;4.0e-05;4.0e-05;3.0e-05;3.0e-05;3.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;2.0e-05;1.0e-05;1.0e-05;1.0e-05;0;0;-1.0e-05;-2.0e-05;-3.0e-05;-4.0e-05;-6.0e-05;-7.0e-05;-8.0e-05;-9.0e-05;-0.00011;-0.00012;-0.00014;-0.00015;-0.00016;-0.00017;-0.00018;-0.00019;-0.00020;-0.00020;-0.00020;-0.00021;-0.00021;-0.00021;-0.00021;-0.00021;-0.00020;-0.00017;-0.00013;-8.0e-05;-1.0e-05;7.0e-05;0.00016;0.00026;0.00037;0.00046;0.00054;0.00061;0.00067]';
-% 
-%   % interpolate psi_s over a&c wavelength
-%   a_psi_s_wl = interp1(wl_psi, a_psi_s, lambda.a, 'linear', 'extrap');
-%   c_psi_s_wl = interp1(wl_psi, c_psi_s, lambda.c, 'linear', 'extrap');
-%   a_psi_t_wl = interp1(wl_psi, psi_t, lambda.a, 'linear', 'extrap');
-%   c_psi_t_wl = interp1(wl_psi, psi_t, lambda.c, 'linear', 'extrap');
-% 
-%   % keep only leg data
-%   cdom = cdom(cdom.dt >= min([tot.dt; filt.dt]) & cdom.dt <= max([tot.dt; filt.dt]), :);
-%   tsg = tsg(tsg.dt >= min([tot.dt; filt.dt]) & tsg.dt <= max([tot.dt; filt.dt]), :);
-% 
-%   % fill regression variable missing data with spline interpolation and nearest extrapolation
-%   filt.fdom = interp1(cdom.dt, cdom.fdom, filt.dt, 'spline');
-%   filt.fdom(isnan(filt.fdom)) = interp1(filt.dt, filt.fdom, filt.dt(isnan(filt.fdom)), 'nearest', 'extrap');
-%   % fill regression variable missing data with spline interpolation and nearest extrapolation
-%   filt.t = interp1(tsg.dt, tsg.t, filt.dt, 'spline');
-%   filt.t(isnan(filt.t)) = interp1(filt.dt, filt.t, filt.dt(isnan(filt.t)), 'nearest', 'extrap');
-%   % fill regression variable missing data with spline interpolation and nearest extrapolation
-%   filt.s = interp1(tsg.dt, tsg.s, filt.dt, 'spline');
-%   filt.s(isnan(filt.s)) = interp1(filt.dt, filt.s, filt.dt(isnan(filt.s)), 'nearest', 'extrap');
-% 
-%   % Remove salinity impact on a&c
-%   filt.a_corr = filt.a - (a_psi_s_wl .* filt.s);
-%   filt.c_corr = filt.c - (c_psi_s_wl .* filt.s);
-%   % Remove temperature impact on a&c
-%   filt.a_corr = filt.a_corr - (a_psi_t_wl .* (filt.t-param.T_cal));
-%   filt.c_corr = filt.c_corr - (c_psi_t_wl .* (filt.t-param.T_cal));
-% 
-%   % regress a&c with fdom
-%   regress_stats = struct();
-%   [regress_stats.a, regress_stats.c] = regress_acfilt(filt, lambda, filt, 'fdom');
-%   % regress a&c with t
-%   [a_t_reg, c_t_reg] = regress_acfilt(filt, lambda, filt, 't');
-% 
-%   % find best regression
-%   for i = regress_stats.a.Properties.VariableNames
-%     i = i{:};
-%     regress_stats.a.(i) = [regress_stats.a.(i) a_t_reg.(i)];
-%     regress_stats.c.(i) = [regress_stats.c.(i) c_t_reg.(i)];
-%   end
-%   best_a_reg = regress_stats.a.R2 == max(regress_stats.a.R2, [], 2);
-%   best_c_reg = regress_stats.c.R2 == max(regress_stats.c.R2, [], 2);
-%   % find wavelength where fdom fit and temperature fit work poorly
-%   bad_fit = all(regress_stats.a.R2 < prctile(regress_stats.a.R2, 0), 2);
-%   best_a_reg(bad_fit, :) = false;
-%   best_c_reg(bad_fit, :) = false;
-% 
-%   % best_a_reg(:,1) = true;
-%   % best_a_reg(:,2) = false;
-% 
-%   filt_interp = table(tot.dt, 'VariableNames', {'dt'});
-%   filt_interp.a = NaN(size(tot.a));
-%   filt_interp.c = NaN(size(tot.c));
-%   % fill regression variable missing data with spline interpolation and nearest extrapolation
-%   filt_interp.fdom = interp1(cdom.dt, cdom.fdom, filt_interp.dt, 'spline');
-%   filt_interp.fdom(isnan(filt_interp.fdom)) = interp1(filt_interp.dt, filt_interp.fdom, filt_interp.dt(isnan(filt_interp.fdom)), 'nearest', 'extrap');
-%   % fill regression variable missing data with spline interpolation and nearest extrapolation
-%   filt_interp.t = interp1(tsg.dt, tsg.t, filt_interp.dt, 'spline');
-%   filt_interp.t(isnan(filt_interp.t)) = interp1(filt_interp.dt, filt_interp.t, filt_interp.dt(isnan(filt_interp.t)), 'nearest', 'extrap');
-%   % fill regression variable missing data with spline interpolation and nearest extrapolation
-%   filt_interp.s = interp1(tsg.dt, tsg.s, filt_interp.dt, 'spline');
-%   filt_interp.s(isnan(filt_interp.s)) = interp1(filt_interp.dt, filt_interp.s, filt_interp.dt(isnan(filt_interp.s)), 'nearest', 'extrap');
-% 
-%   filt_interp_array = [filt_interp.fdom filt_interp.s];
-%   for i = 1:size(best_a_reg, 2)
-%     filt_interp.a(:, best_a_reg(:, i)) = filt_interp_array(:, i) .* regress_stats.a.slope(best_a_reg(:, i), i)' + repmat(regress_stats.a.intercept(best_a_reg(:, i), i)', size(tot.a, 1), 1);
-%     filt_interp.c(:, best_c_reg(:, i)) = filt_interp_array(:, i) .* regress_stats.c.slope(best_c_reg(:, i), i)' + repmat(regress_stats.c.intercept(best_c_reg(:, i), i)', size(tot.c, 1), 1);
-%   end
-%   % fill missing modelled data for bad fit wavelength with spline interpolation
-%   filt_interp.a(:, bad_fit) = interp1(lambda.a, filt_interp.a', lambda.a(bad_fit), 'spline')';
-%   filt_interp.c(:, bad_fit) = interp1(lambda.c, filt_interp.c', lambda.c(bad_fit), 'spline')';
-% 
-%   % add back the salinity effect on the filter interpolation
-%   filt_interp.a = filt_interp.a + (a_psi_s_wl .* filt_interp.s);
-%   filt_interp.c = filt_interp.c + (c_psi_s_wl .* filt_interp.s);
-%   % add back the temperature effect on the filter interpolation
-%   filt_interp.a = filt_interp.a + (a_psi_t_wl .* (filt_interp.t-param.T_cal));
-%   filt_interp.c = filt_interp.c + (c_psi_t_wl .* (filt_interp.t-param.T_cal));
-% 
-%   % example to reconstruct filter events
-%       % % compute a&c filt avg from best regression (fcdom / temperature / fcdom*temperature)
-%       % filt_avg_mod = table(filt_avg.dt, 'VariableNames', {'dt'});
-%       % filt_avg_mod.a = NaN(size(filt_avg.a));
-%       % filt_avg_mod.c = NaN(size(filt_avg.c));
-%       % % fill regression variable missing data with spline interpolation and nearest extrapolation
-%       % filt_avg_mod.fdom = interp1(cdom.dt, cdom.fdom, filt_avg.dt, 'spline');
-%       % filt_avg_mod.fdom(isnan(filt_avg_mod.fdom)) = interp1(filt_avg_mod.dt, filt_avg_mod.fdom, filt_avg.dt(isnan(filt_avg_mod.fdom)), 'nearest', 'extrap');
-%       % filt_avg_mod.t = interp1(tsg.dt, tsg.t, filt_avg.dt, 'spline');
-%       % filt_avg_mod.t(isnan(filt_avg_mod.t)) = interp1(filt_avg_mod.dt, filt_avg_mod.t, filt_avg.dt(isnan(filt_avg_mod.t)), 'nearest', 'extrap');
-%       % % % fill regression variable missing data with spline interpolation and nearest extrapolation
-%       % filt_avg_mod.s = interp1(tsg.dt, tsg.s, filt_avg.dt, 'spline');
-%       % filt_avg_mod.s(isnan(filt_avg_mod.s)) = interp1(filt_avg_mod.dt, filt_avg_mod.s, filt_avg.dt(isnan(filt_avg_mod.s)), 'nearest', 'extrap');
-%       % 
-%       % filt_avg_array = [filt_avg_mod.fdom filt_avg_mod.s];
-%       % for i = 1:size(best_a_reg, 2)
-%       %   filt_avg_mod.a(:, best_a_reg(:, i)) = filt_avg_array(:, i) .* regress_stats.a.slope(best_a_reg(:, i), i)' + repmat(regress_stats.a.intercept(best_a_reg(:, i), i)', size(filt_avg.a, 1), 1);
-%       %   filt_avg_mod.c(:, best_c_reg(:, i)) = filt_avg_array(:, i) .* regress_stats.c.slope(best_c_reg(:, i), i)' + repmat(regress_stats.c.intercept(best_c_reg(:, i), i)', size(filt_avg.c, 1), 1);
-%       % end
-%       % % fill missing modelled data for bad fit wavelength with spline interpolation
-%       % filt_avg_mod.a(:, bad_fit) = interp1(lambda.a, filt_avg_mod.a', lambda.a(bad_fit), 'spline')';
-%       % filt_avg_mod.c(:, bad_fit) = interp1(lambda.c, filt_avg_mod.c', lambda.c(bad_fit), 'spline')';
-%       % 
-%       % % add back the salinity effect on the filter interpolation
-%       % filt_avg_mod.a = filt_avg_mod.a + (a_psi_s_wl .* filt_avg_mod.s);
-%       % filt_avg_mod.c = filt_avg_mod.c + (c_psi_s_wl .* filt_avg_mod.s);
-%       % % add back the temperature effect on the filter interpolation
-%       % filt_avg_mod.a = filt_avg_mod.a + (a_psi_t_wl .* (filt_avg_mod.t-param.T_cal));
-%       % filt_avg_mod.c = filt_avg_mod.c + (c_psi_t_wl .* (filt_avg_mod.t-param.T_cal));
-%       % 
-%       % 
-%       % figure;
-%       % hold on
-%       % scatter(lambda.a, regress_stats.a.slope(:, 1), 20, [113	113	198]/255, 'filled')
-%       % scatter(lambda.c, regress_stats.c.slope(:, 1), 20, [113	113	198]/255)
-%       % scatter(lambda.a, regress_stats.a.slope(:, 2), 20, [113	198	113]/255, 'filled')
-%       % scatter(lambda.c, regress_stats.c.slope(:, 2), 20, [113	198	113]/255)
-%       % legend('slope of c_{filt} to fCDOM', 'slope of a_{filt} to fCDOM', 'slope of c_{filt} to T', 'slope of a_{filt} to T', 'FontSize', 16, 'Location', 'Northwest')
-%       % ylabel('slope of a_{filt} and c_{filt} to fCDOM', 'FontSize', 16)
-%       % xlabel("wavelength (nm)")
-%       % 
-%       % % % percentage difference between modelled a and c from fdom and a and c
-%       % filt_diff = table();
-%       % filt_diff.a = abs((filt_avg_mod.a - filt_avg.a) ./ filt_avg.a) * 100;
-%       % filt_diff.c = abs((filt_avg_mod.c - filt_avg.c) ./ filt_avg.c) * 100;
-%       % avg_diff_a = mean(filt_diff.a, 'omitnan');
-%       % avg_diff_c = mean(filt_diff.c, 'omitnan');
-%       % std_diff_a = std(filt_diff.a, 'omitnan');
-%       % std_diff_c = std(filt_diff.c, 'omitnan');
-%       % 
-%       % figure; hold on
-%       % plot(lambda.a, avg_diff_a, '-b')
-%       % plot(lambda.c, avg_diff_c, '-r')
-%       % ylabel('percentage difference a&c filtered fdom and measured')
-%       % legend('percentage difference a', 'percentage difference c')
-%       % 
-%       % visProd3D(lambda.a, filt_avg_mod.dt, filt_avg_mod.a, false, 'Wavelength', false, 23);
-%       % visProd3D(lambda.c, filt_avg_mod.dt, filt_avg_mod.c, false, 'Wavelength', false, 24);
-%       % 
-%       % visProd3D(lambda.a, filt_avg.dt, filt_avg.a, false, 'Wavelength', false, 25);
-%       % visProd3D(lambda.c, filt_avg.dt, filt_avg.c, false, 'Wavelength', false, 26);
-%       % 
-%       % visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 23);
-%       % visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 24);
-%       % 
-%       % visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 25);
-%       % visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 26);
-% 
-% end
-
-
-%%
-function [a_reg, c_reg] = regress_acfilt(filt, lambda, ancillary, varr)
+%% regression between a/c and other variable in filter events
+function [a_reg, c_reg] = regress_acfilt(filt, lambda, ancillary, varr, clusters)
+  if nargin < 5
+    clusters = table();
+    clusters.a = ones(size(filt, 1), 1);
+    clusters.c = ones(size(filt, 1), 1);
+  end
   % Interpolate regression variable over filtered datetime
   filt.([varr '_b']) = interp1(ancillary.dt, ancillary.(varr), ancillary.dt, 'linear');
   % robust linear regression between filt a&c and ancillary variable
   a_reg = array2table(NaN(size(lambda.a, 2), 5), 'VariableNames', {'slope', 'intercept', 'RMSE', 'nRMSE', 'R2'});
   c_reg = array2table(NaN(size(lambda.a, 2), 5), 'VariableNames', {'slope', 'intercept', 'RMSE', 'nRMSE', 'R2'});
+  groups_a = unique(clusters.a(~isnan(clusters.a)));
+  groups_c = unique(clusters.c(~isnan(clusters.c)));
   for i = 1:size(lambda.a, 2)
-    % regress variable with filtered water absorption
-    [stats.b, stats.stats] = robustfit(ancillary.(varr), filt.a(:, i));
-    a_reg.slope(i) = stats.b(2);
-    a_reg.intercept(i) = stats.b(1);
-    a_reg.RMSE(i) = stats.stats.robust_s;
-    % calculated normalize RMSE by average and R2
-    id_nonan = all(~isnan([filt.a(:, i) ancillary.(varr)]), 2);
-    a_reg.nRMSE(i) = a_reg.RMSE(i)/abs(mean(filt.a(id_nonan, i), 'omitnan'))*100;
-    a_reg.R2(i) = corr(filt.a(id_nonan, i), stats.b(1) + stats.b(2) * ancillary.(varr)(id_nonan))^2;
-
-    % regress variable with filtered water attenuation
-    [stats.b, stats.stats] = robustfit(ancillary.(varr), filt.c(:, i));
-    c_reg.slope(i) = stats.b(2);
-    c_reg.intercept(i) = stats.b(1);
-    c_reg.RMSE(i) = stats.stats.robust_s;
-    % calculated normalize RMSE by average and R2
-    id_nonan = all(~isnan([filt.c(:, i) ancillary.(varr)]), 2);
-    c_reg.nRMSE(i) = c_reg.RMSE(i)/abs(mean(filt.c(id_nonan, i), 'omitnan'))*100;
-    c_reg.R2(i) = corr(filt.c(id_nonan, i), stats.b(1) + stats.b(2) * ancillary.(varr)(id_nonan))^2;
+    for j = 1:size(groups_a, 1)
+      id_grp_a = clusters.a == groups_a(j);
+      % regress variable with filtered water absorption
+      [stats.b, stats.stats] = robustfit(ancillary.(varr)(id_grp_a), filt.a(id_grp_a, i));
+      a_reg.slope(i, j) = stats.b(2);
+      a_reg.intercept(i, j) = stats.b(1);
+      a_reg.RMSE(i, j) = stats.stats.robust_s;
+      % calculated normalize RMSE by average and R2
+      id_nonan = all(~isnan([filt.a(:, i) ancillary.(varr)]), 2);
+      a_reg.nRMSE(i, j) = a_reg.RMSE(i, j)/abs(mean(filt.a(id_grp_a & id_nonan, i), 'omitnan'))*100;
+      a_reg.R2(i, j) = corr(filt.a(id_grp_a & id_nonan, i), stats.b(1) + stats.b(2) * ancillary.(varr)(id_grp_a & id_nonan))^2;
+    end
+    for j = 1:size(groups_c, 1)
+      id_grp_c = clusters.c == groups_c(j);
+      % regress variable with filtered water attenuation
+      [stats.b, stats.stats] = robustfit(ancillary.(varr)(id_grp_c), filt.c(id_grp_c, i));
+      c_reg.slope(i, j) = stats.b(2);
+      c_reg.intercept(i, j) = stats.b(1);
+      c_reg.RMSE(i, j) = stats.stats.robust_s;
+      % calculated normalize RMSE by average and R2
+      id_nonan = all(~isnan([filt.c(:, i) ancillary.(varr)]), 2);
+      c_reg.nRMSE(i, j) = c_reg.RMSE(i, j)/abs(mean(filt.c(id_grp_c & id_nonan, i), 'omitnan'))*100;
+      c_reg.R2(i, j) = corr(filt.c(id_grp_c & id_nonan, i), stats.b(1) + stats.b(2) * ancillary.(varr)(id_grp_c & id_nonan))^2;
+    end
   end
 
   % figure;

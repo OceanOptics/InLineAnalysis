@@ -13,9 +13,9 @@ ila = InLineAnalysis('cfg/TaraEuropa_cfg.m');
 %% set the date to process
 ila.cfg.days2run = datenum(2023,4,2):datenum(2023,5,6); %datenum(2023,5,5)
 
-%% 'SBE38450269','NMEA','FLOW','ACS412','HyperBB8002','BB3349','SUVF6254','WS3S1081','LISST1183'
-ila.cfg.instruments2run = {'NMEA'};
-ila.cfg.qcref.view = 'NMEA';
+%% 'SBE38450269','NMEA','FLOW','ACS412','HyperBB8002','BB31502','SUVF6254','WS3S1081','LISST1183'
+ila.cfg.instruments2run = {'FLOW', 'BB31502'};
+ila.cfg.qcref.view = 'BB31502';
 %ila.cfg.instruments2run = {'FLOW','SBE38450269'};
 %ila.cfg.qcref.view = 'SBE38450269';ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
@@ -26,9 +26,9 @@ ila.ReadRaw();
 ila.CheckDataStatus();
 
 %% Or Load data from already processed mat files
-%ila.Read('raw');
-%ila.Read('bin');
-%ila.Read('qc');
+ila.Read('raw');
+ila.Read('bin');
+% ila.Read('qc');
 %ila.Read('prod');
 % ila.CheckDataStatus();
 

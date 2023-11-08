@@ -118,8 +118,8 @@ cfg.instruments.(['HyperBB' SN]).sn = SN;
 cfg.instruments.(['HyperBB' SN]).ila_prefix = ['HyperBB' SN];
 cfg.instruments.(['HyperBB' SN]).logger = 'InlininoHBB';
 cfg.instruments.(['HyperBB' SN]).theta = 135;
-cfg.instruments.(['HyperBB' SN]).calfile_plaque = fullfile(PATH_ROOT, 'DeviceFiles', ['HyperBB_SN' SN '_TaraCals'], 'Hbb_Cal_Plaque_20210315_114120.mat');
-cfg.instruments.(['HyperBB' SN]).calfile_temp = fullfile(PATH_ROOT, 'DeviceFiles', ['HyperBB_SN' SN '_TaraCals'], 'HBB_Cal_Temp_20210315_205506.mat');
+cfg.instruments.(['HyperBB' SN]).PlaqueCal = fullfile(PATH_ROOT, 'DeviceFiles', ['HyperBB_SN' SN '_TaraCals'], 'Hbb_Cal_Plaque_20210315_114120.mat');
+cfg.instruments.(['HyperBB' SN]).TemperatureCal = fullfile(PATH_ROOT, 'DeviceFiles', ['HyperBB_SN' SN '_TaraCals'], 'HBB_Cal_Temp_20210315_205506.mat');
 cfg.instruments.(['HyperBB' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN]),...
                                   'di',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN], 'DI'),...
                                   'wk',   fullfile(PATH_ROOT, 'wk', ['HyperBB' SN]),...
@@ -499,7 +499,10 @@ for i = 1:size(cfg.process.instruments2run)
                                       'interpolation_method', 'CDOM', ... % 
                                       'CDOM_source', 'SUVF6244', ... % WSCD859
                                       'FLOW_source', 'FLOW', ...
-                                      'di_method', 'normal'); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
+                                      'di_method', 'normal');
+  % SUVF options
+  elseif any(contains(cfg.process.instruments2run{i}, {'WSCD','SUVF'}))
+    cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false);
   end
 end
 % cfg.process.calibrate.ACS57 = struct('compute_dissolved', false, ...

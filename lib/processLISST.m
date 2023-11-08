@@ -73,7 +73,7 @@ if ~isempty(filt)
     % interpolate filtered event
   
     % Compute filtered period median
-    filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
+    filt_avg = table(NaN(size(sel_start)), 'VariableNames', {'dt'});
     filt_avg.beta = NaN(size(filt_avg,1), size(filt.beta, 2));
     filt_avg.beta_avg_sd = NaN(size(filt_avg,1), size(filt.beta_avg_sd, 2));
     filt_avg.laser_reference = NaN(size(filt_avg,1), 1);
@@ -82,14 +82,19 @@ if ~isempty(filt)
       sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
       foo = filt(sel_filt,:);
       if sum(sel_filt) == 1
+        filt_avg.dt(i) = foo.dt;
         filt_avg.beta(i,:) = foo.beta;
         filt_avg.beta_avg_sd(i,:) = foo.beta_avg_sd;
         filt_avg.laser_reference(i,:) = foo.laser_reference;
         filt_avg.(LASER_POWER_VAR)(i,:) = foo.(LASER_POWER_VAR);
       else
-        foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-        foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+        perc25 = foo.beta > prctile(foo.beta, 25, 1);
+        foo.beta_avg_sd(perc25) = NaN;
+        foo.beta(perc25) = NaN;
+        foo.laser_reference(perc25) = NaN;
+        foo.(LASER_POWER_VAR)(perc25) = NaN;
         % compute average of all values smaller than 25th percentile for each filter event
+        filt_avg.dt(i) = mean(foo.dt(any(~perc25, 2)), 'omitnan');
         filt_avg.beta(i,:) = mean(foo.beta, 1, 'omitnan');
         filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 1, 'omitnan');
         filt_avg.laser_reference(i) = mean(foo.laser_reference, 1, 'omitnan');

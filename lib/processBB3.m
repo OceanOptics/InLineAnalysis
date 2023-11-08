@@ -63,7 +63,7 @@ if exist('fth', 'var')
   if size(sel_start,1) ~= size(sel_end,1); error('Inconsistent fth data'); end
 
   % Compute filtered period median
-  filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
+  filt_avg = table(NaN(size(sel_start)), 'VariableNames', {'dt'});
   filt_avg.beta = NaN(size(filt_avg,1), size(param.lambda, 2));
   filt_avg.beta_avg_sd = NaN(size(filt_avg,1), size(param.lambda, 2));
   filt_avg.beta_avg_n = NaN(size(filt_avg,1), 1);
@@ -74,13 +74,16 @@ if exist('fth', 'var')
         if sum(sel_filt) > 0
           foo = filt_qc(sel_filt,:);
           if sum(sel_filt) == 1
+            filt_avg.dt(i) = foo.dt;
             filt_avg.beta(i,:) = foo.beta;
             filt_avg.beta_avg_sd(i,:) = foo.beta_avg_sd;
             filt_avg.beta_avg_n(i,:) = foo.beta_avg_n;
           else
-            foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-            foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+            perc25 = foo.beta > prctile(foo.beta, 25, 1);
+            foo.beta_avg_sd(perc25) = NaN;
+            foo.beta(perc25) = NaN;
             % compute average of all values smaller than 25th percentile for each filter event
+            filt_avg.dt(i) = mean(foo.dt(any(~perc25, 2)), 'omitnan');
             filt_avg.beta(i,:) = mean(foo.beta, 1, 'omitnan');
             filt_avg.beta_avg_sd(i,:) = mean(foo.beta_avg_sd, 1, 'omitnan');
             filt_avg.beta_avg_n(i) = sum(foo.beta_avg_n(any(~isnan(foo.beta), 2)), 'omitnan');
@@ -93,6 +96,7 @@ if exist('fth', 'var')
       %       to optical backscattering in the open ocean. Biogeosciences Discuss 6, 291–340. 
       %       https://doi.org/10.5194/bgd-6-291-2009
       fprintf('Fitting exponential to filter events ... \n')
+      filt_avg.dt = (fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2;
       [filt_avg, FiltStat] = FiltExpFit('beta', filt_avg, filt_raw, filt_bad, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
       fprintf('Done\n')
       % run 25 percentile method on failed exponential fits
@@ -102,11 +106,14 @@ if exist('fth', 'var')
           if any(~FiltStat.exitflag(i,:))
             foo = filt_qc(sel_filt,:);
             if sum(sel_filt) == 1
+              filt_avg.dt(i) = foo.dt;
               filt_avg.beta(i,~FiltStat.exitflag(i,:)) = foo.beta(:,~FiltStat.exitflag(i,:));
             else
-              foo.beta_avg_sd(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
-              foo.beta(foo.beta > prctile(foo.beta, 25, 1)) = NaN;
+              perc25 = foo.beta > prctile(foo.beta, 25, 1);
+              foo.beta_avg_sd(perc25) = NaN;
+              foo.beta(perc25) = NaN;
               % compute average of all values smaller than 25th percentile for each filter event
+              filt_avg.dt(i) = mean(foo.dt(any(~perc25, 2)), 'omitnan');
               filt_avg.beta(i,~FiltStat.exitflag(i,:)) = mean(foo.beta(:,~FiltStat.exitflag(i,:)), 1, 'omitnan');
               filt_avg.beta_avg_sd(i,~FiltStat.exitflag(i,:)) = mean(foo.beta_avg_sd(:,~FiltStat.exitflag(i,:)), 1, 'omitnan');
               filt_avg.beta_avg_n(i) = sum(foo.beta_avg_n(any(~isnan(foo.beta(:,~FiltStat.exitflag(i,:))), 2)), 'omitnan');

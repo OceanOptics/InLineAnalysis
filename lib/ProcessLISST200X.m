@@ -61,7 +61,7 @@ if ~isempty(filt)
     % interpolate filtered event
 
     % Compute filtered period median
-    filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
+    filt_avg = table(NaN(size(sel_start)), 'VariableNames', {'dt'});
     filt_avg.RingValues = NaN(size(filt_avg,1), size(filt.RingValues, 2));
     filt_avg.RingValues_avg_sd = NaN(size(filt_avg,1), size(filt.RingValues_avg_sd, 2));
     filt_avg.RingValues_avg_n = NaN(size(filt_avg,1), size(filt.RingValues_avg_sd, 2));
@@ -78,6 +78,7 @@ if ~isempty(filt)
       sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
       foo = filt(sel_filt,:);
       if sum(sel_filt) == 1
+        filt_avg.dt(i) = foo.dt;
         filt_avg.RingValues(i,:) = foo.RingValues;
         filt_avg.RingValues_avg_sd(i,:) = foo.RingValues_avg_sd;
         filt_avg.RingValues_avg_n(i,:) = foo.RingValues_avg_n;
@@ -91,14 +92,17 @@ if ~isempty(filt)
         filt_avg.TotalVolumeConcentration_avg_sd(i,:) = foo.TotalVolumeConcentration_avg_sd;
         filt_avg.TotalVolumeConcentration_avg_n(i,:) = foo.TotalVolumeConcentration_avg_n;
       else
-        foo.RingValues_avg_sd(foo.RingValues > prctile(foo.RingValues, 25, 1)) = NaN;
-        foo.RingValues(foo.RingValues > prctile(foo.RingValues, 25, 1)) = NaN;
-        foo.LaserReference_avg_sd(foo.LaserReference > prctile(foo.LaserReference, 25, 1)) = NaN;
-        foo.LaserTransmission_avg_sd(foo.LaserTransmission > prctile(foo.LaserTransmission, 25, 1)) = NaN;
-        foo.LaserTransmission(foo.LaserTransmission > prctile(foo.LaserTransmission, 25, 1)) = NaN;
-        foo.TotalVolumeConcentration_avg_sd(foo.TotalVolumeConcentration > prctile(foo.TotalVolumeConcentration, 25, 1)) = NaN;
-        foo.TotalVolumeConcentration(foo.TotalVolumeConcentration > prctile(foo.TotalVolumeConcentration, 25, 1)) = NaN;
+        perc25 = foo.LaserTransmission > prctile(foo.LaserTransmission, 25, 1);
+        foo.RingValues_avg_sd(perc25) = NaN;
+        foo.RingValues(perc25) = NaN;
+        foo.LaserReference(perc25) = NaN;
+        foo.LaserReference_avg_sd(perc25) = NaN;
+        foo.LaserTransmission_avg_sd(perc25) = NaN;
+        foo.LaserTransmission(perc25) = NaN;
+        foo.TotalVolumeConcentration_avg_sd(perc25) = NaN;
+        foo.TotalVolumeConcentration(perc25) = NaN;
         % compute average of all values smaller than 25th percentile for each filter event
+        filt_avg.dt(i) = mean(foo.dt(any(~perc25, 2)), 'omitnan');
         filt_avg.RingValues(i,:) = mean(foo.RingValues, 1, 'omitnan');
         filt_avg.RingValues_avg_sd(i,:) = mean(foo.RingValues_avg_sd, 1, 'omitnan');
         filt_avg.LaserReference(i) = mean(foo.LaserReference, 1, 'omitnan');

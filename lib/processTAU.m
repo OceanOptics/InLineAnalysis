@@ -47,7 +47,7 @@ if size(sel_start,1) ~= size(sel_end,1); error('Inconsistent fth data'); end
 % interpolate filtered event
 
 % Compute filtered period median
-filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
+filt_avg = table(NaN(size(sel_start)), 'VariableNames', {'dt'});
 filt_avg.Tau = NaN(size(filt_avg,1), 1);
 filt_avg.Beamc = NaN(size(filt_avg,1), 1);
 filt_avg.Tau_avg_sd = NaN(size(filt_avg,1), 1);
@@ -58,6 +58,7 @@ for i=1:size(sel_start, 1)
   sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
   foo = filt(sel_filt,:);
   if sum(sel_filt) == 1
+    filt_avg.dt(i) = foo.dt;
     filt_avg.Tau(i,:) = foo.Tau;
     filt_avg.Beamc(i,:) = foo.Beamc;
     filt_avg.Tau_avg_sd(i,:) = foo.Tau_avg_sd;
@@ -65,11 +66,14 @@ for i=1:size(sel_start, 1)
     filt_avg.Tau_avg_n(i) = foo.Tau_avg_n;
     filt_avg.Beamc_avg_n(i) = foo.Beamc_avg_n;
   else
-    foo.Tau_avg_sd(foo.Tau < prctile(foo.Tau, 75, 1)) = NaN;
-    foo.Beamc_avg_sd(foo.Beamc > prctile(foo.Beamc, 25, 1)) = NaN;
-    foo.Tau(foo.Tau < prctile(foo.Tau, 75, 1)) = NaN;
-    foo.Beamc(foo.Beamc > prctile(foo.Beamc, 25, 1)) = NaN;
+    Tau_perc75 = foo.Tau < prctile(foo.Tau, 75, 1);
+    Beamc_perc25 = foo.Beamc > prctile(foo.Beamc, 25, 1);
+    foo.Tau_avg_sd(Tau_perc75) = NaN;
+    foo.Beamc_avg_sd(Beamc_perc25) = NaN;
+    foo.Tau(Tau_perc75) = NaN;
+    foo.Beamc(Beamc_perc25) = NaN;
     % compute average of all values smaller than 25th percentile for each filter event
+    filt_avg.dt(i) = mean(foo.dt(any(~Tau_perc75, 2)), 'omitnan');
     filt_avg.Tau(i,:) = mean(foo.Tau, 1, 'omitnan');
     filt_avg.Beamc(i,:) = mean(foo.Beamc, 1, 'omitnan');
     filt_avg.Tau_avg_sd(i,:) = mean(foo.Tau_avg_sd, 1, 'omitnan');

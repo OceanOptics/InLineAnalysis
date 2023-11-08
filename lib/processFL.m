@@ -63,7 +63,7 @@ if exist('fth', 'var')
   if size(sel_start,1) ~= size(sel_end,1); error('Inconsistent fth data'); end
 
   % Compute filtered period median
-  filt_avg = table((fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2, 'VariableNames', {'dt'});
+  filt_avg = table(NaN(size(sel_start)), 'VariableNames', {'dt'});
   filt_avg.fchl = NaN(size(filt_avg,1), 1);
   filt_avg.fchl_avg_sd = NaN(size(filt_avg,1), 1);
   filt_avg.fchl_avg_n = NaN(size(filt_avg,1), 1);
@@ -74,13 +74,16 @@ if exist('fth', 'var')
         if sum(sel_filt) > 0
           foo = filt_qc(sel_filt,:);
           if sum(sel_filt) == 1
+            filt_avg.dt(i) = foo.dt;
             filt_avg.fchl(i,:) = foo.fchl;
             filt_avg.fchl_avg_sd(i,:) = foo.fchl_avg_sd;
             filt_avg.fchl_avg_n(i,:) = foo.fchl_avg_n;
           else
-            foo.fchl_avg_sd(foo.fchl > prctile(foo.fchl, 25, 1)) = NaN;
-            foo.fchl(foo.fchl > prctile(foo.fchl, 25, 1)) = NaN;
+            perc25 = foo.fchl > prctile(foo.fchl, 25, 1);
+            foo.fchl_avg_sd(perc25) = NaN;
+            foo.fchl(perc25) = NaN;
             % compute average of all values smaller than 25th percentile for each filter event
+            filt_avg.dt(i) = mean(foo.dt(any(~perc25, 2)), 'omitnan');
             filt_avg.fchl(i,:) = mean(foo.fchl, 1, 'omitnan');
             filt_avg.fchl_avg_sd(i,:) = mean(foo.fchl_avg_sd, 1, 'omitnan');
             filt_avg.fchl_avg_n(i) = sum(foo.fchl_avg_n(any(~isnan(foo.fchl), 2)), 'omitnan');
@@ -93,6 +96,7 @@ if exist('fth', 'var')
       %       to optical backscattering in the open ocean. Biogeosciences Discuss 6, 291–340. 
       %       https://doi.org/10.5194/bgd-6-291-2009
       fprintf('Fitting exponential to filter events ... \n')
+      filt_avg.dt = (fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2;
       [filt_avg, FiltStat] = FiltExpFit('fchl', filt_avg, filt_raw, filt_bad, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
       fprintf('Done\n')
       % run 25 percentile method on failed exponential fits
@@ -102,11 +106,14 @@ if exist('fth', 'var')
           if any(~FiltStat.exitflag(i,:))
             foo = filt_qc(sel_filt,:);
             if sum(sel_filt) == 1
+              filt_avg.dt(i) = foo.dt;
               filt_avg.fchl(i,~FiltStat.exitflag(i,:)) = foo.fchl(:, ~FiltStat.exitflag(i,:));
             else
-              foo.fchl_avg_sd(foo.fchl > prctile(foo.fchl, 25, 1)) = NaN;
-              foo.fchl(foo.fchl > prctile(foo.fchl, 25, 1)) = NaN;
+              perc25 = foo.beta > prctile(foo.beta, 25, 1);
+              foo.fchl_avg_sd(perc25) = NaN;
+              foo.fchl(perc25) = NaN;
               % compute average of all values smaller than 25th percentile for each filter event
+              filt_avg.dt(i) = mean(foo.dt(any(~perc25, 2)), 'omitnan');
               filt_avg.fchl(i, ~FiltStat.exitflag(i,:)) = mean(foo.fchl(:,~FiltStat.exitflag(i,:)), 1, 'omitnan');
               filt_avg.fchl_avg_sd(i, ~FiltStat.exitflag(i,:)) = mean(foo.fchl_avg_sd(:,~FiltStat.exitflag(i,:)), 1, 'omitnan');
               filt_avg.fchl_avg_n(i) = sum(foo.fchl_avg_n(any(~isnan(foo.fchl(:,~FiltStat.exitflag(i,:))), 2)), 'omitnan');

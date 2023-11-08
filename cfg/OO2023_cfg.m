@@ -126,7 +126,7 @@ cfg.instruments.FLOW.view = struct('varname', 'swt','spd_variable','spd1'); % sp
 SN = '412';
 cfg.instruments.(['ACS' SN]) = struct();
 cfg.instruments.(['ACS' SN]).di = struct();
-cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN '_'];
+cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN];
 cfg.instruments.(['ACS' SN]).di.postfix = '';
 cfg.instruments.(['ACS' SN]).model = 'ACS';
 cfg.instruments.(['ACS' SN]).sn = SN;
@@ -143,7 +143,7 @@ cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 SN = '091';
 cfg.instruments.(['ACS' SN]) = struct();
 cfg.instruments.(['ACS' SN]).di = struct();
-cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN '_'];
+cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN];
 cfg.instruments.(['ACS' SN]).di.postfix = '';
 cfg.instruments.(['ACS' SN]).model = 'ACS';
 cfg.instruments.(['ACS' SN]).sn = SN;
@@ -160,7 +160,7 @@ cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 SN = '262';
 cfg.instruments.(['ACS' SN]) = struct();
 cfg.instruments.(['ACS' SN]).di = struct();
-cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN '_'];
+cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN];
 cfg.instruments.(['ACS' SN]).di.postfix = '';
 cfg.instruments.(['ACS' SN]).model = 'ACS';
 cfg.instruments.(['ACS' SN]).sn = SN;
@@ -177,7 +177,7 @@ cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 SN = '327';
 cfg.instruments.(['ACS' SN]) = struct();
 cfg.instruments.(['ACS' SN]).di = struct();
-cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN '_'];
+cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN];
 cfg.instruments.(['ACS' SN]).di.postfix = '';
 cfg.instruments.(['ACS' SN]).model = 'ACS';
 cfg.instruments.(['ACS' SN]).sn = SN;
@@ -194,7 +194,7 @@ cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 SN = '410';
 cfg.instruments.(['ACS' SN]) = struct();
 cfg.instruments.(['ACS' SN]).di = struct();
-cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN '_'];
+cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN];
 cfg.instruments.(['ACS' SN]).di.postfix = '';
 cfg.instruments.(['ACS' SN]).model = 'ACS';
 cfg.instruments.(['ACS' SN]).sn = SN;
@@ -211,7 +211,7 @@ cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 SN = '8002';
 cfg.instruments.(['HyperBB' SN]) = struct();
 cfg.instruments.(['HyperBB' SN]).di = struct();
-cfg.instruments.(['HyperBB' SN]).di.prefix = ['DIW_HyperBB' SN '_'];
+cfg.instruments.(['HyperBB' SN]).di.prefix = ['DIW_HyperBB' SN];
 cfg.instruments.(['HyperBB' SN]).di.postfix = '';
 cfg.instruments.(['HyperBB' SN]).model = 'HBB';
 cfg.instruments.(['HyperBB' SN]).sn = SN;
@@ -228,10 +228,10 @@ cfg.instruments.(['HyperBB' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw'
 cfg.instruments.(['HyperBB' SN]).view = struct('varname', 'beta', 'varcol', 23);
 
 %%% BB3 %%%
-SN = '349';
+SN = '1502';
 cfg.instruments.(['BB3' SN]) = struct();
 cfg.instruments.(['BB3' SN]).di = struct();
-cfg.instruments.(['BB3' SN]).di.prefix = ['DIW_BB3' SN '_'];
+cfg.instruments.(['BB3' SN]).di.prefix = ['DIW_BB3' SN];
 cfg.instruments.(['BB3' SN]).di.postfix = '';
 cfg.instruments.(['BB3' SN]).model = 'BB';
 cfg.instruments.(['BB3' SN]).sn = SN;
@@ -258,14 +258,14 @@ cfg.instruments.(['SUVF' SN]).dark = 0;
 cfg.instruments.(['SUVF' SN]).logger = 'InlininoADU100';
 cfg.instruments.(['SUVF' SN]).analog_channel = 'Analog(2)';
 if strcmp(cfg.instruments.(['SUVF' SN]).logger, 'InlininoADU100')
-  cfg.instruments.(['SUVF' SN]).ila_prefix = [cfg.instruments.FLOW.model cfg.instruments.FLOW.sn '_'];
+  cfg.instruments.(['SUVF' SN]).ila_prefix = [cfg.instruments.FLOW.model cfg.instruments.FLOW.sn];
   [~, raw_folder_name] = fileparts(cfg.instruments.FLOW.path.raw);
 else
   cfg.instruments.(['SUVF' SN]).ila_prefix = ['SUVF' SN];
   raw_folder_name = ['SUVF' SN];
 end
 cfg.instruments.(['SUVF' SN]).di = struct();
-cfg.instruments.(['SUVF' SN]).di.prefix = ['DIW_' cfg.instruments.(['SUVF' SN]).ila_prefix SN '_'];
+cfg.instruments.(['SUVF' SN]).di.prefix = ['DIW_' cfg.instruments.(['SUVF' SN]).ila_prefix SN];
 cfg.instruments.(['SUVF' SN]).di.postfix = '';
 cfg.instruments.(['SUVF' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', raw_folder_name),...
                                   'di',  fullfile(PATH_ROOT, 'raw', ['SUVF' SN], 'DI'),...
@@ -294,7 +294,7 @@ cfg.instruments.(['WS3S' SN]).view = struct('varname', 'fchl');
 SN = '1183';
 cfg.instruments.(['LISST' SN]) = struct();
 cfg.instruments.(['LISST' SN]).di = struct();
-cfg.instruments.(['LISST' SN]).di.prefix = ['DIW_LISST' SN '_'];
+cfg.instruments.(['LISST' SN]).di.prefix = ['DIW_LISST' SN];
 cfg.instruments.(['LISST' SN]).di.postfix = '';
 cfg.instruments.(['LISST' SN]).model = 'LISST';
 cfg.instruments.(['LISST' SN]).type = 'B'; 
@@ -555,7 +555,10 @@ for i = 1:size(cfg.process.instruments2run)
                                       'interpolation_method', 'linear', ... % linear CDOM
                                       'CDOM_source', 'SUVF6254', ... % 
                                       'FLOW_source', 'FLOW', ...
-                                      'di_method', 'normal'); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
+                                      'di_method', 'normal');
+  % SUVF options
+  elseif any(contains(cfg.process.instruments2run{i}, {'WSCD','SUVF'}))
+    cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false);
   end
 end
 % cfg.process.calibrate.ACS57 = struct('compute_dissolved', false, ...
