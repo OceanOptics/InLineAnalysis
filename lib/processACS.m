@@ -22,51 +22,57 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
   end
   % check scattering correction method
-  if ~any(strcmp(scattering_correction, {'Zaneveld1994', 'Kostakis2022'}))
+  if ~any(strcmp(scattering_correction, {'Zaneveld1994_proportional', 'Rottgers2013_semiempirical'}))
     error('%s residual temperature and scattering correction not supported', scattering_correction)
   end
+  flow_data = fth.qc.tsw;
 
-  % remove duplicates
-  [~, L, ~] = unique(fth.qc.tsw.dt,'first');
-  indexToDump = not(ismember(1:numel(fth.qc.tsw.dt), L));
-  if sum(indexToDump) > 0
-    fprintf('Warning: %i identical dates in FLOW data => deleted\n', sum(indexToDump))
-    fth.qc.tsw(indexToDump, :) = [];
-  end
-  % remove duplicates
-  [~, L, ~] = unique(tot.dt,'first');
-  indexToDump = not(ismember(1:numel(tot.dt), L));
-  if sum(indexToDump) > 0
-    fprintf('Warning: %i identical dates in total data => deleted\n', sum(indexToDump))
-    tot(indexToDump, :) = [];
-  end
-  % remove duplicates
-  [~, L, ~] = unique(filt.dt,'first');
-  indexToDump = not(ismember(1:numel(filt.dt), L));
-  if sum(indexToDump) > 0
-    fprintf('Warning: %i identical dates in filtered data => deleted\n', sum(indexToDump))
-    filt(indexToDump, :) = [];
-  end
+  % round time stamp and remove time duplicates
+  tot = round_timestamp(tot);
+  filt = round_timestamp(filt);
+  flow_data = round_timestamp(flow_data);
+
+  % % remove duplicates
+  % [~, L, ~] = unique(flow_data.dt,'first');
+  % indexToDump = not(ismember(1:numel(flow_data.dt), L));
+  % if sum(indexToDump) > 0
+  %   fprintf('Warning: %i identical dates in FLOW data => deleted\n', sum(indexToDump))
+  %   flow_data(indexToDump, :) = [];
+  % end
+  % % remove duplicates
+  % [~, L, ~] = unique(tot.dt,'first');
+  % indexToDump = not(ismember(1:numel(tot.dt), L));
+  % if sum(indexToDump) > 0
+  %   fprintf('Warning: %i identical dates in total data => deleted\n', sum(indexToDump))
+  %   tot(indexToDump, :) = [];
+  % end
+  % % remove duplicates
+  % [~, L, ~] = unique(filt.dt,'first');
+  % indexToDump = not(ismember(1:numel(filt.dt), L));
+  % if sum(indexToDump) > 0
+  %   fprintf('Warning: %i identical dates in filtered data => deleted\n', sum(indexToDump))
+  %   filt(indexToDump, :) = [];
+  % end
   % check if fCDOM data loaded if fCDOM interpolation
   if strcmp(interpolation_method, 'CDOM')
     % Require both CDOM & Switch position
-    if ~isempty(CDOM.prod.a) || ~isempty(CDOM.qc.tsw)
+    if ~isempty(CDOM.prod.a)
       if ~isempty(CDOM.prod.a)
         cdom_base = CDOM.prod.a;
-      else
-        cdom_base = CDOM.qc.tsw;
       end
       if ~any(cdom_base.dt >= min([tot.dt; filt.dt]) & cdom_base.dt <= max([tot.dt; filt.dt]))
         fprintf('Warning: fCDOM dates do not correspond to ACS dates: interpolation switched to "linear"\n')
         interpolation_method = 'linear';
       else
-        % remove duplicates
-        [~, L, ~] = unique(cdom_base.dt,'first');
-        indexToDump = not(ismember(1:numel(cdom_base.dt), L));
-        if sum(indexToDump) > 0
-          fprintf('Warning: %i identical dates in fCDOM data => deleted\n', sum(indexToDump))
-          cdom_base(indexToDump, :) = [];
-        end
+        % round time stamp and remove time duplicates
+        cdom_base = round_timestamp(cdom_base);
+        % % remove duplicates
+        % [~, L, ~] = unique(cdom_base.dt,'first');
+        % indexToDump = not(ismember(1:numel(cdom_base.dt), L));
+        % if sum(indexToDump) > 0
+        %   fprintf('Warning: %i identical dates in fCDOM data => deleted\n', sum(indexToDump))
+        %   cdom_base(indexToDump, :) = [];
+        % end
       end
     else
       fprintf('Warning: fCDOM data not loaded: interpolation switched to "linear"\n')
@@ -85,20 +91,22 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       tsg_loaded = false;
     else
       tsg_loaded = true;
-      % remove duplicates
-      [~, L, ~] = unique(tsg_data.dt,'first');
-      indexToDump = not(ismember(1:numel(tsg_data.dt), L));
-      if sum(indexToDump) > 0
-        fprintf('Warning: %i identical dates in TSG data => deleted\n', sum(indexToDump))
-        tsg_data(indexToDump, :) = [];
-      end
+      % round time stamp and remove time duplicates
+      tsg_data = round_timestamp(tsg_data);
+      % % remove duplicates
+      % [~, L, ~] = unique(tsg_data.dt,'first');
+      % indexToDump = not(ismember(1:numel(tsg_data.dt), L));
+      % if sum(indexToDump) > 0
+      %   fprintf('Warning: %i identical dates in TSG data => deleted\n', sum(indexToDump))
+      %   tsg_data(indexToDump, :) = [];
+      % end
     end
   end
-  % interpolate fth.qc.tsw.swt onto binned data to fill missing flow data
-  fth_interp = table([tot.dt; fth.qc.tsw.dt; filt.dt], 'VariableNames', {'dt'});
+  % interpolate flow_data.swt onto binned data to fill missing flow data
+  fth_interp = table([tot.dt; flow_data.dt; filt.dt], 'VariableNames', {'dt'});
   [~,b] = sort(fth_interp.dt); % sort dates
   fth_interp.dt = fth_interp.dt(b,:);
-  fth_interp.swt = interp1(fth.qc.tsw.dt, fth.qc.tsw.swt, fth_interp.dt, 'previous');%, 'linear', 'extrap');
+  fth_interp.swt = interp1(flow_data.dt, flow_data.swt, fth_interp.dt, 'previous');%, 'linear', 'extrap');
   fth_interp.swt = fth_interp.swt > 0;
   % Find switch events from total to filtered
   sel_start = find(fth_interp.swt(1:end-1) == SWITCH_TOTAL & fth_interp.swt(2:end) == SWITCH_FILTERED);
@@ -128,45 +136,24 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   filt_interp.a = NaN(size(tot.a));
   filt_interp.c = NaN(size(tot.c));
 
-  % create ancillary table and prepare T/S if loaded
-  ancillary = table();
-  foo_dt = [datetime(min([tot.dt; filt.dt]), 'ConvertFrom', 'datenum') datetime(max([tot.dt; filt.dt]), 'ConvertFrom', 'datenum')];
-  ancillary.dt = datenum(dateshift((foo_dt(1):minutes(1):foo_dt(2))','start','minute'));
+  % add T/S to filt and filt_interp if TSG loaded
   if tsg_loaded
-    % interpolate T and S on ancillary table
-    ancillary.t = interp1(tsg_data.dt, tsg_data.(tsg.temperature_variable), ancillary.dt, 'spline');
-    ancillary.t = fillmissing(ancillary.t, 'nearest');
-    ancillary.s = interp1(tsg_data.dt, tsg_data.s, ancillary.dt, 'spline');
-    ancillary.s = fillmissing(ancillary.s, 'nearest');
-
-    % replace interpolated values over gaps > 60 min by NaN
-    missing_tsg= ~ismember(ancillary.dt, tsg_data.dt);
-    t = [true; diff(missing_tsg) ~= 0];
-    k = diff(find([t; true])) .* missing_tsg(t);
-    long_nan = k(cumsum(t)) > 120;
-    ancillary.t(long_nan) = NaN;
-    ancillary.s(long_nan) = NaN;
-    % % fill long gaps with nearest values
-    % ancillary.t = fillmissing(ancillary.t, 'nearest');
-    % ancillary.s = fillmissing(ancillary.s, 'nearest');
-
-    % interpolate spline T on filt_interp table 
-    filt_interp = addvars(filt_interp, interp1(ancillary.dt, ancillary.t, filt_interp.dt, 'spline'), ...
+    % interpolate spline T on filt_interp table
+    filt_interp = addvars(filt_interp, interpspline_extrapnearest(tsg_data, filt_interp.dt, tsg.temperature_variable, 30), ...
       'NewVariableNames', 't', 'After', 'dt');
     % interpolate spline S on filt_interp table
-    filt_interp = addvars(filt_interp, interp1(ancillary.dt, ancillary.s, filt_interp.dt, 'spline'), ...
+    filt_interp = addvars(filt_interp, interpspline_extrapnearest(tsg_data, filt_interp.dt, 's', 30), ...
       'NewVariableNames', 's', 'After', 'dt');
-
     % interpolate T and S on filtered data 
-    filt = addvars(filt, interp1(ancillary.dt, ancillary.t, filt.dt, 'spline'), 'NewVariableNames', 't', 'After', 'dt');
-    filt = addvars(filt, interp1(tsg_data.dt, tsg_data.s, filt.dt, 'spline'), 'NewVariableNames', 's', 'After', 'dt');
-    
+    filt = addvars(filt, interpspline_extrapnearest(tsg_data, filt.dt, tsg.temperature_variable, 30), ...
+      'NewVariableNames', 't', 'After', 'dt');
+    filt = addvars(filt, interpspline_extrapnearest(tsg_data, filt.dt, 's', 30), ...
+      'NewVariableNames', 's', 'After', 'dt');
     % add T and S variables on filt_avg table
-    filt_avg = addvars(filt_avg, NaN(size(filt_avg,1),1), 'NewVariableNames', 's', 'After', 'dt');
     filt_avg = addvars(filt_avg, NaN(size(filt_avg,1),1), 'NewVariableNames', 't', 'After', 'dt');
-
-    % remove psiS and psiT with Tref = median(T) of whole processed section
-    Tref = median(ancillary.t, 'omitnan');
+    filt_avg = addvars(filt_avg, NaN(size(filt_avg,1),1), 'NewVariableNames', 's', 'After', 'dt');
+    % remove psiS and psiT from tot and filt with Tref = median(T) of whole processed section
+    Tref = median([filt.t; filt_interp.t], 'omitnan');
     a_psiS = interp1(psi.wl, psi.a_psiS, lambda.a, 'spline');
     c_psiS = interp1(psi.wl, psi.c_psiS, lambda.c, 'spline');
     a_psiT = interp1(psi.wl, psi.psiT, lambda.a, 'spline');
@@ -179,56 +166,20 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
 
   % prepare fCDOM data if CDOM interpolation
   if strcmp(interpolation_method, 'CDOM')
-    % create new fdom table interpolating for gaps < 60 min
-    ancillary.fdom = interp1(cdom_base.dt, cdom_base.fdom, ancillary.dt, 'spline');
-    ancillary.fdom = fillmissing(ancillary.fdom, 'nearest');
-    % smooth cdom data removing frequencies higher than 10min
-    d = designfilt('lowpassiir','FilterOrder',1, 'PassbandFrequency',1/(60*10),'SampleRate', 1/60);
-    ancillary.fdom_10smooth = filtfilt(d, ancillary.fdom);
-
-    % replace interpolated values over gaps > 60 min by NaN
-    missing_cdom = ~ismember(ancillary.dt, cdom_base.dt);
-    t = [true; diff(missing_cdom) ~= 0];
-    k = diff(find([t; true])) .* missing_cdom(t);
-    long_nan = k(cumsum(t)) > 120;
-    ancillary.fdom(long_nan) = NaN;
-    ancillary.fdom_10smooth(long_nan) = NaN;
-    % fill long gaps with nearest values to force agcg_fdom_interpolation function to do linear interpolation
-    ancillary.fdom = fillmissing(ancillary.fdom, 'nearest');
-    ancillary.fdom_10smooth = fillmissing(ancillary.fdom_10smooth, 'nearest');
-
     % interpolate spline and extrapolate nearest fdom on filt_interp table
-    filt_interp = addvars(filt_interp, interp1(ancillary.dt, ancillary.fdom, filt_interp.dt, 'spline'), ...
+    filt_interp = addvars(filt_interp, interpspline_extrapnearest(cdom_base, filt_interp.dt, 'fdom', 30, false), ...
       'NewVariableNames', 'fdom', 'After', 'dt');
-    filt_interp.fdom = fillmissing(filt_interp.fdom, 'nearest');
-
     % interpolate fdom on filtered data
-    filt = addvars(filt, interp1(ancillary.dt, ancillary.fdom, filt.dt, 'spline'), ...
+    filt = addvars(filt, interpspline_extrapnearest(cdom_base, filt.dt, 'fdom', 30, false), ...
       'NewVariableNames', 'fdom', 'After', 'dt');
-    filt.fdom = fillmissing(filt.fdom, 'nearest');
-
     % add fdom variables on filt_avg table
-    filt_avg = addvars(filt_avg, NaN(size(filt_avg,1),1), 'NewVariableNames', 'fdom_10smooth', 'After', 'dt');
     filt_avg = addvars(filt_avg, NaN(size(filt_avg,1),1), 'NewVariableNames', 'fdom', 'After', 'dt');
   end
-
-  % figure; hold on
-  % yyaxis('left')
-  % scatter(datetime(filt.dt, 'ConvertFrom', 'datenum'), filt.t, 20, 'ro', 'filled')
-  % scatter(datetime(filt_interp.dt, 'ConvertFrom', 'datenum'), filt_interp.t, 20, 'b+')
-  % ylabel('Temperature')
-  % yyaxis('right')
-  % scatter(datetime(filt.dt, 'ConvertFrom', 'datenum'), filt.fdom, 20, 'co', 'filled')
-  % scatter(datetime(filt_interp.dt, 'ConvertFrom', 'datenum'), filt_interp.fdom, 20, 'co', 'filled')
-  % ylabel('fCDOM')
   
   for i=1:size(sel_start, 1)
     sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
     foo = filt(sel_filt,:);
-    if strcmp(interpolation_method, 'CDOM') || tsg_loaded
-      sel_anc = fth_interp.dt(sel_start(i)) <= ancillary.dt & ancillary.dt <= fth_interp.dt(sel_end(i));
-      foo_anc = ancillary(sel_anc,:);
-    end
+    % filter average of a and c
     if sum(sel_filt) == 1
       filt_avg.dt(i) = foo.dt;
       filt_avg.start(i) = foo.dt;
@@ -239,13 +190,14 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       filt_avg.c_avg_sd(i,:) = foo.c_avg_sd;
       filt_avg.a_avg_n(i) = foo.a_avg_n;
       filt_avg.c_avg_n(i) = foo.c_avg_n;
+      % repeat for T/S if tsg is loaded
       if tsg_loaded
-        filt_avg.t(i,:) = foo_anc.t;
-        filt_avg.s(i,:) = foo_anc.s;
+        filt_avg.t(i,:) = foo.t;
+        filt_avg.s(i,:) = foo.s;
       end
+      % repeat for fdom if interpolation method == CDOM
       if strcmp(interpolation_method, 'CDOM')
-        filt_avg.fdom(i,:) = foo_anc.fdom;
-        filt_avg.fdom_10smooth(i,:) = foo_anc.fdom_10smooth;
+        filt_avg.fdom(i,:) = foo.fdom;
       end
     elseif sum(sel_filt) > 1
       a_perc25 = foo.a > prctile(foo.a, 25, 1);
@@ -255,28 +207,33 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       foo.a(a_perc25) = NaN;
       foo.c(c_perc25) = NaN;
       % compute average of all values smaller than 25th percentile for each filter event
+      filt_avg.dt(i) = mean(foo.dt(any(~a_perc25, 2) | any(~c_perc25, 2)), 'omitnan');
+      if any(any(any(~a_perc25, 2) | any(~c_perc25, 2), 2))
+        filt_avg.start(i) = min(foo.dt(any(~a_perc25, 2) | any(~c_perc25, 2)));
+        filt_avg.end(i) = max(foo.dt(any(~a_perc25, 2) | any(~c_perc25, 2)));
+      else
+        filt_avg.start(i) = NaN;
+        filt_avg.end(i) = NaN;
+      end
       filt_avg.a(i,:) = mean(foo.a, 1, 'omitnan');
       filt_avg.c(i,:) = mean(foo.c, 1, 'omitnan');
-      filt_avg.dt(i) = mean(foo.dt(any(a_perc25, 2) | any(c_perc25, 2)), 'omitnan');
-      filt_avg.start(i) = min(foo.dt(any(a_perc25, 2) | any(c_perc25, 2)));
-      filt_avg.end(i) = max(foo.dt(any(a_perc25, 2) | any(c_perc25, 2)));
       filt_avg.a_avg_sd(i,:) = mean(foo.a_avg_sd, 1, 'omitnan');
       filt_avg.c_avg_sd(i,:) = mean(foo.c_avg_sd, 1, 'omitnan');
       filt_avg.a_avg_n(i) = sum(foo.a_avg_n(any(~isnan(foo.a), 2)), 'omitnan');
       filt_avg.c_avg_n(i) = sum(foo.c_avg_n(any(~isnan(foo.c), 2)), 'omitnan');
+      % repeat for T/S if tsg is loaded
       if tsg_loaded
-        foo_anc.t(foo_anc.t > prctile(foo_anc.t, 25, 1)) = NaN;
-        foo_anc.s(foo_anc.s > prctile(foo_anc.s, 25, 1)) = NaN;
+        foo.t(foo.t > prctile(foo.t, 25, 1)) = NaN;
+        foo.s(foo.s > prctile(foo.s, 25, 1)) = NaN;
         % compute average of all values smaller than 25th percentile for each filter event
-        filt_avg.t(i,:) = mean(foo_anc.t, 1, 'omitnan');
-        filt_avg.s(i,:) = mean(foo_anc.s, 1, 'omitnan');
+        filt_avg.t(i) = mean(foo.t, 1, 'omitnan');
+        filt_avg.s(i) = mean(foo.s, 1, 'omitnan');
       end
+      % repeat for fdom if interpolation method == CDOM
       if strcmp(interpolation_method, 'CDOM')
-        foo_anc.fdom(foo_anc.fdom > prctile(foo_anc.fdom, 25, 1)) = NaN;
-        foo_anc.fdom_10smooth(foo_anc.fdom_10smooth > prctile(foo_anc.fdom_10smooth, 25, 1)) = NaN;
+        foo.fdom(foo.fdom > prctile(foo.fdom, 25, 1)) = NaN;
         % compute average of all values smaller than 25th percentile for each filter event
-        filt_avg.fdom(i,:) = mean(foo_anc.fdom, 1, 'omitnan');
-        filt_avg.fdom_10smooth(i,:) = mean(foo_anc.fdom_10smooth, 1, 'omitnan');
+        filt_avg.fdom(i) = mean(foo.fdom, 1, 'omitnan');
       end
     end
   end
@@ -289,7 +246,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   switch interpolation_method
     case 'CDOM'
       % interpolate ag and cg using fcdom
-      [filt_interp] = agcg_fdom_interpolation(filt_interp, filt, lambda, CDOM.dark, filt_avg);
+      filt_interp = agcg_fdom_interpolation(tot, filt_interp, filt, lambda, CDOM.dark, filt_avg);
   
       % TODO: propagate error from regression and filter event STD
       filt_interp.a_avg_sd = interp1(filt.dt, filt.a_avg_sd, filt_interp.dt, 'linear');
@@ -346,22 +303,22 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     guiSelectOnTimeSeries(fh);
   end
   
-% figure(1);
-% subplot(1, 3, 1)
-% scatter(filt_interp.a(filt_interp.lin_bool,40), filt_interp.s(filt_interp.lin_bool), 20, 'k+')
-% scatter(filt_interp.a(~filt_interp.lin_bool,40), filt_interp.s(~filt_interp.lin_bool), 20, 'bo', 'filled')
-% ylabel('Salinity')
-% xlabel('ag')
-% subplot(1, 3, 2)
-% scatter(filt_interp.c(filt_interp.lin_bool,40), filt_interp.s(filt_interp.lin_bool), 20, 'k+')
-% scatter(filt_interp.c(~filt_interp.lin_bool,40), filt_interp.s(~filt_interp.lin_bool), 20, 'bo', 'filled')
-% ylabel('Salinity')
-% xlabel('cg')
-% subplot(1, 3, 3)
-% scatter(filt_interp.fdom(filt_interp.lin_bool), filt_interp.s(filt_interp.lin_bool), 20, 'k+')
-% scatter(filt_interp.fdom(~filt_interp.lin_bool), filt_interp.s(~filt_interp.lin_bool), 20, 'bo', 'filled')
-% ylabel('Salinity')
-% xlabel('fdom')
+  % figure();
+  % subplot(1, 3, 1)
+  % scatter(filt_interp.a(filt_interp.flag_linear_interp,40), filt_interp.s(filt_interp.flag_linear_interp), 20, 'k+')
+  % scatter(filt_interp.a(~filt_interp.flag_linear_interp,40), filt_interp.s(~filt_interp.flag_linear_interp), 20, 'bo', 'filled')
+  % ylabel('Salinity')
+  % xlabel('ag')
+  % subplot(1, 3, 2)
+  % scatter(filt_interp.c(filt_interp.flag_linear_interp,40), filt_interp.s(filt_interp.flag_linear_interp), 20, 'k+')
+  % scatter(filt_interp.c(~filt_interp.flag_linear_interp,40), filt_interp.s(~filt_interp.flag_linear_interp), 20, 'bo', 'filled')
+  % ylabel('Salinity')
+  % xlabel('cg')
+  % subplot(1, 3, 3)
+  % scatter(filt_interp.fdom(filt_interp.flag_linear_interp), filt_interp.s(filt_interp.flag_linear_interp), 20, 'k+')
+  % scatter(filt_interp.fdom(~filt_interp.flag_linear_interp), filt_interp.s(~filt_interp.flag_linear_interp), 20, 'bo', 'filled')
+  % ylabel('Salinity')
+  % xlabel('fdom')
 
   % Particulate = Total - FSW
   p = table(tot.dt, 'VariableNames', {'dt'});
@@ -374,30 +331,30 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     cp_for_apresiduals_corr = interp1(lambda.c', p.cp', lambda.a', 'linear', 'extrap')';
     % ap Scattering & Residual temperature correction
     % cp Residual correction (for efficiency use the one computed from ap as it should be the same)
-    fprintf(['ap ' scattering_correction ' residual temperature and scattering correction ... '])
-    if strcmp(scattering_correction, 'Kostakis2022')
-      [p.ap, ~] = ResidualTemperatureAndScatteringCorrectionKostakis(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
-    elseif strcmp(scattering_correction, 'Zaneveld1994')
-      [p.ap, ~] = ResidualTemperatureAndScatteringCorrectionZaneveld(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
+    fprintf('ap %s residual temperature and scattering correction ... ', strrep(scattering_correction, '_', ' '))
+    if strcmp(scattering_correction, 'Rottgers2013_semiempirical')
+      [p.ap, ~] = ResidualTempScatterCorrRottgers_semiempirical(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
+    elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
+      [p.ap, ~] = ResidualTempScatterCorrZaneveld_proportional(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
     end
     fprintf('Done\n')
-    fprintf(['cp ' scattering_correction ' residual temperature and scattering correction ... '])
-    if strcmp(scattering_correction, 'Kostakis2022')
-      [~, p.cp] = ResidualTemperatureAndScatteringCorrectionKostakis(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
-    elseif strcmp(scattering_correction, 'Zaneveld1994')
-      [~, p.cp] = ResidualTemperatureAndScatteringCorrectionZaneveld(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
+    fprintf('cp %s residual temperature and scattering correction ... ', strrep(scattering_correction, '_', ' '))
+    if strcmp(scattering_correction, 'Rottgers2013_semiempirical')
+      [~, p.cp] = ResidualTempScatterCorrRottgers_semiempirical(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
+    elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
+      [~, p.cp] = ResidualTempScatterCorrZaneveld_proportional(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
     end
     fprintf('Done\n')
   else
-    fprintf(['ap and cp ' scattering_correction ' residual temperature and scattering correction ... '])
-    if strcmp(scattering_correction, 'Kostakis2022')
-      [p.ap, p.cp] = ResidualTemperatureAndScatteringCorrectionKostakis(p.ap, p.cp, lambda.ref, psi);
-    elseif strcmp(scattering_correction, 'Zaneveld1994')
-      [p.ap, p.cp] = ResidualTemperatureAndScatteringCorrectionZaneveld(p.ap, p.cp, lambda.ref, psi);
+    fprintf('ap and cp %s residual temperature and scattering correction ... ', strrep(scattering_correction, '_', ' '))
+    if strcmp(scattering_correction, 'Rottgers2013_semiempirical')
+      [p.ap, p.cp] = ResidualTempScatterCorrRottgers_semiempirical(p.ap, p.cp, lambda.ref, psi);
+    elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
+      [p.ap, p.cp] = ResidualTempScatterCorrZaneveld_proportional(p.ap, p.cp, lambda.ref, psi);
     end
   end
   
-  % Remove lines full of NaNs (Kostakis2022 potentially fail when temperature correct is too large
+  % Remove lines full of NaNs (Rottgers2013_semiempirical potentially fail when temperature correct is too large)
   sel2rm = all(isnan(p.ap), 2) | all(isnan(p.cp), 2);
   p(sel2rm, :) = [];
   tot(sel2rm, :) = [];
@@ -432,13 +389,25 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   % p.ap(p.ap < -0.0015 & lambda.a >= wla_700) = NaN;
   
   % set flag matrix
-  flag = array2table(false(size(p,1), 21), 'VariableNames', {'cp_neg','ap_neg',...
+  flag_varname = {...
+    'fCDOM_mix_a_cluster', 'fCDOM_mix_c_cluster', 'fCDOM_a_cluster_chg', ...
+    'fCDOM_c_cluster_chg', 'flag_linear_interp', 'cp_neg','ap_neg', ...
     'ap_shape','ap_bubbles','ap430_700_neg','cp_over10','noisy600_650',...
     'ap460_640_04_450','positive_ap450_570','poc_flag','chl_ap676lh_flag',...
     'gamma_flag','chl_Halh_flag','HH_mphi_flag','HH_G50_flag','chlratio_flag',...
     'gamma_suspicious','poc_suspicious','chl_ap676lh_suspicious',...
-    'chl_Halh_suspicious','HH_G50_mphi_suspicious'});
-  
+    'chl_Halh_suspicious','HH_G50_mphi_suspicious'};
+  flag = array2table(false(size(p,1), length(flag_varname)), 'VariableNames', flag_varname);
+  if strcmp(interpolation_method, 'CDOM')
+    flag.fCDOM_mix_a_cluster = filt_interp.fCDOM_mix_a_cluster;
+    flag.fCDOM_mix_c_cluster = filt_interp.fCDOM_mix_c_cluster;
+    flag.fCDOM_a_cluster_chg = filt_interp.fCDOM_a_cluster_chg;
+    flag.fCDOM_c_cluster_chg = filt_interp.fCDOM_c_cluster_chg;
+    flag.flag_linear_interp = filt_interp.flag_linear_interp;
+  else
+    flag.flag_linear_interp = true(size(p,1), 1);
+  end
+
   % delete cp spectra when any cp < -0.0015
   todelete = any(p.cp < -0.0015, 2);
   if sum(todelete) > 0
@@ -705,6 +674,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   
   % set flag column
   p.flag_bit = set_flagbit(flag);
+  % flag_info = read_flagbit(p.flag_bit, 'ACS');
   
   %% ag & cg
   if ~isempty(di)
@@ -757,7 +727,6 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     fprintf('Correcting for temperature & salinity dependence ... ')
     % Temperature & Salinity Correction (No Scattering correction needed)
     [g.ag, g.cg] = TemperatureAndSalinityDependence(g.ag, g.cg, lambda.a, lambda.c, psi);
-  %   [g.ag, g.cg] = ResidualTemperatureAndScatteringCorrection(g.ag, g.cg, lambda.ref);
     fprintf('Done\n')
   
     % Propagate error
@@ -878,8 +847,8 @@ function cost = costfun_TSD(x, a, psiT, psiS, wl)
 end
 
 
-%% Residual Temperature And Scattering Correction (Zaneveld)
-function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrectionZaneveld(ap, cp, wl, psi)
+%% Residual Temperature And Scattering Correction (Zaneveld 1994 proportional)
+function [ap_corr, cp_corr] = ResidualTempScatterCorrZaneveld_proportional(ap, cp, wl, psi)
   % Function from Emmanuel Boss improved by Nils Haëntjens
   % Assumes negligible ap in NIR after Zaneveld 1994 method 3
   psiT = interp1(psi.wl, psi.psiT, wl);
@@ -916,9 +885,9 @@ function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrectionZaneveld
 end
 
 
-%% Residual Temperature And Scattering Correction (Kostakis)
-function [ap_corr, cp_corr] = ResidualTemperatureAndScatteringCorrectionKostakis(ap, cp, wl, psi)
-  % Function from Emmanuel Boss after Kostakis et al. 2022
+%% Residual Temperature And Scattering Correction (Rottgers2013 semiempirical)
+function [ap_corr, cp_corr] = ResidualTempScatterCorrRottgers_semiempirical(ap, cp, wl, psi)
+  % Function from Emmanuel Boss after Rottgers et al. 2013
   % Allows absorption in NIR in case of high NAP
   psiT = interp1(psi.wl, psi.psiT, wl);
   
@@ -1161,7 +1130,7 @@ function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
     qwl = unique([wl_ZS13(:)' 442 676]);
     ap_ZS13 = interp1(lambda, ap_filled', qwl, 'linear', 'extrap'); % need to extrapolate for 400
   
-  %   % vectorized partition_ap (DOESN'T WORK)
+  %   % vectorized partition_ap (DOESN'T WORK YET)
   %   agaus.ad_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
   %   agaus.aphi_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
   %   [agaus.ad_ZS13, agaus.aphi_ZS13] = partition_ap_vec(ap_ZS13, qwl', 50);  % Must be in colum direction
@@ -1186,11 +1155,10 @@ function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
   fprintf('Done\n')
 end
 
-function [filt_interp] = agcg_fdom_interpolation(filt_interp, filt, lambda, cdom_dark, filt_avg)
+function [filt_interp] = agcg_fdom_interpolation(tot, filt_interp, filt, lambda, cdom_dark, filt_avg)
   % Reconstruct ag and cg from fCDOM data
   [filt_avg, filt_interp, ~] = fdom_agcg_model(filt, filt_interp, lambda, filt_avg); % regression_stats
   n_periods = size(filt_avg,1)-1;
-  filt_interp.lin_bool = false(size(filt_interp.fdom));
 
   % visProd3D(lambda.a, filt_interp.dt, filt_interp.intercept_interp_a, false, 'Wavelength', false, 27);
   % title('intercept a')
@@ -1221,37 +1189,34 @@ function [filt_interp] = agcg_fdom_interpolation(filt_interp, filt, lambda, cdom
   %     if any((filt_interp.fdom(it) - cdom_dark) / cdom_dark > 0.2)
   %       % prepare delta a / delta f and delta c / delta f
   %       delta_acf.dt(i) = mean([filt_avg.dt(it0) filt_avg.dt(it1)], 'omitnan');
-  %       delta_acf.delta_af(i, :) = (filt_avg.a(it1,:) - filt_avg.a(it0,:)) / (filt_avg.fdom_10smooth(it1) - filt_avg.fdom_10smooth(it0));
-  %       delta_acf.delta_cf(i, :) = (filt_avg.c(it1,:) - filt_avg.c(it0,:)) / (filt_avg.fdom_10smooth(it1) - filt_avg.fdom_10smooth(it0));
-  %       % prepare fdom0, a0 and c0
-  %       filt_interp.fdom0(it) = repmat(filt_avg.fdom_10smooth(it0), sum(it), 1);
+  %       delta_acf.delta_af(i, :) = (filt_avg.a(it1,:) - filt_avg.a(it0,:)) / (filt_avg.fdom(it1) - filt_avg.fdom(it0));
+  %       delta_acf.delta_cf(i, :) = (filt_avg.c(it1,:) - filt_avg.c(it0,:)) / (filt_avg.fdom(it1) - filt_avg.fdom(it0));
+  %       filt_interp.fdom0(it) = repmat(filt_avg.fdom(it0), sum(it), 1);
   %       filt_interp.a0(it,:) = repmat(filt_avg.a(it0,:), sum(it), 1);
   %       filt_interp.c0(it,:) = repmat(filt_avg.c(it0,:), sum(it), 1);
-  %       filt_interp.lin_bool(it) = false;
+  %       filt_interp.flag_linear_interp(it) = false;
   %     else
-  %       filt_interp.lin_bool(it) = true;
+  %       filt_interp.flag_linear_interp(it) = true;
   %     end
   %   end
   % end
   % delta_acf(all(isnan(delta_acf.delta_af), 2) | all(isnan(delta_acf.delta_cf), 2), :) = [];
   % % interpolated delta a / delta fdom over total events
-  % filt_interp.delta_af = interp1(delta_acf.dt, delta_acf.delta_af, filt_interp.dt, 'linear');
-  % filt_interp.delta_af = fillmissing(filt_interp.delta_af, 'nearest');
-  % filt_interp.delta_cf = interp1(delta_acf.dt, delta_acf.delta_cf, filt_interp.dt, 'linear');
-  % filt_interp.delta_cf = fillmissing(filt_interp.delta_cf, 'nearest');
+  % filt_interp.delta_af = interpspline_extrapnearest(delta_acf, filt_interp.dt, 'delta_af');
+  % filt_interp.delta_cf = interpspline_extrapnearest(delta_acf, filt_interp.dt, 'delta_cf');
   % % extrapolate a0, c0, fdom0
   % filt_interp.fdom0 = fillmissing(filt_interp.fdom0, 'nearest');
   % filt_interp.a0 = fillmissing(filt_interp.a0, 'nearest');
   % filt_interp.c0 = fillmissing(filt_interp.c0, 'nearest');
   % % compute ag and cg
-  % filt_interp.a = filt_interp.a0 + filt_interp.delta_af .* (filt_interp.fdom - filt_interp.fdom0);
-  % filt_interp.c = filt_interp.c0 + filt_interp.delta_cf .* (filt_interp.fdom - filt_interp.fdom0);
+  % filt_interp.a = filt_interp.al + filt_interp.delta_af .* (filt_interp.fdom - filt_interp.fdoml);
+  % filt_interp.c = filt_interp.cl + filt_interp.delta_cf .* (filt_interp.fdom - filt_interp.fdoml);
   % % linearly interpolate ag and cg
   % filt_interp.lin_a = interp1(filt_avg.dt, filt_avg.a, filt_interp.dt, 'linear');
   % filt_interp.lin_c = interp1(filt_avg.dt, filt_avg.c, filt_interp.dt, 'linear');
   % % replace fdom interpolation by linear for filter events where fdom is constant
-  % filt_interp.a(filt_interp.lin_bool) = filt_interp.lin_a(filt_interp.lin_bool);
-  % filt_interp.c(filt_interp.lin_bool) = filt_interp.lin_c(filt_interp.lin_bool);
+  % filt_interp.a(filt_interp.flag_linear_interp) = filt_interp.lin_a(filt_interp.flag_linear_interp);
+  % filt_interp.c(filt_interp.flag_linear_interp) = filt_interp.lin_c(filt_interp.flag_linear_interp);
 
   % visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 27);
   % title('ag fdom interpolated')
@@ -1264,41 +1229,98 @@ function [filt_interp] = agcg_fdom_interpolation(filt_interp, filt, lambda, cdom
   % title('cg linearly interpolated')
 
   % interpolate ag and cg based on fdom: Guillaume's method (global)
+  % allocate fdom0, a0, and c0 varialbes
+  filt_interp.fdom0 = NaN(size(filt_interp.fdom));
+  filt_interp.a0 = NaN(size(filt_interp.a));
+  filt_interp.c0 = NaN(size(filt_interp.c));
+  filt_interp.ag_fact = NaN(size(filt_interp.a));
+  filt_interp.cg_fact = NaN(size(filt_interp.c));
+  filt_interp.fCDOM_mix_a_cluster = false(size(filt_interp.dt));
+  filt_interp.fCDOM_mix_c_cluster = false(size(filt_interp.dt));
+  filt_interp.fCDOM_a_cluster_chg = false(size(filt_interp.dt));
+  filt_interp.fCDOM_c_cluster_chg = false(size(filt_interp.dt));
+  filt_interp.flag_linear_interp = false(size(filt_interp.dt));
   for i=1:n_periods
     it0 = i; it1 = i + 1;
     it = filt_avg.dt(it0) <= filt_interp.dt & filt_interp.dt <= filt_avg.dt(it1);
     if any(it)
       it_filt_interp = filt_interp(it,:);
       % interpolation based on fCDOM - fCDOM_dark > 20% of fCDOM_dark
-      if any((filt_interp.fdom(it) - cdom_dark) / cdom_dark > 0.5)
+      if any((filt_interp.fdom(it) - cdom_dark) / cdom_dark > 0.2)
         % compute interpolated ag factor
-        ag_fact0 = (filt_avg.a(it0,:) - filt_avg.intercept_a(it0,:)) ./ filt_avg.fdom_10smooth(it0);
-        ag_fact1 = (filt_avg.a(it1,:) - filt_avg.intercept_a(it1,:)) ./ filt_avg.fdom_10smooth(it1);
-        ag_fact = interp1(filt_avg.dt(it0:it1,:), [ag_fact0; ag_fact1], it_filt_interp.dt, 'linear');
-        % % compute interpolated cg factor
-        % cg_fact0 = (filt_avg.c(it0,:) - filt_avg.intercept_c(it0,:)) ./ filt_avg.fdom_10smooth(it0);
-        % cg_fact1 = (filt_avg.c(it1,:) - filt_avg.intercept_c(it1,:)) ./ filt_avg.fdom_10smooth(it1);
-        % cg_fact = interp1(filt_avg.dt(it0:it1,:), [cg_fact0; cg_fact1], it_filt_interp.dt, 'linear');
-        % compute ag and cg
-        filt_interp.a(it, :) = filt_avg.a(it0,:) + ag_fact .* (filt_interp.fdom(it,:) - filt_avg.fdom_10smooth(it0,:));
-        filt_interp.c(it, :) = filt_avg.c(it0,:) + ag_fact .* (filt_interp.fdom(it,:) - filt_avg.fdom_10smooth(it0,:));
-        filt_interp.lin_bool(it) = false;
+        ag_fact0 = (filt_avg.a(it0,:) - filt_avg.intercept_a(it0,:)) ./ filt_avg.fdom(it0);
+        ag_fact1 = (filt_avg.a(it1,:) - filt_avg.intercept_a(it1,:)) ./ filt_avg.fdom(it1);
+        filt_interp.ag_factl(it,:) = interp1(filt_avg.dt(it0:it1,:), [abs(ag_fact0); abs(ag_fact1)], it_filt_interp.dt, 'linear');
+        % compute interpolated cg factor
+        cg_fact0 = (filt_avg.c(it0,:) - filt_avg.intercept_c(it0,:)) ./ filt_avg.fdom(it0);
+        cg_fact1 = (filt_avg.c(it1,:) - filt_avg.intercept_c(it1,:)) ./ filt_avg.fdom(it1);
+        filt_interp.cg_factl(it,:) = interp1(filt_avg.dt(it0:it1,:), [cg_fact0; cg_fact1], it_filt_interp.dt, 'linear');
+        % % compute ag and cg (method using only a0 constant accross total event
+        % filt_interp.a(it, :) = filt_avg.a(it0,:) + ag_fact .* (filt_interp.fdom(it,:) - filt_avg.fdom(it0,:));
+        % filt_interp.c(it, :) = filt_avg.c(it0,:) + cg_fact .* (filt_interp.fdom(it,:) - filt_avg.fdom(it0,:));
+        % compute interpolated fdom0, a0, and c0 variables
+        filt_interp.fdoml(it) = interp1(filt_avg.dt(it0:it1,:), [filt_avg.fdom(it0); filt_avg.fdom(it1)], it_filt_interp.dt, 'linear');
+        filt_interp.al(it,:) = interp1(filt_avg.dt(it0:it1,:), [filt_avg.a(it0,:); filt_avg.a(it1,:)], it_filt_interp.dt, 'linear');
+        filt_interp.cl(it,:) = interp1(filt_avg.dt(it0:it1,:), [filt_avg.c(it0,:); filt_avg.c(it1,:)], it_filt_interp.dt, 'linear');
+        % flag when mixed a clusters within filter event 0 or filter event 1
+        if any(filt_avg.cluster_a_flag(it0) | filt_avg.cluster_a_flag(it1))
+          fprintf('a filter interpolation #%i flagged: mixed cluster within start and/or end filter event(s)\n', i)
+          filt_interp.fCDOM_mix_a_cluster(i) = true;
+        end
+        % flag when mixed c clusters within filter event 0 or filter event 1
+        if any(filt_avg.cluster_c_flag(it0) | filt_avg.cluster_c_flag(it1))
+          fprintf('c filter interpolation #%i flagged: mixed cluster within start and/or end filter event(s)\n', i)
+          filt_interp.fCDOM_mix_c_cluster(i) = true;
+        end
+        % flag when a clusters change between filter event 0 and filter event 1
+        if ~all(isnan(filt_avg.cluster_weighted_a(it0,:))) && ~all(isnan(filt_avg.cluster_weighted_a(it1,:))) && ...
+            any(filt_avg.cluster_weighted_a(it0,:) ~= filt_avg.cluster_weighted_a(it1, :)) && any(any(~isnan(tot.a(it, :)), 2))
+          fprintf('a filter interpolation #%i flagged: change of clusters between start and end filter events\n', i)
+          filt_interp.fCDOM_a_cluster_chg(it) = true;
+        end
+        % flag when c clusters change between filter event 0 and filter event 1
+        if ~all(isnan(filt_avg.cluster_weighted_c(it0,:))) && ~all(isnan(filt_avg.cluster_weighted_c(it1,:))) && ...
+            any(filt_avg.cluster_weighted_c(it0,:) ~= filt_avg.cluster_weighted_c(it1, :)) && any(any(~isnan(tot.c(it, :)), 2))
+          fprintf('c filter interpolation #%i flagged: change of clusters between start and end filter events\n', i)
+          filt_interp.fCDOM_c_cluster_chg(it) = true;
+        end
+        % set linear interpolation boolean
+        filt_interp.flag_linear_interp(it) = false;
       else
         % linearly interpolate ag and cg if fdom is constant between it0 and it1
-        filt_interp.a(it, :) = interp1(filt_avg.dt(it0:it1,:), filt_avg.a(it0:it1,:), it_filt_interp.dt, 'linear');
-        filt_interp.c(it, :) = interp1(filt_avg.dt(it0:it1,:), filt_avg.c(it0:it1,:), it_filt_interp.dt, 'linear');
-        filt_interp.lin_bool(it) = true;
+        fprintf('Filter interpolation #%i flagged: linearly interpolated\n', i)
+        filt_interp.flag_linear_interp(it) = true;
       end
     end
   end
+  % fill missing a0, c0, fdom0
+  filt_interp.ag_fact = fillmissing(filt_interp.ag_fact, 'nearest');
+  filt_interp.cg_fact = fillmissing(filt_interp.cg_fact, 'nearest');
+  filt_interp.fdom0 = fillmissing(filt_interp.fdom0, 'nearest');
+  filt_interp.a0 = fillmissing(filt_interp.a0, 'nearest');
+  filt_interp.c0 = fillmissing(filt_interp.c0, 'nearest');
+  % linearly interpolate a and c
+  filt_interp.lin_a = interp1(filt_avg.dt, filt_avg.a, filt_interp.dt, 'linear');
+  filt_interp.lin_c = interp1(filt_avg.dt, filt_avg.c, filt_interp.dt, 'linear');
+  % compute ag and cg
+  filt_interp.a(~filt_interp.flag_linear_interp, :) = filt_interp.al(~filt_interp.flag_linear_interp, :) + ...
+    filt_interp.ag_factl(~filt_interp.flag_linear_interp, :) .* ...
+    (filt_interp.fdom(~filt_interp.flag_linear_interp) - filt_interp.fdoml(~filt_interp.flag_linear_interp)); 
+  filt_interp.c(~filt_interp.flag_linear_interp, :) = filt_interp.cl(~filt_interp.flag_linear_interp, :) + ...
+    filt_interp.cg_factl(~filt_interp.flag_linear_interp, :) .* ...
+    (filt_interp.fdom(~filt_interp.flag_linear_interp) - filt_interp.fdoml(~filt_interp.flag_linear_interp));
+  % replace fdom interpolation by linear for filter events where fdom is constant
+  filt_interp.a(filt_interp.flag_linear_interp, :) = filt_interp.lin_a(filt_interp.flag_linear_interp, :);
+  filt_interp.c(filt_interp.flag_linear_interp, :) = filt_interp.lin_c(filt_interp.flag_linear_interp, :);
+
 
   % figure; hold on
   % scatter(datetime(filt_interp.dt, 'convertfrom', 'datenum'), ag_fact_tot(:,70), 20, 'ko')
-  % scatter(datetime(filt_interp.dt(~filt_interp.lin_bool), 'convertfrom', 'datenum'), filt_interp.delta_af(~filt_interp.lin_bool,70), 20, 'r+')
+  % scatter(datetime(filt_interp.dt(~filt_interp.flag_linear_interp), 'convertfrom', 'datenum'), filt_interp.delta_af(~filt_interp.flag_linear_interp,70), 20, 'r+')
   % 
   % figure; hold on
   % scatter(filt_interp.dt, cg_fact_tot(:,70), 20, 'ko')
-  % scatter(filt_interp.dt(~filt_interp.lin_bool), filt_interp.delta_cf(~filt_interp.lin_bool,70), 20, 'r+')
+  % scatter(filt_interp.dt(~filt_interp.flag_linear_interp), filt_interp.delta_cf(~filt_interp.flag_linear_interp,70), 20, 'r+')
 
   % visProd3D(lambda.a, filt_interp.dt(it), filt_interp.a(it,:), false, 'Wavelength', false, i+1);
   % title('ag fdom interpolated')
@@ -1314,24 +1336,11 @@ function [filt_interp] = agcg_fdom_interpolation(filt_interp, filt, lambda, cdom
   % title('ag difference')
   % visProd3D(lambda.a, filt_interp.dt(it), filt_interp.c(it,:) - filt_interp.lin_c(it,:), false, 'Wavelength', false, i+6);
   % title('cg difference')
-  % 
-  % cdom = table();
-  % cdom.dt = datetime([filt.dt; filt_interp.dt], 'ConvertFrom', 'datenum');
-  % cdom.fdom = [filt.fdom; filt_interp.fdom];
-  % 
-  % figure;
-  % scatter(cdom.dt, cdom.fdom, 20, 'filled')
 
-
-
-  % idp = filt_interp.dt >= min(it_filt_interp.dt) & filt_interp.dt <= max(it_filt_interp.dt);
-  % figure(i+7)
-  % scatter(datetime(filt_interp.dt(idp), 'ConvertFrom', 'datenum'), filt_interp.fdom(idp), 20, 'filled')
-  % ylabel('fdom smoothed')
+  % yaxr = [it_filt_interp.fdom; filt_avg.fdom(it0:it1)];
   % 
   % wl_toplot = 40;
-  % % figure(1)
-  % figure(i+10)
+  % figure(1)
   % clf
   % subplot(1,2,1)
   % yyaxis('left')
@@ -1345,9 +1354,12 @@ function [filt_interp] = agcg_fdom_interpolation(filt_interp, filt, lambda, cdom
   % ylabel('ag')
   % yyaxis('right')
   % hold on
-  % scatter(datetime(cdom.dt, 'ConvertFrom', 'datenum'), ...
-  %   cdom.fdom, 40, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5, 'Marker', 'd')
+  % scatter(datetime(filt_interp.dt, 'ConvertFrom', 'datenum'), ...
+  %   filt_interp.fdom, 40, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5, 'Marker', 'd')
+  % scatter(datetime(filt_avg.dt, 'ConvertFrom', 'datenum'), ...
+  %   filt_avg.fdom, 100, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5, 'Marker', 'd')
   % xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
+  % ylim([min(yaxr)-0.001 max(yaxr)+0.001])
   % ylabel('fdom')
   % legend('ag fdom interpolated', 'ag filter average', 'fdom smoothed', 'Location', 'Best')
   % subplot(1,2,2)
@@ -1361,15 +1373,14 @@ function [filt_interp] = agcg_fdom_interpolation(filt_interp, filt, lambda, cdom
   % ylabel('cg')
   % yyaxis('right')
   % hold on
-  % scatter(datetime(cdom.dt, 'ConvertFrom', 'datenum'), ...
-  %   cdom.fdom, 40, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5, 'Marker', 'd')
+  % scatter(datetime(filt_interp.dt, 'ConvertFrom', 'datenum'), ...
+  %   filt_interp.fdom, 40, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5, 'Marker', 'd')
+  % scatter(datetime(filt_avg.dt, 'ConvertFrom', 'datenum'), ...
+  %   filt_avg.fdom, 100, 'filled', 'MarkerFaceColor', 'k', 'MarkerFaceAlpha', 0.5, 'Marker', 'd')
   % xlim([plot_dt(1)-hours(0.5) plot_dt(end)+hours(0.5)])
+  % ylim([min(yaxr)-0.001 max(yaxr)+0.001])
   % ylabel('fdom')
   % legend('cg fdom interpolated', 'cg filter average', 'fdom smoothed', 'Location', 'Best')
-
-  % linearly interpolate a and c
-  filt_interp.lin_a = interp1(filt_avg.dt, filt_avg.a, filt_interp.dt, 'linear');
-  filt_interp.lin_c = interp1(filt_avg.dt, filt_avg.c, filt_interp.dt, 'linear');
 
   % visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 23);
   % title('ag fdom interpolated')
@@ -1386,280 +1397,285 @@ end
 %% 
 function [filt_avg, filt_interp, regress_stats] = fdom_agcg_model(filt, filt_interp, lambda, filt_avg)
   
-
-
-  % filt.dt = datetime(filt.dt, 'ConvertFrom', 'datenum');
-  % cluster
   clusters = table();
-  % clusters.a = NaN(size(filt.a));
-  % clusters.c = NaN(size(filt.c));
-  % for i = id450_a
-  %   clusters.a(:,i) = kmeans(filt.a(:, i) ./ filt.fdom, 3);
-  %   clusters.c(:,i) = kmeans(filt.c(:, i) ./ filt.fdom, 3);
-  %   % figure; hold on
-  %   % gscatter(filt.a(:,i), filt.fdom, clusters.a(:,i), [], 'xod')
-  % end
-
-
-  % id450_a = find(lambda.a > 450 & lambda.a < 550);
+  % define reference wavelength to do regression (450nm)
   id450_a = abs(lambda.a - 450) == min(abs(lambda.a - 450));
   id450_c = abs(lambda.c - 450) == min(abs(lambda.c - 450));
-  
-  % number of clusters to try
-  klist = 1:5;
-  kmeanfunc = @(X,K)(kmeans(X, K));
-  % evaluate optimum number of cluster for a
-  eva = evalclusters(filt.a(:, id450_a) ./ filt.fdom, kmeanfunc, 'silhouette','klist', klist);
-  clusters.a = kmeans(filt.a(:, id450_a) ./ filt.fdom, eva.OptimalK);
-  % evaluate optimum number of cluster for a
-  eva = evalclusters(filt.c(:, id450_c) ./ filt.fdom, kmeanfunc, 'silhouette','klist', klist);
-  clusters.c = kmeans(filt.c(:, id450_c) ./ filt.fdom, eva.OptimalK);
 
-  % col = distinguishable_colors(3);
+  % iterate dbscan with multiple epsilon until nRMSE of all cluster < 10%
+  fprintf('Finding best epsilon for dbscan Kernel Density clustering of a(filt)/fCDOM(filt) ... ')
+  k = 1;
+  epsilons = 1:-0.01:0.01;
+  keep_going = true;
+  max_nb_clusters = day(datetime(max(filt_interp.dt) - min(filt_interp.dt), 'ConvertFrom', 'datenum'));
+  eval_cluster = table();
+  eval_cluster.nRMSE_a450 = NaN(length(epsilons), max_nb_clusters);
+  eval_cluster.nRMSE_c450 = NaN(length(epsilons), max_nb_clusters);
+  eval_cluster.slope_a450 = NaN(length(epsilons), max_nb_clusters);
+  eval_cluster.slope_c450 = NaN(length(epsilons), max_nb_clusters);
+  epsilon_a = epsilons(1);
+  epsilon_c = epsilons(1);
+  % normalize the time variable between 0 to 0.5
+  time_var = (filt.dt-min(filt.dt))/max(filt.dt-min(filt.dt)) / 2;
+  data_tocluster_a = [filt.a(:, id450_a)./filt.fdom time_var]; % time_var filt.t filt.s
+  data_tocluster_c = [filt.c(:, id450_c)./filt.fdom time_var]; % time_var filt.t filt.s
+  minimum_nb_point_per_cluster = 50;
+  while k <= length(epsilons) && keep_going
+    clusters.a = dbscan(data_tocluster_a, epsilons(k), minimum_nb_point_per_cluster, 'Distance', 'euclidean');
+    clusters.a(clusters.a == -1) = NaN;
+    clusters.c = dbscan(data_tocluster_c, epsilons(k), minimum_nb_point_per_cluster, 'Distance', 'euclidean');
+    clusters.c(clusters.c == -1) = NaN;
+    % regress a&c with fdom
+    [regress_stats_a, regress_stats_c] = regress_acfilt(filt.a(:, id450_a), filt.c(:, id450_c), filt.fdom, clusters);
+    eval_cluster.nRMSE_a450(k, 1:size(regress_stats_a.nRMSE, 2)) = regress_stats_a.nRMSE;
+    eval_cluster.nRMSE_c450(k, 1:size(regress_stats_c.nRMSE, 2)) = regress_stats_c.nRMSE;
+    eval_cluster.slope_a450(k, 1:size(regress_stats_a.slope, 2)) = regress_stats_a.slope;
+    eval_cluster.slope_c450(k, 1:size(regress_stats_c.slope, 2)) = regress_stats_c.slope;
+    if k >= 2
+      % get epsilon_a
+      if all(eval_cluster.nRMSE_a450(k,1:size(regress_stats_a.nRMSE, 2)) < 10, 2)
+        epsilon_a = epsilons(k);
+      end
+      % get epsilon_c
+      if all(eval_cluster.nRMSE_c450(k,1:size(regress_stats_c.nRMSE, 2)) < 10, 2)
+        epsilon_c = epsilons(k);
+      end
+      % if both a and c found stop iterations
+      if all(eval_cluster.nRMSE_a450(k,1:size(regress_stats_a.nRMSE, 2)) < 10, 2) && ...
+           all(eval_cluster.nRMSE_c450(k,1:size(regress_stats_c.nRMSE, 2)) < 10, 2)
+        keep_going = false;
+      elseif size(regress_stats_a.nRMSE, 2) > max_nb_clusters || size(regress_stats_c.nRMSE, 2) > max_nb_clusters
+        keep_going = false;
+        if epsilon_a == epsilons(1)
+          epsilon_a = epsilons(k);
+        end
+        if epsilon_c == epsilons(1)
+          epsilon_c = epsilons(k);
+        end
+      end
+    end
+    k = k + 1;
+  end
+  fprintf('done\n')
+  % eval_cluster.nRMSE_a450(:,k:end) = [];
+  % eval_cluster.nRMSE_c450(:,k:end) = [];
+  % eval_cluster.slope_a450(:,k:end) = [];
+  % eval_cluster.slope_c450(:,k:end) = [];
+  % eval_cluster(k:end, :) = [];
 
-  % figure; hold on
-  % scatter(lambda.a, filt.a(clusters.a == 1, :) ./ filt.fdom(clusters.a == 1), ...
-  %   'MarkerEdgeColor', col(1, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'x')
-  % scatter(lambda.a, filt.a(clusters.a == 2, :) ./ filt.fdom(clusters.a == 2), ...
-  %   'MarkerEdgeColor', col(2, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'o')
-  % scatter(lambda.a, filt.a(clusters.a == 3, :) ./ filt.fdom(clusters.a == 3), ...
-  %   'MarkerEdgeColor', col(3, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'd')
-  % 
-  % figure; hold on
-  % scatter(lambda.c, filt.c(clusters.c == 1, :) ./ filt.fdom(clusters.c == 1), ...
-  %   'MarkerEdgeColor', col(1, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'x')
-  % scatter(lambda.c, filt.c(clusters.c == 2, :) ./ filt.fdom(clusters.c == 2), ...
-  %   'MarkerEdgeColor', col(2, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'o')
-  % scatter(lambda.c, filt.c(clusters.c == 3, :) ./ filt.fdom(clusters.c == 3), ...
-  %   'MarkerEdgeColor', col(3, :), 'MarkerEdgeAlpha', 0.2, 'Marker', 'd')
+  % run clustering with the best epsilon
+  fprintf('Kernel Density clustering of a(filt)/fCDOM(filt) ... ')
+  clusters = table();
+  clusters.a = dbscan(data_tocluster_a, epsilon_a, minimum_nb_point_per_cluster, 'Distance', 'euclidean');
+  clusters.a(clusters.a == -1) = NaN;
+  clusters.c = dbscan(data_tocluster_c, epsilon_c, minimum_nb_point_per_cluster, 'Distance', 'euclidean');
+  clusters.c(clusters.c == -1) = NaN;
+  fprintf('done\n')
 
   % regress a&c with fdom
   regress_stats = struct();
-  [regress_stats.a, regress_stats.c] = regress_acfilt(filt, lambda, filt, 'fdom', clusters);
+  [regress_stats.a, regress_stats.c] = regress_acfilt(filt.a, filt.c, filt.fdom, clusters);
 
-  % find wavelength where fdom fit and temperature fit work poorly
-  bad_fit_a = all(regress_stats.a.R2 < prctile(regress_stats.a.R2, 5, 1), 2);
-  bad_fit_c = all(regress_stats.c.R2 < prctile(regress_stats.c.R2, 5, 1), 2);
+  % plot clusters
+  fprintf('Plotting clustering results ... ')
+  figure(33); subplot(2, 2, 1);
+  gscatter(datetime(filt.dt, 'ConvertFrom', 'datenum'), filt.a(:, id450_a) ./ filt.fdom, ...
+    clusters.a, [], 'vo<s>pdh+*x', 8, 'on', 'Time', 'Cluster number');
+  title('a cluster time series'); set(gca, 'Fontsize', 12)
+  subplot(2, 2, 2); gsc = gscatter(filt.fdom, filt.a(:,id450_a), clusters.a, [], 'vo<s>pdh+*x');
+  xlimit = get(gca, 'XLim');
+  ylimit = get(gca, 'YLim');
+  for c = 1:size(regress_stats.a.slope, 2)
+    rl = refline(regress_stats.a.slope(id450_a, c), regress_stats.a.intercept(id450_a, c));
+    set(rl, 'Color', gsc(c).Color, 'LineWidth', 1)
+  end
+  set(gca, 'XLim', xlimit)
+  set(gca, 'YLim', ylimit)
+  xlabel('a'); ylabel('fdom'); title('a cluster: a/fdom'); set(gca, 'Fontsize', 12)
+  leg = findobj(gcf, 'Type', 'Legend');
+  title(leg,'Clusters')
+
+  subplot(2, 2, 3);
+  gscatter(datetime(filt.dt, 'ConvertFrom', 'datenum'), filt.a(:, id450_c) ./ filt.fdom, ...
+    clusters.c, [], 'vo<s>pdh+*x', 8, 'on', 'Time', 'Cluster number');
+  title('c cluster time series'); set(gca, 'Fontsize', 12)
+  subplot(2, 2, 4); gsc = gscatter(filt.fdom, filt.c(:,id450_c), clusters.c, [], 'vo<s>pdh+*x');
+  xlimit = get(gca, 'XLim');
+  ylimit = get(gca, 'YLim');
+  for c = 1:size(regress_stats.c.slope, 2)
+    rl = refline(regress_stats.c.slope(id450_c, c), regress_stats.c.intercept(id450_c, c));
+    set(rl, 'Color', gsc(c).Color, 'LineWidth', 1)
+  end
+  set(gca, 'XLim', xlimit)
+  set(gca, 'YLim', ylimit)
+  xlabel('c'); ylabel('fdom'); title('a cluster: c/fdom'); set(gca, 'Fontsize', 12)
+  leg = findobj(gcf, 'Type', 'Legend');
+  leg(1).String = strrep(leg(1).String, 'data', 'regression cluster ');
+  leg(3).String = strrep(leg(3).String, 'data', 'regression cluster ');
+  title(leg,'Clusters')
+  fprintf('done\n')
+
+  drawnow
+
+  % % find wavelength where fdom fit and temperature fit work poorly
+  % bad_fit_a = all(regress_stats.a.R2 < prctile(regress_stats.a.R2, 5, 1), 2);
+  % bad_fit_c = all(regress_stats.c.R2 < prctile(regress_stats.c.R2, 5, 1), 2);
   
   %%% apply the regression to get a and c dissolved from fdom
   groups_a = unique(clusters.a(~isnan(clusters.a)));
   groups_c = unique(clusters.c(~isnan(clusters.c)));
 
-  % Weight cluster for each filter event
-  cluster_weighted = table(filt_avg.dt, 'VariableNames', {'dt'});
-  cluster_weighted.a = NaN(size(cluster_weighted,1), size(groups_a, 1));
-  cluster_weighted.c = NaN(size(cluster_weighted,1), size(groups_c, 1));
+  % Weight cluster for each filter event in case clusters are changing
+  % during a filter event (unlikely with the new dbscan method but let's keep it in case)
+  filt_avg = addvars(filt_avg, NaN(size(filt_avg,1),size(groups_a,1)), 'NewVariableNames', 'cluster_weighted_c', 'after', 'end');
+  filt_avg = addvars(filt_avg, NaN(size(filt_avg,1),size(groups_a,1)), 'NewVariableNames', 'cluster_weighted_a', 'after', 'end');
+  filt_avg = addvars(filt_avg, false(size(filt_avg.dt)), 'NewVariableNames', 'cluster_c_flag', 'after', 'end');
+  filt_avg = addvars(filt_avg, false(size(filt_avg.dt)), 'NewVariableNames', 'cluster_a_flag', 'after', 'end');
   for i=1:size(filt_avg, 1)
     sel_filt = filt_avg.start(i) <= filt.dt & filt.dt <= filt_avg.end(i);
     foo = clusters(sel_filt,:);
+    % flag if clusters are not all the same within a single filter event
+    if size(unique(foo.a(~isnan(foo.a))), 1) > 1
+      filt_avg.cluster_a_flag(i) = true;
+    end
+    if size(unique(foo.c(~isnan(foo.c))), 1) > 1
+      filt_avg.cluster_c_flag(i) = true;
+    end
+    % weight clusters proportionally for each filter events
     for j = 1:size(groups_a,1)
-      cluster_weighted.a(i,j) = sum(foo.a == groups_a(j)) ./ sum(~isnan(foo.a));
+      filt_avg.cluster_weighted_a(i,j) = sum(foo.a == groups_a(j)) ./ sum(~isnan(foo.a));
     end
     for j = 1:size(groups_c,1)
-      cluster_weighted.c(i,j) = sum(foo.c == groups_c(j)) ./ sum(~isnan(foo.c));
+      filt_avg.cluster_weighted_c(i,j) = sum(foo.c == groups_c(j)) ./ sum(~isnan(foo.c));
     end
   end
-  % weigth a slope and intercept
-  cluster_weighted.slope_a = zeros(size(cluster_weighted, 1), size(regress_stats.a, 1));
-  cluster_weighted.intercept_a = zeros(size(cluster_weighted, 1), size(regress_stats.a, 1));
+  % weight a slope and intercept
+  filt_avg.slope_a = zeros(size(filt_avg, 1), size(regress_stats.a, 1));
+  filt_avg.intercept_a = zeros(size(filt_avg, 1), size(regress_stats.a, 1));
   for j = 1:size(groups_a, 1)
-    cluster_weighted.slope_a = cluster_weighted.slope_a + regress_stats.a.slope(:,j)'.*cluster_weighted.a(:,j);
-    cluster_weighted.intercept_a = cluster_weighted.intercept_a + regress_stats.a.intercept(:,j)'.*cluster_weighted.a(:,j);
+    filt_avg.slope_a = filt_avg.slope_a + regress_stats.a.slope(:,j)'.*filt_avg.cluster_weighted_a(:,j);
+    filt_avg.intercept_a = filt_avg.intercept_a + regress_stats.a.intercept(:,j)'.*filt_avg.cluster_weighted_a(:,j);
   end
-  % weigth c slope and intercept
-  cluster_weighted.slope_c = zeros(size(cluster_weighted, 1), size(regress_stats.c, 1));
-  cluster_weighted.intercept_c = zeros(size(cluster_weighted, 1), size(regress_stats.c, 1));
+  % weight c slope and intercept
+  filt_avg.slope_c = zeros(size(filt_avg, 1), size(regress_stats.c, 1));
+  filt_avg.intercept_c = zeros(size(filt_avg, 1), size(regress_stats.c, 1));
   for j = 1:size(groups_c, 1)
-    cluster_weighted.slope_c = cluster_weighted.slope_c + regress_stats.c.slope(:,j)'.*cluster_weighted.c(:,j);
-    cluster_weighted.intercept_c = cluster_weighted.intercept_c + regress_stats.c.intercept(:,j)'.*cluster_weighted.c(:,j);
+    filt_avg.slope_c = filt_avg.slope_c + regress_stats.c.slope(:,j)'.*filt_avg.cluster_weighted_c(:,j);
+    filt_avg.intercept_c = filt_avg.intercept_c + regress_stats.c.intercept(:,j)'.*filt_avg.cluster_weighted_c(:,j);
   end
   % interpolate slope and intercept cluster specific onto filt_interp.dt
-  filt_interp.slope_interp_a = interp1(cluster_weighted.dt, cluster_weighted.slope_a, filt_interp.dt, 'spline');
-  filt_interp.slope_interp_a = fillmissing(filt_interp.slope_interp_a, 'nearest');
-  filt_interp.intercept_interp_a = interp1(cluster_weighted.dt, cluster_weighted.intercept_a, filt_interp.dt, 'spline');
-  filt_interp.intercept_interp_a = fillmissing(filt_interp.intercept_interp_a, 'nearest');
-  filt_interp.slope_interp_c = interp1(cluster_weighted.dt, cluster_weighted.slope_c, filt_interp.dt, 'spline');
-  filt_interp.slope_interp_c = fillmissing(filt_interp.slope_interp_c, 'nearest');
-  filt_interp.intercept_interp_c = interp1(cluster_weighted.dt, cluster_weighted.intercept_c, filt_interp.dt, 'spline');
-  filt_interp.intercept_interp_c = fillmissing(filt_interp.intercept_interp_c, 'nearest');
-  
-  filt_avg.slope_a = cluster_weighted.slope_a;
-  filt_avg.intercept_a = cluster_weighted.intercept_a;
-  filt_avg.slope_c = cluster_weighted.slope_c;
-  filt_avg.intercept_c = cluster_weighted.intercept_c;
-  
-  % % reconstruct a filtered from fdom
-  % % TODO remember here I've removed the bad fit component
-  % % filt_interp.a = filt_interp.fdom .* filt_interp.slope_interp_a(:, ~bad_fit_a) + filt_interp.intercept_interp_a(:, ~bad_fit_a);
-  % % filt_interp.a(:, ~bad_fit_a) = filt_interp.fdom .* filt_interp.slope_interp_a(:, ~bad_fit_a) + filt_interp.intercept_interp_a(:, ~bad_fit_a);
-  % filt_interp.a = filt_interp.fdom .* filt_interp.slope_interp_a + filt_interp.intercept_interp_a;
-  % % reconstruct c filtered from fdom
-  % % filt_interp.c = filt_interp.fdom .* filt_interp.slope_interp_c(:, ~bad_fit_c) + filt_interp.intercept_interp_c(:, ~bad_fit_c);
-  % % filt_interp.c(:, ~bad_fit_c) = filt_interp.fdom .* filt_interp.slope_interp_c(:, ~bad_fit_c) + filt_interp.intercept_interp_c(:, ~bad_fit_c);
-  % filt_interp.c = filt_interp.fdom .* filt_interp.slope_interp_c + filt_interp.intercept_interp_c;
-
-
-  % for i = 1:size(lambda.a, 2)
-  %   % reconstruct a filtered from fdom
-  %   % TODO remember here I've removed the bad fit component
-  %   for j = 1:size(groups_a, 1)
-  %     id_grp_a = clusters.a == groups_a(j);
-  %     % filt_interp.a(id_grp_a, :) = filt_interp.fdom(id_grp_a) .* regress_stats.a.slope(~bad_fit_a,j)' + repmat(regress_stats.a.intercept(~bad_fit_a,j)', sum(id_grp_a), 1);
-  %     % filt_interp.a(id_grp_a, ~bad_fit_a) = filt_interp.fdom(id_grp_a) .* regress_stats.a.slope(~bad_fit_a,j)' + repmat(regress_stats.a.intercept(~bad_fit_a,j)', sum(id_grp_a), 1);
-  %     filt_interp.a(id_grp_a, :) = filt_interp.fdom(id_grp_a) .* regress_stats.a.slope(:,j)' + repmat(regress_stats.a.intercept(:,j)', sum(id_grp_a), 1);
-  %   end
-  %   % reconstruct c filtered from fdom
-  %   for j = 1:size(groups_c, 1)
-  %     id_grp_c = clusters.c == groups_c(j);
-  %     % filt_interp.c(id_grp_c, :) = filt_interp.fdom(id_grp_c) .* regress_stats.c.slope(~bad_fit_c,j)' + repmat(regress_stats.c.intercept(~bad_fit_c,j)', sum(id_grp_c), 1);
-  %     % filt_interp.c(id_grp_c, ~bad_fit_c) = filt_interp.fdom(id_grp_c) .* regress_stats.c.slope(~bad_fit_c,j)' + repmat(regress_stats.c.intercept(~bad_fit_c,j)', sum(id_grp_c), 1);
-  %     filt_interp.c(id_grp_c, :) = filt_interp.fdom(id_grp_c) .* regress_stats.c.slope(:,j)' + repmat(regress_stats.c.intercept(:,j)', sum(id_grp_c), 1);
-  %   end
-  % end
-
-
-  % % % reconstruct a and c filtered from fdom
-  % % % TODO remember here I've removed the bad fit component
-  % % % filt_interp.a = filt_interp.fdom .* regress_stats.a.slope(~bad_fit)' + repmat(regress_stats.a.intercept(~bad_fit)', size(tot.a, 1), 1);
-  % % filt_interp.a = filt_interp.fdom .* regress_stats.a.slope' + repmat(regress_stats.a.intercept', size(tot.a, 1), 1);
-  % % % filt_interp.c = filt_interp.fdom .* regress_stats.c.slope(~bad_fit)' + repmat(regress_stats.c.intercept(~bad_fit)', size(tot.c, 1), 1);
-  % % filt_interp.c = filt_interp.fdom .* regress_stats.c.slope' + repmat(regress_stats.c.intercept', size(tot.c, 1), 1);
-  % % % filt_interp.a(:, ~bad_fit) = filt_interp.fdom .* regress_stats.a.slope(~bad_fit)' + repmat(regress_stats.a.intercept(~bad_fit)', size(tot.a, 1), 1);
-  % % % filt_interp.c(:, ~bad_fit) = filt_interp.fdom .* regress_stats.c.slope(~bad_fit)' + repmat(regress_stats.c.intercept(~bad_fit)', size(tot.c, 1), 1);
-
-
-  % % fill missing modelled data for bad fit wavelength with spline interpolation
-  % filt_interp.a(:, bad_fit) = interp1(lambda.a, filt_interp.a', lambda.a(bad_fit), 'spline')';
-  % filt_interp.c(:, bad_fit) = interp1(lambda.c, filt_interp.c', lambda.c(bad_fit), 'spline')';
-
-
-  % % compare filter even measured and modelled
-  %     % compute a&c filt avg from best regression (fcdom / temperature / fcdom*temperature)
-  %     filt_avg_mod = table(filt_avg.dt, 'VariableNames', {'dt'});
-  %     filt_avg_mod.a = NaN(size(filt_avg.a));
-  %     filt_avg_mod.c = NaN(size(filt_avg.c));
-  %     % fill regression variable missing data with spline interpolation and nearest extrapolation
-  %     filt_avg_mod.fdom = interp1(cdom.dt, cdom.fdom, filt_avg.dt, 'spline');
-  %     filt_avg_mod.fdom(isnan(filt_avg_mod.fdom)) = interp1(filt_avg_mod.dt, filt_avg_mod.fdom, filt_avg.dt(isnan(filt_avg_mod.fdom)), 'nearest', 'extrap');
-  %     % reconstruct a and c filtered from fdom
-  %     filt_avg_mod.a = filt_avg_mod.fdom .* regress_stats.a.slope' + repmat(regress_stats.a.intercept', size(filt_avg.a, 1), 1);
-  %     filt_avg_mod.c = filt_avg_mod.fdom .* regress_stats.c.slope' + repmat(regress_stats.c.intercept', size(filt_avg.c, 1), 1);
-  %     % filt_avg_mod.a(:, ~bad_fit) = filt_avg_mod.fdom .* regress_stats.a.slope(~bad_fit)' + repmat(regress_stats.a.intercept(~bad_fit)', size(filt_avg.a, 1), 1);
-  %     % filt_avg_mod.c(:, ~bad_fit) = filt_avg_mod.fdom .* regress_stats.c.slope(~bad_fit)' + repmat(regress_stats.c.intercept(~bad_fit)', size(filt_avg.c, 1), 1);
-  %     % 
-  %     % % fill missing modelled data for bad fit wavelength with spline interpolation
-  %     % filt_avg_mod.a(:, bad_fit) = interp1(lambda.a, filt_avg_mod.a', lambda.a(bad_fit), 'spline')';
-  %     % filt_avg_mod.c(:, bad_fit) = interp1(lambda.c, filt_avg_mod.c', lambda.c(bad_fit), 'spline')';
-  % 
-  %     figure;
-  %     hold on
-  %     scatter(lambda.a, regress_stats.a.slope, 20, [113	113	198]/255, 'filled')
-  %     scatter(lambda.c, regress_stats.c.slope, 20, [113	113	198]/255)
-  %     legend('slope of c_{filt} to fCDOM', 'slope of a_{filt} to fCDOM', 'FontSize', 16, 'Location', 'Northwest')
-  %     ylabel('slope of a_{filt} and c_{filt} to fCDOM', 'FontSize', 16)
-  %     xlabel("wavelength (nm)")
-  % 
-  %     % % percentage difference between modelled a and c from fdom and a and c
-  %     filt_diff = table();
-  %     filt_diff.a = abs((filt_avg_mod.a - filt_avg.a) ./ filt_avg.a) * 100;
-  %     filt_diff.c = abs((filt_avg_mod.c - filt_avg.c) ./ filt_avg.c) * 100;
-  %     avg_diff_a = mean(filt_diff.a, 'omitnan');
-  %     avg_diff_c = mean(filt_diff.c, 'omitnan');
-  %     std_diff_a = std(filt_diff.a, 'omitnan');
-  %     std_diff_c = std(filt_diff.c, 'omitnan');
-  % 
-  %     figure; hold on
-  %     plot(lambda.a, avg_diff_a, '-b')
-  %     plot(lambda.c, avg_diff_c, '-r')
-  %     ylabel('percentage difference a&c filtered fdom and measured')
-  %     legend('percentage difference a', 'percentage difference c')
-  % 
-  %     visProd3D(lambda.a, filt_avg_mod.dt, filt_avg_mod.a, false, 'Wavelength', false, 23);
-  %     visProd3D(lambda.c, filt_avg_mod.dt, filt_avg_mod.c, false, 'Wavelength', false, 24);
-  % 
-  %     visProd3D(lambda.a, filt_avg.dt, filt_avg.a, false, 'Wavelength', false, 25);
-  %     visProd3D(lambda.c, filt_avg.dt, filt_avg.c, false, 'Wavelength', false, 26);
-  % 
-  %     visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 23);
-  %     visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 24);
-  % 
-  %     visProd3D(lambda.a, filt_interp.dt, filt_interp.a, false, 'Wavelength', false, 25);
-  %     visProd3D(lambda.c, filt_interp.dt, filt_interp.c, false, 'Wavelength', false, 26);
+  filt_interp.slope_interp_a = interpspline_extrapnearest(filt_avg, filt_interp.dt, 'slope_a');
+  filt_interp.intercept_interp_a = interpspline_extrapnearest(filt_avg, filt_interp.dt, 'intercept_a');
+  filt_interp.slope_interp_c = interpspline_extrapnearest(filt_avg, filt_interp.dt, 'slope_c');
+  filt_interp.intercept_interp_c = interpspline_extrapnearest(filt_avg, filt_interp.dt, 'intercept_c');
 end
 
 
 %% regression between a/c and other variable in filter events
-function [a_reg, c_reg] = regress_acfilt(filt, lambda, ancillary, varr, clusters)
-  if nargin < 5
+function [a_reg, c_reg] = regress_acfilt(a, c, ancillary, clusters)
+  if nargin < 4
     clusters = table();
-    clusters.a = ones(size(filt, 1), 1);
-    clusters.c = ones(size(filt, 1), 1);
+    clusters.a = ones(size(a, 1), 1);
+    clusters.c = ones(size(c, 1), 1);
   end
-  % Interpolate regression variable over filtered datetime
-  filt.([varr '_b']) = interp1(ancillary.dt, ancillary.(varr), ancillary.dt, 'linear');
   % robust linear regression between filt a&c and ancillary variable
-  a_reg = array2table(NaN(size(lambda.a, 2), 5), 'VariableNames', {'slope', 'intercept', 'RMSE', 'nRMSE', 'R2'});
-  c_reg = array2table(NaN(size(lambda.a, 2), 5), 'VariableNames', {'slope', 'intercept', 'RMSE', 'nRMSE', 'R2'});
+  a_reg = array2table(NaN(size(a, 2), 5), 'VariableNames', {'slope', 'intercept', 'RMSE', 'nRMSE', 'R2'});
+  c_reg = array2table(NaN(size(c, 2), 5), 'VariableNames', {'slope', 'intercept', 'RMSE', 'nRMSE', 'R2'});
   groups_a = unique(clusters.a(~isnan(clusters.a)));
   groups_c = unique(clusters.c(~isnan(clusters.c)));
-  for i = 1:size(lambda.a, 2)
+  for i = 1:size(a, 2)
     for j = 1:size(groups_a, 1)
       id_grp_a = clusters.a == groups_a(j);
       % regress variable with filtered water absorption
-      [stats.b, stats.stats] = robustfit(ancillary.(varr)(id_grp_a), filt.a(id_grp_a, i));
+      [stats.b, stats.stats] = robustfit(ancillary(id_grp_a), a(id_grp_a, i));
+      [~, MSGID] = lastwarn();
+      warning('off', MSGID)
       a_reg.slope(i, j) = stats.b(2);
       a_reg.intercept(i, j) = stats.b(1);
       a_reg.RMSE(i, j) = stats.stats.robust_s;
       % calculated normalize RMSE by average and R2
-      id_nonan = all(~isnan([filt.a(:, i) ancillary.(varr)]), 2);
-      a_reg.nRMSE(i, j) = a_reg.RMSE(i, j)/abs(mean(filt.a(id_grp_a & id_nonan, i), 'omitnan'))*100;
-      a_reg.R2(i, j) = corr(filt.a(id_grp_a & id_nonan, i), stats.b(1) + stats.b(2) * ancillary.(varr)(id_grp_a & id_nonan))^2;
+      id_nonan = all(~isnan([a(:, i) ancillary]), 2);
+      a_reg.nRMSE(i, j) = a_reg.RMSE(i, j)/abs(mean(a(id_grp_a & id_nonan, i), 'omitnan'))*100;
+      a_reg.R2(i, j) = corr(a(id_grp_a & id_nonan, i), stats.b(1) + stats.b(2) * ancillary(id_grp_a & id_nonan))^2;
     end
     for j = 1:size(groups_c, 1)
       id_grp_c = clusters.c == groups_c(j);
       % regress variable with filtered water attenuation
-      [stats.b, stats.stats] = robustfit(ancillary.(varr)(id_grp_c), filt.c(id_grp_c, i));
+      [stats.b, stats.stats] = robustfit(ancillary(id_grp_c), c(id_grp_c, i));
+      [~, MSGID] = lastwarn();
+      warning('off', MSGID)
       c_reg.slope(i, j) = stats.b(2);
       c_reg.intercept(i, j) = stats.b(1);
       c_reg.RMSE(i, j) = stats.stats.robust_s;
       % calculated normalize RMSE by average and R2
-      id_nonan = all(~isnan([filt.c(:, i) ancillary.(varr)]), 2);
-      c_reg.nRMSE(i, j) = c_reg.RMSE(i, j)/abs(mean(filt.c(id_grp_c & id_nonan, i), 'omitnan'))*100;
-      c_reg.R2(i, j) = corr(filt.c(id_grp_c & id_nonan, i), stats.b(1) + stats.b(2) * ancillary.(varr)(id_grp_c & id_nonan))^2;
+      id_nonan = all(~isnan([c(:, i) ancillary]), 2);
+      c_reg.nRMSE(i, j) = c_reg.RMSE(i, j)/abs(mean(c(id_grp_c & id_nonan, i), 'omitnan'))*100;
+      c_reg.R2(i, j) = corr(c(id_grp_c & id_nonan, i), stats.b(1) + stats.b(2) * ancillary(id_grp_c & id_nonan))^2;
     end
   end
+end
 
-  % figure;
-  % subplot(2,4,1)
-  % plot_linreg(ancillary.(varr), filt.a(:, 76), 'robust', 'linear', false, 0.05);
-  % xlabel(varr)
-  % ylabel(['a' num2str(lambda.a(76))])
-  % subplot(2,4,2)
-  % plot_linreg(ancillary.(varr), filt.a(:, 78), 'robust', 'linear', false, 0.05);
-  % xlabel(varr)
-  % ylabel(['a' num2str(lambda.a(78))])
-  % subplot(2,4,3)
-  % plot_linreg(ancillary.(varr), filt.a(:, 79), 'robust', 'linear', false, 0.05);
-  % xlabel(varr)
-  % ylabel(['a' num2str(lambda.a(79))])
-  % subplot(2,4,4)
-  % plot_linreg(ancillary.(varr), filt.a(:, 80), 'robust', 'linear', false, 0.05);
-  % xlabel(varr)
-  % ylabel(['a' num2str(lambda.a(80))])
-  % subplot(2,4,5)
-  % plot_linreg(ancillary.(varr), filt.a(:, 81), 'robust', 'linear', false, 0.05);
-  % xlabel(varr)
-  % ylabel(['a' num2str(lambda.a(81))])
-  % subplot(2,4,6)
-  % plot_linreg(ancillary.(varr), filt.a(:, 82), 'robust', 'linear', false, 0.05);
-  % xlabel(varr)
-  % ylabel(['a' num2str(lambda.a(82))])
-  % subplot(2,4,7)
-  % plot_linreg(ancillary.(varr), filt.a(:, 84), 'robust', 'linear', false, 0.05);
-  % xlabel(varr)
-  % ylabel(['a' num2str(lambda.a(84))])
-  % subplot(2,4,8)
-  % plot_linreg(ancillary.(varr), filt.a(:, 86), 'robust', 'linear', false, 0.05);
-  % xlabel(varr)
-  % ylabel(['a' num2str(lambda.a(86))])
+%%
+function data_out = interpspline_extrapnearest(data_in, dt_vector, var_tointerp, max_missing_length, extrap_bool)
+  if nargin < 5
+    extrap_bool = true;
+  end
+  % remove row full of NaNs
+  data_in(all(isnan(data_in.(var_tointerp)), 2), :) = [];
+  % convert dt_vector to datetime
+  datetime_vector = datetime(dt_vector, 'ConvertFrom', 'datenum');
+  dt = (datenum(min(datetime_vector):median(diff(datetime_vector)):max(datetime_vector)))';
+  % id extrapolation
+  extrapolated_id = isnan(interp1(data_in.dt, data_in.(var_tointerp), dt, 'nearest'));
+  % interpolate spline
+  data_out = interp1(data_in.dt, data_in.(var_tointerp), dt, 'spline');
+  % replace extrapolated data by NaN
+  data_out(extrapolated_id) = NaN;
+  % fill missing data with nearest interpolation
+  if extrap_bool
+    data_out = fillmissing(data_out, 'nearest');
+  end
+  % replace interpolated values over gaps > max_missing_length by NaN
+  if nargin >= 4
+    if ~isempty(max_missing_length)
+      missing_data = ~ismember(dt, data_in.dt);
+      t = [true; diff(missing_data) ~= 0];
+      k = diff(find([t; true])) .* missing_data(t);
+      long_nan = k(cumsum(t)) > max_missing_length;
+      data_out(long_nan, :) = NaN;
+    end
+  end
+  data_out = interp1(dt, data_out, dt_vector, 'nearest');
+end
+
+%%
+function data_out = round_timestamp(data_in)
+  data_out = table();
+  % make sure data_in.dt in rounded to the time binning frequency
+  datetime_data_in_dt = datetime(data_in.dt, 'ConvertFrom', 'datenum');
+  % get time binning frequency
+  Tbin_data_in = median(diff(datetime_data_in_dt));
+  if Tbin_data_in >= hours(1)
+    data_out.dt = datenum(dateshift(datetime_data_in_dt, 'start', 'hours'));
+  elseif Tbin_data_in >= minutes(1)
+    % round start/end time to minute
+    data_out.dt = datenum(dateshift(datetime_data_in_dt, 'start', 'minutes'));
+  elseif Tbin_data_in >= seconds(1)
+    % round start/end time to seconds
+    data_out.dt = datenum(dateshift(datetime_data_in_dt, 'start', 'seconds'));
+  else
+    error('automatic detection of sampling rate detected a frequency not supported: check interpspline_extrapnearest function in processACS.m')
+  end
+  % remove duplicates
+  [~, L, ~] = unique(data_out.dt,'first');
+  indexToDump = not(ismember(1:numel(data_out.dt), L));
+  if sum(indexToDump) > 0
+    data_out(indexToDump, :) = [];
+  end
+  % interpolate data on rounded datetime
+  vars = data_in.Properties.VariableNames;
+  vars(strcmp(vars, 'dt')) = [];
+  for v = vars
+    data_out.(v{:}) = interp1(data_in.dt, data_in.(v{:}), data_out.dt, 'linear');
+  end
 end

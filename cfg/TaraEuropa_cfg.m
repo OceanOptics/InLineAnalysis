@@ -24,12 +24,14 @@ cfg.meta.measurement_depth = 2;
 %% INSTRUMENTS %%
 %%%%%%%%%%%%%%%%%
 
-PATH_ROOT = '/Users/emmanuelboss/Desktop/TaraEuropa';
-% PATH_ROOT = '/Volumes/Samsung_T5/Data/TaraEuropa';
+%PATH_ROOT = '/Users/emmanuelboss/Desktop/TaraEuropa';
+PATH_ROOT = '/Volumes/Data/TaraEuropa/';
 
 %%% TSG %%%
 model = 'SBE3845';
-SN = '0269';
+%SN = '0269';
+
+SN = '04970269';
 cfg.instruments.([model SN]) = struct();
 cfg.instruments.([model SN]).model = model;
 cfg.instruments.([model SN]).boat = 'Tara';
@@ -44,7 +46,7 @@ cfg.instruments.([model SN]).temperature_variable = 't2';
 
 
 %%% NMEA %%%
-model = 'GPS32Tara'; % GPSSC701Tara GPS32Tara GPSCOMPASSAT
+model = 'GPSSC701Tara'; % GPSSC701Tara GPS32Tara GPSCOMPASSAT
 SN = '';
 cfg.instruments.NMEA = struct();
 cfg.instruments.NMEA.model = model;
@@ -74,7 +76,7 @@ cfg.instruments.FLOW.path = struct('raw',  fullfile(PATH_ROOT, 'raw', 'FlowContr
 cfg.instruments.FLOW.view = struct('varname', 'swt','spd_variable','spd1'); % spd1 spd2
 
 %%% ACS003 %%%
-SN = '003';
+SN = '3';
 cfg.instruments.(['ACS' SN]) = struct();
 cfg.instruments.(['ACS' SN]).di = struct();
 cfg.instruments.(['ACS' SN]).di.prefix = ['DIW_ACS' SN '_'];
@@ -90,25 +92,25 @@ cfg.instruments.(['ACS' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['
                                     'ui', fullfile(PATH_ROOT, 'ui', ['ACS' SN]));
 cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 
-% %%% HBB %%%
-% SN = '8005';
-% cfg.instruments.(['HyperBB' SN]) = struct();
-% cfg.instruments.(['HyperBB' SN]).di = struct();
-% cfg.instruments.(['HyperBB' SN]).di.prefix = ['DIW_HyperBB' SN '_'];
-% cfg.instruments.(['HyperBB' SN]).di.postfix = '';
-% cfg.instruments.(['HyperBB' SN]).model = 'HBB';
-% cfg.instruments.(['HyperBB' SN]).sn = SN;
-% cfg.instruments.(['HyperBB' SN]).ila_prefix = ['HyperBB' SN];
-% cfg.instruments.(['HyperBB' SN]).logger = 'InlininoHBB';
-% cfg.instruments.(['HyperBB' SN]).theta = 135;
-% cfg.instruments.(['HyperBB' SN]).PlaqueCal = fullfile(PATH_ROOT, 'DeviceFiles', 'HyperBB8005_cal_20230307/Hbb_Cal_Plaque_20230307_131026_3_avg.mat');
-% cfg.instruments.(['HyperBB' SN]).TemperatureCal = fullfile(PATH_ROOT, 'DeviceFiles', 'HyperBB8005_cal_20230307/Hbb_Cal_Temp_20230217_160954.mat');
-% cfg.instruments.(['HyperBB' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN]),...
-%                                   'di',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN], 'DI'),...
-%                                   'wk',   fullfile(PATH_ROOT, 'wk', ['HyperBB' SN]),...
-%                                   'prod', fullfile(PATH_ROOT, 'prod'),...
-%                                   'ui', fullfile(PATH_ROOT, 'ui', ['HyperBB' SN]));
-% cfg.instruments.(['HyperBB' SN]).view = struct('varname', 'beta', 'varcol', 23);
+%%% HBB %%%
+SN = '8005';
+cfg.instruments.(['HyperBB' SN]) = struct();
+cfg.instruments.(['HyperBB' SN]).di = struct();
+cfg.instruments.(['HyperBB' SN]).di.prefix = ['DIW_HyperBB' SN '_'];
+cfg.instruments.(['HyperBB' SN]).di.postfix = '';
+cfg.instruments.(['HyperBB' SN]).model = 'HBB';
+cfg.instruments.(['HyperBB' SN]).sn = SN;
+cfg.instruments.(['HyperBB' SN]).ila_prefix = ['HyperBB' SN];
+cfg.instruments.(['HyperBB' SN]).logger = 'InlininoHBB';
+cfg.instruments.(['HyperBB' SN]).theta = 135;
+cfg.instruments.(['HyperBB' SN]).PlaqueCal = fullfile(PATH_ROOT, 'DeviceFiles', 'HyperBB8005_cal_20230307/Hbb_Cal_Plaque_20230307_131026_3_avg.mat');
+cfg.instruments.(['HyperBB' SN]).TemperatureCal = fullfile(PATH_ROOT, 'DeviceFiles', 'HyperBB8005_cal_20230307/Hbb_Cal_Temp_20230217_160954.mat');
+cfg.instruments.(['HyperBB' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN]),...
+                                  'di',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN], 'DI'),...
+                                  'wk',   fullfile(PATH_ROOT, 'wk', ['HyperBB' SN]),...
+                                  'prod', fullfile(PATH_ROOT, 'prod'),...
+                                  'ui', fullfile(PATH_ROOT, 'ui', ['HyperBB' SN]));
+cfg.instruments.(['HyperBB' SN]).view = struct('varname', 'beta', 'varcol', 23);
 
 
 %%% SUVF %%%
@@ -251,7 +253,7 @@ end
 % cfg.process.split.buffer.LISSTTau1002G = [180, 60];
 % cfg.process.split.buffer.BB31502 = [420, 220];
 % cfg.process.split.buffer.WSCD859 = [540, 100];
-% cfg.process.split.buffer.SUVF6244 = [240, 100]; % [660, 100]
+ cfg.process.split.buffer.SUVF6244 = [180, 60]; % [660, 100]
 % cfg.process.split.buffer.HyperBB8005 = [240, 140]; % [540, 340]
 % cfg.process.split.buffer.LISST1183 = [540, 360];
 
@@ -361,16 +363,17 @@ for i = 1:size(cfg.process.instruments2run)
   % AC meter options
   if any(contains(cfg.process.instruments2run{i}, {'ACS', 'AC9'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
+                                      'TSG_source', 'SBE384504970269', ...
                                       'interpolation_method', 'linear', ... % choose one: linear CDOM
                                       'CDOM_source', 'SUVF6244', ... %
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'best_di', ... % best_di normal
-                                      'scattering_correction', 'Kostakis2022', ... % Zaneveld1994 Kostakis2022
-                                      'compute_ad_aphi', true); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
+                                      'scattering_correction', 'Rottgers2013_semiempirical', ... % Zaneveld1994_proportional Rottgers2013_semiempirical
+                                      'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
   % ECO-BB options
   elseif any(contains(cfg.process.instruments2run{i}, {'BB', 'BB'}) & ~contains(cfg.process.instruments2run{i}, {'HyperBB','HBB','hbb'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', true, ...
-                                      'TSG_source', 'SBE38450269', ...
+                                      'TSG_source', 'SBE384504970269', ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'SW_scattering', ... % interpolate constant SW_scattering
                                       'filt_method', 'exponential_fit'); % 25percentil exponential_fit
@@ -383,7 +386,7 @@ for i = 1:size(cfg.process.instruments2run)
   % HyperBB options
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
-                                      'TSG_source', 'SBE38450269', ...
+                                      'TSG_source', 'SBE384504970269', ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'SW_scattering', ... % interpolate constant SW_scattering
                                       'filt_method', 'exponential_fit'); % 25percentil exponential_fit

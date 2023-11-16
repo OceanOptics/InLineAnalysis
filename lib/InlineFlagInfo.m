@@ -12,6 +12,26 @@ switch instrument
   case {'ACS', 'AC'}
     InLineFlag = table();
     
+    InLineFlag.name{size(InLineFlag,1)+1} = 'fCDOM_mix_a_cluster';
+    InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
+    InLineFlag.description{size(InLineFlag,1)} = 'fCDOM interpolation: mixed clusters within start and/or end a filter event(s)';
+    
+    InLineFlag.name{size(InLineFlag,1)+1} = 'fCDOM_mix_c_cluster';
+    InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
+    InLineFlag.description{size(InLineFlag,1)} = 'fCDOM interpolation: mixed clusters within start and/or end c filter event(s)';
+    
+    InLineFlag.name{size(InLineFlag,1)+1} = 'fCDOM_a_cluster_chg';
+    InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
+    InLineFlag.description{size(InLineFlag,1)} = 'fCDOM interpolation: change of a clusters between start and end filter events';
+    
+    InLineFlag.name{size(InLineFlag,1)+1} = 'fCDOM_c_cluster_chg';
+    InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
+    InLineFlag.description{size(InLineFlag,1)} = 'fCDOM interpolation: change of c clusters between start and end filter events';
+    
+    InLineFlag.name{size(InLineFlag,1)+1} = 'flag_linear_interp';
+    InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
+    InLineFlag.description{size(InLineFlag,1)} = 'Filter events linearly interpolated';
+
     InLineFlag.name{size(InLineFlag,1)+1} = 'cp_neg';
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
     InLineFlag.description{size(InLineFlag,1)} = 'cp < -0.0015';

@@ -4,20 +4,26 @@
 clear
 close all
 
-cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master')
+cd('/Volumes/Data/TaraEuropa/InLineAnalysis-master')
 
 % Load InLineAnalysis and the configuration
 ila = InLineAnalysis('cfg/TaraEuropa_cfg.m');
 
 % Quick cfg update
 %% set the date to process
-ila.cfg.days2run = datenum(2023,4,2):datenum(2023,5,6); %datenum(2023,5,5)
+ila.cfg.days2run = datenum(2023,4,4):datenum(2023,4,19); %datenum(2023,5,10):datenum(2023,5,30);datenum(2023,6,6):datenum(2023,6,30);datenum(2023,7,8):datenum(2023,8,3)
+% ila.cfg.days2run = datenum(2023,4,9):datenum(2023,4,19);
+% ila.cfg.days2run = datenum(2023,4,20):datenum(2023,5,26);
+% ila.cfg.days2run = datenum(2023,5,2):datenum(2023,5,3);
+% ila.cfg.days2run = datenum(2023,4,4):datenum(2023,4,6);
 
-%% 'SBE38450269','NMEA','FLOW','ACS412','HyperBB8002','BB31502','SUVF6254','WS3S1081','LISST1183'
-ila.cfg.instruments2run = {'FLOW', 'BB31502'};
-ila.cfg.qcref.view = 'BB31502';
-%ila.cfg.instruments2run = {'FLOW','SBE38450269'};
-%ila.cfg.qcref.view = 'SBE38450269';ila.cfg.parallel = Inf;
+%% 'SBE38450269','NMEA','FLOW','ACS412','HyperBB8002','BB3349','SUVF6254','WS3S1081','LISST1183'
+ila.cfg.instruments2run = {'FLOW','SUVF6244','SBE384504970269','ACS3'};%SBE384504970286'};
+ila.cfg.qcref.view = 'ACS3';
+% ila.cfg.instruments2run = {'FLOW','SUVF6244'};
+% ila.cfg.qcref.view = 'SUVF6244';
+% ila.cfg.instruments2run = {'FLOW','SBE384504970286','SUVF6244','ACS3'};
+ila.cfg.parallel = Inf;
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 
 %% 1. Import | Load raw data
@@ -26,10 +32,10 @@ ila.ReadRaw();
 ila.CheckDataStatus();
 
 %% Or Load data from already processed mat files
-ila.Read('raw');
-ila.Read('bin');
-% ila.Read('qc');
-%ila.Read('prod');
+% ila.Read('raw');
+% ila.Read('bin');
+ila.Read('qc');
+ila.Read('prod');
 % ila.CheckDataStatus();
 
 %% 2. Synchronise instruments
@@ -127,10 +133,10 @@ ila.SpectralQC('AC',{'raw'}); % AC or BB
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.SpectralQC('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'g','ag'})
-ila.SpectralQC('AC',{'raw'}, false, {'fsw','qc'});
+ila.SpectralQC('AC',{'raw'}, false, {'fsw','c'});
 
 %% 5.3. Loading previous qc pick selection at raw level
-ila.cfg.qc.mode='load';  % load or ui
+ila.cfg.qc.mode='ui';  % load or ui
 ila.cfg.qc.specific.run = {ila.cfg.qcref.view}; % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
 ila.QC();
 
@@ -153,7 +159,7 @@ ila.Write('bin', 'part')
 ila.CheckDataStatus();
 
 %% 7. Flag
-ila.Flag() % Now deprecated will just copy data to next level
+ila.Flag() % copy data to next level
 ila.CheckDataStatus();
 
 %% 8. QC Interactive or Loading previous qc selection
@@ -161,7 +167,7 @@ ila.CheckDataStatus();
 ila.cfg.qc.mode='ui';  % load or ui
 ila.cfg.qc.remove_old = false;  % remove old selection of this period
 ila.cfg.qc.qc_once_for_all = false; % true = QC all variables | false = QC variables separately)
-% Global
+% Glob
 ila.cfg.qc.global.view = {ila.cfg.qcref.view};
 ila.cfg.qc.global.active = false;
 % Specific
@@ -191,7 +197,7 @@ ila.SpectralQC('AC',{'qc'});
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.SpectralQC('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'g','ag'})
 % ila.SpectralQC('AC',{'qc'}, false, {'fsw','a'});
-ila.SpectralQC('AC',{'qc'}, false, {'tsw','c'});
+ila.SpectralQC('AC',{'qc'}, false, {'fsw','c'});
 
 %% 9. QC Switch position
 % QC switch position to make sure each filter event is separated by a
@@ -202,21 +208,22 @@ ila.QCSwitchPosition()
 ila.Write('qc', 'part')
 
 %% 10. Calibrate
-% ila.cfg.calibrate.skip = {'FLOW', 'TSG', 'ALFA', 'NMEA'};
+% ila.cfg.calibrate.skip = {'FLOW', 'TSG', 'ALFA', 'NMEA','SBE384504970286','SUVF6244'};
+ila.cfg.calibrate.skip = {'FLOW', 'TSG', 'ALFA', 'NMEA','SBE384504970269'};%SBE384504970286'};
 % update filter method if needed
 ila.cfg.calibrate.(ila.cfg.qcref.view).filt_method = 'exponential_fit'; % exponential_fit 25percentil
 % update filter interpolation method if needed
-ila.cfg.calibrate.(ila.cfg.qcref.view).interpolation_method = 'linear'; % CDOM linear
+ila.cfg.calibrate.(ila.cfg.qcref.view).interpolation_method = 'CDOM'; % CDOM linear
 % update scattering correction method if needed
-ila.cfg.calibrate.(ila.cfg.qcref.view).scattering_correction = 'Kostakis2022'; % Kostakis2022 Zaneveld1994
+ila.cfg.calibrate.(ila.cfg.qcref.view).scattering_correction = 'Rottgers2013_semiempirical'; % Rottgers2013_semiempirical Zaneveld1994_proportional
 ila.Calibrate();
 ila.CheckDataStatus();
 
 %% 10.1 Product visualisation plots with option to save
-save_figures = true;
+save_figures = false;
 
 %%% AC or BB 3D plots %%%
-ila.SpectralQC('AC', {'prod'}, save_figures); % AC or BB
+% ila.SpectralQC('AC', {'prod'}, save_figures); % AC or BB
 
 %%% ACS BB3 TSG PAR WSCD SUVF ALFA LISST final product visualisation %%%
 ila.visProd_timeseries()
