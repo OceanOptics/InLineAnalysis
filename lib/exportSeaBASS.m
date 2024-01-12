@@ -32,26 +32,27 @@ else
 end
 % Generate fieldnames
 k = 1;
-specific_fields = {}; specific_units = {};
+sz = sum(cellfun('isempty', subfields)) + sum(cellfun(@(s) size(s, 2), subfields));
+specific_fields = cell(1, sz); specific_units = cell(1, sz);
 for i=1:size(i_specific_fields,2)
+  if size(subfields{i},2) < 2
+    id = k;
+  else
+    id = k:k+size(subfields{i},2)-1;
+  end
   if isempty(subfields{i})
-    specific_fields{k} = data.Properties.VariableNames{i_specific_fields(i)};
-    specific_units{k} = data.Properties.VariableUnits{i_specific_fields(i)};
-    k=k+1;
+    specific_fields{id} = data.Properties.VariableNames{i_specific_fields(i)};
+    specific_units{id} = data.Properties.VariableUnits{i_specific_fields(i)};
   elseif strfind(data.Properties.VariableNames{i_specific_fields(i)}, '_')
     foo = strsplit(data.Properties.VariableNames{i_specific_fields(i)}, '_');
-    for j=1:size(subfields{i},2)
-      specific_fields{k} = sprintf('%s%s%s', foo{1}, subfields{i}(j), sprintf('_%s', foo{2:end}));
-      specific_units{k} = data.Properties.VariableUnits{i_specific_fields(i)};
-      k=k+1;
-    end
+    specific_fields(id) = cellstr(strcat(foo{1}, subfields{i}, sprintf('_%s', foo{2:end})));
+    specific_units(id) = data.Properties.VariableUnits(i_specific_fields(i));
   else
-    for j=1:size(subfields{i},2)
-      specific_fields{k} = sprintf('%s%s', data.Properties.VariableNames{i_specific_fields(i)}, subfields{i}(j));
-      specific_units{k} = data.Properties.VariableUnits{i_specific_fields(i)};
-      k=k+1;
-    end
+    specific_fields(id) = cellstr(strcat(data.Properties.VariableNames{i_specific_fields(i)}, subfields{i}));
+    specific_units(id) = data.Properties.VariableUnits(i_specific_fields(i));
   end
+  k=k+size(id,2);
+
 end
 
 % Replace bad values
@@ -80,10 +81,10 @@ fprintf(fid,'/data_status=%s\n', meta.data_status);
 % Date & Time
 dt_min = min(data.dt);
 dt_max = max(data.dt);
-fprintf(fid,'/start_date=%s\n', datestr(dt_min,'yyyymmdd'));
-fprintf(fid,'/end_date=%s\n', datestr(dt_max,'yyyymmdd'));
-fprintf(fid,'/start_time=%s[GMT]\n', datestr(dt_min,'HH:MM:SS'));
-fprintf(fid,'/end_time=%s[GMT]\n', datestr(dt_max,'HH:MM:SS'));
+fprintf(fid,'/start_date=%s\n', datetime(dt_min, 'Format', 'yyyyMMdd'));
+fprintf(fid,'/end_date=%s\n', datetime(dt_max, 'Format', 'yyyyMMdd'));
+fprintf(fid,'/start_time=%s[GMT]\n', datetime(dt_min, 'Format', 'HH:mm:SS'));
+fprintf(fid,'/end_time=%s[GMT]\n', datetime(dt_max, 'Format', 'HH:mm:SS'));
 % Location
 fprintf(fid,'/north_latitude=%.3f[DEG]\n', max(data.lat));
 fprintf(fid,'/south_latitude=%.3f[DEG]\n', min(data.lat));
@@ -105,7 +106,7 @@ foo = sprintf('%s,', units{:});fprintf(fid,'/units=%s\n', foo(1:end-1));
 fprintf(fid,'/end_header\n');
 fclose(fid);
 
-dat = table(datestr(data.dt, 'yyyymmdd'), datestr(data.dt, 'HH:MM:SS'), round(data.lat, 4), ...
+dat = table(datetime(data.dt, 'Format', 'yyyyMMdd'), datetime(data.dt, 'Format', 'HH:mm:SS'), round(data.lat, 4), ...
   round(data.lon, 4), round(data.t, 4), round(data.s, 4), 'VariableNames', {'Date', 'Time', ...
   'lat', 'lon', 't', 's'});
 var_precision = data.Properties.VariableDescriptions(i_specific_fields);
@@ -115,15 +116,15 @@ if any(int)
     var_precision{int(j)} = '%.0d';
   end
 end
-var_precision = str2num(cell2mat(regexprep(var_precision','\D','')));
+% var_precision = str2num(cell2mat(regexprep(var_precision','\D','')));
+var_precision = str2double(regexprep(var_precision,'\D',''))';
 for j=progress(1:size(i_specific_fields,2))
   var = data.Properties.VariableNames{i_specific_fields(j)};
   dat = [dat array2table(round(data.(var), var_precision(j)), 'VariableNames', ...
     cellfun(@(x) [var '_' x], cellstr(num2str((1:size(data.(var), 2))')), 'un', 0))];
 end
-writetable(dat,[file_path filesep file_name file_ext],'Encoding','US-ASCII', ...
-  'Filetype', 'text','WriteMode','Append',...
-    'WriteVariableNames',false,'WriteRowNames',false)
+writetable(dat, fullfile(file_path, [file_name file_ext]), 'Encoding','US-ASCII', ...
+  'Filetype', 'text','WriteMode','Append', 'WriteVariableNames',false,'WriteRowNames',false)
   
 % % set separator
 % com = repmat(',', size(data, 1), 1);

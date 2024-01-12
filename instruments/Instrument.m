@@ -314,7 +314,10 @@ classdef (Abstract) Instrument < handle
           if ~any(sel); fprintf('WRITE: %s_%s_%s No data.\n', filename_prefix, level, f); continue; end
           data = obj.(level).(f)(sel,:);
           if ~isfolder(obj.path.wk); mkdir(obj.path.(level)); end
+          tic
           save(fullfile(obj.path.wk, filename), 'data');
+          fprintf('WRITE: %s saved', filename);
+          t = toc; fprintf('  %1.3f s\n', t);
         end
 %       else
 %         % One Table at the level
@@ -383,10 +386,16 @@ classdef (Abstract) Instrument < handle
             sel = min(days2read) <= data_temp.dt & data_temp.dt < max(days2read) + 1;
             fn = strsplit(f, {'_','.'}); fn = fn{end-1};%(1:end-4);
             if strcmp(fn, level)
+              if ~isempty(obj.(level))
+                [obj.(level), data_temp] = check_nb_variables(obj.(level), data_temp(sel,:), f);
+              end
               obj.(level)(end+1:end+sum(sel),:) = data_temp(sel,:);
               obj.(level).Properties.CustomProperties = data_temp.Properties.CustomProperties;
             else
               if isfield(obj.(level), fn)
+                if ~isempty(obj.(level).(fn))
+                  [obj.(level).(fn), data_temp] = check_nb_variables(obj.(level).(fn), data_temp(sel,:), f);
+                end
                 obj.(level).(fn)(end+1:end+sum(sel),:) = data_temp(sel,:);
                 obj.(level).(fn).Properties.CustomProperties = data_temp.Properties.CustomProperties;
               else
@@ -394,6 +403,9 @@ classdef (Abstract) Instrument < handle
                   obj.(level).(fn) = data_temp(sel,:);
                   obj.(level).(fn).Properties.CustomProperties = data_temp.Properties.CustomProperties;
                 else
+                  if ~isempty(obj.(level))
+                    [obj.(level), data_temp] = check_nb_variables(obj.(level), data_temp(sel,:), f);
+                  end
                   obj.(level)(end+1:end+sum(sel),:) = data_temp(sel,:);
                   obj.(level).Properties.CustomProperties = data_temp.Properties.CustomProperties;
                 end
@@ -451,5 +463,23 @@ classdef (Abstract) Instrument < handle
 %     end
 %   end
   
+end
+
+function [gdata, data] = check_nb_variables(gdata, data, dt)
+  if all(size(gdata, 2) ~= size(data, 2) & ~isempty(gdata) & ~isempty(data))
+    if all(ismember(gdata.Properties.VariableNames, data.Properties.VariableNames)) && ...
+        ~all(ismember(data.Properties.VariableNames, gdata.Properties.VariableNames))
+      missing_var = data.Properties.VariableNames(~ismember(data.Properties.VariableNames, gdata.Properties.VariableNames));
+      data = data(:, ismember(data.Properties.VariableNames, gdata.Properties.VariableNames));
+      before_or_after = 'before';
+    elseif ~all(ismember(gdata.Properties.VariableNames, data.Properties.VariableNames)) && ...
+        all(ismember(data.Properties.VariableNames, gdata.Properties.VariableNames))
+      missing_var = data.Properties.VariableNames(~ismember(gdata.Properties.VariableNames, data.Properties.VariableNames));
+      gdata = gdata(:, ismember(gdata.Properties.VariableNames, data.Properties.VariableNames));
+      before_or_after = 'after';
+    end
+    warning('Consolidating files with different number of variables. %s missing in files %s %s: variable ignored', ...
+      ['"' cell2mat(join(missing_var, '", "')) '"'], before_or_after, dt)
+  end
 end
 

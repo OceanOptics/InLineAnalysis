@@ -92,7 +92,7 @@ classdef HBB < Instrument
       end
     end
     
-    function Calibrate(obj, compute_dissolved, TSG, SWT, di_method, filt_method)
+    function Calibrate(obj, days2run, compute_dissolved, TSG, SWT, di_method, filt_method)
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       param = struct('lambda', obj.lambda, 'theta', obj.theta);
 %       param = struct('lambda', obj.lambda, 'theta', obj.theta, 'muFactors', obj.muFactors);
@@ -101,20 +101,20 @@ classdef HBB < Instrument
         switch filt_method
           case '25percentil'
             [obj.prod.p, obj.prod.g] = processHBB(param, obj.qc.tsw, obj.qc.fsw, [], [], ...
-              obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT, SWT_constants);
+              obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT, SWT_constants, days2run);
           case 'exponential_fit'
             [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processHBB(param, obj.qc.tsw, ...
               obj.qc.fsw, obj.raw.fsw, obj.raw.bad, obj.bin.diw, TSG.qc.tsw, ...
-              di_method, filt_method, SWT, SWT_constants);
+              di_method, filt_method, SWT, SWT_constants, days2run);
         end
       else
         switch filt_method
           case '25percentil'
             obj.prod.p = processHBB(param, obj.qc.tsw, obj.qc.fsw, [], [], [], [], [], ...
-              filt_method, SWT, SWT_constants);
+              filt_method, SWT, SWT_constants, days2run);
           case 'exponential_fit'
             [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processHBB(param, obj.qc.tsw, obj.qc.fsw, ...
-              obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT, SWT_constants);
+              obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT, SWT_constants, days2run);
         end
       end
     end

@@ -207,7 +207,7 @@ switch instrument
     fig(94);
     clf
     scatter(data.dt, data.fdom, 6, 'filled');
-    ylabel('FDOM ppb');
+    ylabel('FDOM [v uncalibrated]');
     xlim([min(data.dt) max(data.dt)]);
   case 'WSS'
     fig(95);
@@ -250,6 +250,14 @@ switch instrument
     ylabel('Phycoerythryn?? (mg.m^{-1}??)');
     xlim([min(data.dt) max(data.dt)]);
     legend('PE1Rg', 'PE2Rg', 'PE3Rg', 'PE1CFg', 'PE2CFg', 'PE3CFg', 'PE12Rg', 'PE12CFg')
+    subplot(4, 1, 4); hold on
+    scatter(data.dt, data.FvFm, 6, 'filled');
+    scatter(data.dt, data.FvFmC, 6, 'filled');
+    scatter(data.dt, data.FvFmG, 6, 'filled');
+    scatter(data.dt, data.FvFmCG, 6, 'filled');
+    ylabel('FvFm [??]');
+    xlim([min(data.dt) max(data.dt)]);
+    legend('FvFm', 'FvFmC', 'FvFmG', 'FvFmCG')
   case 'LISST'
     fig(100);
     clf

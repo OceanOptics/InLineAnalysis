@@ -25,15 +25,15 @@ cfg.meta.measurement_depth = 2;
 %%%%%%%%%%%%%%%%%
 
 %PATH_ROOT = '/Users/emmanuelboss/Desktop/TaraEuropa';
-PATH_ROOT = '/Volumes/Data/TaraEuropa/';
+% PATH_ROOT = '/Volumes/Data/TaraEuropa/';
+PATH_ROOT = '/Volumes/Samsung_T5/Data/TaraEuropa';
 
 %%% TSG %%%
 model = 'SBE3845';
-%SN = '0269';
-
-SN = '04970269';
+SN = '04970286'; % 04970269
 cfg.instruments.([model SN]) = struct();
 cfg.instruments.([model SN]).model = model;
+cfg.instruments.([model SN]).TSG_source = true;
 cfg.instruments.([model SN]).boat = 'Tara';
 cfg.instruments.([model SN]).logger = 'Inlinino_base'; % TeraTerm Matlab Inlinino
 cfg.instruments.([model SN]).sn = SN;
@@ -92,7 +92,7 @@ cfg.instruments.(['ACS' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['
                                     'ui', fullfile(PATH_ROOT, 'ui', ['ACS' SN]));
 cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 
-%%% HBB %%%
+% %%% HBB %%%
 SN = '8005';
 cfg.instruments.(['HyperBB' SN]) = struct();
 cfg.instruments.(['HyperBB' SN]).di = struct();
@@ -103,8 +103,8 @@ cfg.instruments.(['HyperBB' SN]).sn = SN;
 cfg.instruments.(['HyperBB' SN]).ila_prefix = ['HyperBB' SN];
 cfg.instruments.(['HyperBB' SN]).logger = 'InlininoHBB';
 cfg.instruments.(['HyperBB' SN]).theta = 135;
-cfg.instruments.(['HyperBB' SN]).PlaqueCal = fullfile(PATH_ROOT, 'DeviceFiles', 'HyperBB8005_cal_20230307/Hbb_Cal_Plaque_20230307_131026_3_avg.mat');
-cfg.instruments.(['HyperBB' SN]).TemperatureCal = fullfile(PATH_ROOT, 'DeviceFiles', 'HyperBB8005_cal_20230307/Hbb_Cal_Temp_20230217_160954.mat');
+cfg.instruments.(['HyperBB' SN]).PlaqueCal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Plaque_20230307_131026_3_avg.mat');
+cfg.instruments.(['HyperBB' SN]).TemperatureCal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Temp_20230217_160954.mat');
 cfg.instruments.(['HyperBB' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN]),...
                                   'di',  fullfile(PATH_ROOT, 'raw', ['HyperBB' SN], 'DI'),...
                                   'wk',   fullfile(PATH_ROOT, 'wk', ['HyperBB' SN]),...
@@ -117,6 +117,7 @@ cfg.instruments.(['HyperBB' SN]).view = struct('varname', 'beta', 'varcol', 23);
 SN = '6244';
 cfg.instruments.(['SUVF' SN]) = struct();
 cfg.instruments.(['SUVF' SN]).model = 'CD';
+cfg.instruments.(['SUVF' SN]).CDOM_source = true;
 cfg.instruments.(['SUVF' SN]).sn = SN;
 cfg.instruments.(['SUVF' SN]).slope = 1;
 cfg.instruments.(['SUVF' SN]).dark = 0.076;
@@ -211,8 +212,8 @@ end
 %%% QC Reference (Flow Control/FLOW) %%%
 cfg.process.qcref = struct();
 cfg.process.qcref.reference = 'FLOW';
-cfg.process.qcref.view = cfg.process.instruments2run(find(contains(cfg.process.instruments2run, ...
-  {'ACS', 'AC9'}),1, 'first'));
+cfg.process.qcref.view = cfg.process.instruments2run{find(contains(cfg.process.instruments2run, ...
+  {'ACS', 'AC9'}),1, 'first')};
 cfg.process.qcref.mode = 'ui'; % load or ui
 cfg.process.qcref.remove_old = false; % remove old selection of the same period
 cfg.process.qcref.MinFiltPeriod = 50; % filter even period in minute
@@ -358,14 +359,43 @@ cfg.process.qc.specific.run = cfg.process.qcref.view;
 cfg.process.calibrate = struct();
 cfg.process.calibrate.skip = cfg.process.instruments2run(contains(cfg.process.instruments2run, ...
   {'FLOW','TSG','SBE45','SBE3845','ALFA','NMEA'}));
+cfg.process.min_nb_pts_per_cluster = 100;
+cfg.process.time_weight_for_cluster = 0.9;
+% look for TSG and SUVF and automatically turn off CDOM interpolation if not available
+cfg.process.TSG_source = '';
+cfg.process.CDOM_source = '';
+for i = fieldnames(cfg.instruments)'
+  if isfield(cfg.instruments.(i{:}), 'TSG_source')
+    if cfg.instruments.(i{:}).TSG_source
+      cfg.process.TSG_source = i{:};
+    end
+  end
+  if isfield(cfg.instruments.(i{:}), 'CDOM_source')
+    if cfg.instruments.(i{:}).CDOM_source
+      cfg.process.CDOM_source = i{:};
+    end
+  end
+end
+% if no TSG and CDOM source indicated in cfg: find TSG and CDOM instruments automatically
+if isempty(cfg.process.TSG_source)
+  if any(contains(cfg.process.instruments2run, {'SBE3845', 'SBE45', 'ATLASECRTD'}))
+    cfg.process.TSG_source = cfg.process.instruments2run{find(contains(cfg.process.instruments2run, {'SBE3845', 'SBE45', 'ATLASECRTD'}), 1, 'first')};
+  end
+end
+if isempty(cfg.process.CDOM_source)
+  if any(contains(cfg.process.instruments2run, {'WSCD', 'SUVF'}))
+    cfg.process.CDOM_source = cfg.process.instruments2run{find(contains(cfg.process.instruments2run, {'WSCD', 'SUVF'}), 1, 'first')};
+  end
+end
+
 % Set calibrate options depending on instrument type (default).
 for i = 1:size(cfg.process.instruments2run)
   % AC meter options
   if any(contains(cfg.process.instruments2run{i}, {'ACS', 'AC9'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
-                                      'TSG_source', 'SBE384504970269', ...
+                                      'TSG_source', cfg.process.TSG_source, ...
                                       'interpolation_method', 'linear', ... % choose one: linear CDOM
-                                      'CDOM_source', 'SUVF6244', ... %
+                                      'CDOM_source', cfg.process.CDOM_source, ... %
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'best_di', ... % best_di normal
                                       'scattering_correction', 'Rottgers2013_semiempirical', ... % Zaneveld1994_proportional Rottgers2013_semiempirical
@@ -373,7 +403,7 @@ for i = 1:size(cfg.process.instruments2run)
   % ECO-BB options
   elseif any(contains(cfg.process.instruments2run{i}, {'BB', 'BB'}) & ~contains(cfg.process.instruments2run{i}, {'HyperBB','HBB','hbb'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', true, ...
-                                      'TSG_source', 'SBE384504970269', ...
+                                      'TSG_source', cfg.process.TSG_source, ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'SW_scattering', ... % interpolate constant SW_scattering
                                       'filt_method', 'exponential_fit'); % 25percentil exponential_fit
@@ -386,7 +416,7 @@ for i = 1:size(cfg.process.instruments2run)
   % HyperBB options
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
-                                      'TSG_source', 'SBE384504970269', ...
+                                      'TSG_source', cfg.process.TSG_source, ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'SW_scattering', ... % interpolate constant SW_scattering
                                       'filt_method', 'exponential_fit'); % 25percentil exponential_fit
@@ -400,11 +430,11 @@ for i = 1:size(cfg.process.instruments2run)
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'interpolate'); % interpolate constant
-  % LISST-Tau options
+  % LISST-Tau options TODO: add TSG_source and CDOM source and good fDOM inteprolation like ACs
   elseif any(contains(cfg.process.instruments2run{i}, {'LISSTTau','LISSTTAU','LISST-Tau','TAU'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
                                       'interpolation_method', 'linear', ... % linear CDOM
-                                      'CDOM_source', 'SUVF6244', ... % 
+                                      'CDOM_source', cfg.process.CDOM_source, ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'normal');
   % SUVF options

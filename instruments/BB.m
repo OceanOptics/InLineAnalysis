@@ -25,7 +25,7 @@ classdef BB < ECO
       
     end
 
-    function Calibrate(obj, compute_dissolved, TSG, SWT, di_method, filt_method)
+    function Calibrate(obj, days2run, compute_dissolved, TSG, SWT, di_method, filt_method)
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       param = struct('lambda', obj.lambda, 'theta', obj.theta, 'slope', obj.slope, 'dark', obj.dark);
       % linear interpolation only, CDOM interpolation is not yet available
@@ -33,21 +33,21 @@ classdef BB < ECO
         switch filt_method
           case '25percentil'
             [obj.prod.p, obj.prod.g] = processBB3(param, obj.qc.tsw, obj.qc.fsw, [], [], ...
-              obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT, SWT_constants);
+              obj.bin.diw, TSG.qc.tsw, di_method, filt_method, SWT, SWT_constants, days2run);
           case 'exponential_fit'
             [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processBB3(param, obj.qc.tsw, ...
               obj.qc.fsw, obj.raw.fsw, obj.raw.bad, obj.bin.diw, TSG.qc.tsw, di_method, ...
-              filt_method, SWT, SWT_constants);
+              filt_method, SWT, SWT_constants, days2run);
         end
       else
         switch filt_method
           case '25percentil'
             obj.prod.p = processBB3(param, obj.qc.tsw, obj.qc.fsw, [], [], [], [], [], ...
-              filt_method, SWT, SWT_constants);
+              filt_method, SWT, SWT_constants, days2run);
           case 'exponential_fit'
             [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processBB3(param, obj.qc.tsw, ...
               obj.qc.fsw, obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT, ...
-              SWT_constants);
+              SWT_constants, days2run);
         end
       end
     end

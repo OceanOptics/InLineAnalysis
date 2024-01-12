@@ -105,7 +105,7 @@ classdef LISST < Instrument
       obj.diameters = sqrt(obj.ds(1:end-1) .* obj.ds(2:end));
     end
     
-    function Calibrate(obj, compute_dissolved, SWT, di_method)
+    function Calibrate(obj, days2run, compute_dissolved, SWT, di_method)
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       param = struct('zsc', obj.zsc, 'dcal', obj.dcal, 'vcc', obj.vcc,...
                      'non_spherical', NaN, 'ds', obj.ds,...
@@ -120,10 +120,10 @@ classdef LISST < Instrument
       end
       if compute_dissolved
         obj.prod.p = processLISST(param, obj.qc.tsw, obj.qc.fsw, [], ...
-          SWT, SWT_constants, di_method);
+          SWT, SWT_constants, di_method, days2run);
       else
         obj.prod.p = processLISST(param, obj.qc.tsw, obj.qc.fsw, obj.bin.diw, ...
-          SWT, SWT_constants, di_method);
+          SWT, SWT_constants, di_method, days2run);
       end
     end
     

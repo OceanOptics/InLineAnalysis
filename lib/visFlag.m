@@ -57,14 +57,16 @@ end
 
 % set y limit to binned data in priority
 if ~autoscale
-  if isempty(bin_tot_good) && ~isempty(bin_filt_good)
-    ylim([min(bin_filt_good.(varname)(:,varindex)) max(bin_filt_good.(varname)(:,varindex))]); 
+  if isempty(bin_tot_good) && ~isempty(bin_filt_good) && ~isempty(raw_filt)
+    foo_sc = [bin_filt_good.(varname)(:,varindex); raw_filt.(varname)(:,varindex)];
   elseif ~isempty(bin_tot_good) && isempty(bin_filt_good)
-    ylim([min(bin_tot_good.(varname)(:,varindex)) max(bin_tot_good.(varname)(:,varindex))]);
+    foo_sc = bin_tot_good.(varname)(:,varindex);
+  elseif ~isempty(bin_tot_good) && ~isempty(bin_filt_good) && ~isempty(raw_filt)
+    foo_sc = [bin_tot_good.(varname)(:,varindex); bin_filt_good.(varname)(:,varindex); raw_filt.(varname)(:,varindex)];
   elseif ~isempty(bin_tot_good) && ~isempty(bin_filt_good)
-    ylim([min([bin_tot_good.(varname)(:,varindex); bin_filt_good.(varname)(:,varindex)]) ...
-      max([bin_tot_good.(varname)(:,varindex); bin_filt_good.(varname)(:,varindex)])]);
+    foo_sc = [bin_tot_good.(varname)(:,varindex); bin_filt_good.(varname)(:,varindex)];
   end
+  ylim([min(foo_sc) max(foo_sc)]);
 end
 
 ylabel(varname);

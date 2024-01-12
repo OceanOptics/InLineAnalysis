@@ -99,11 +99,11 @@ legend(leg, 'switch position (1=filtered | 0=total)','AutoUpdate','off', 'FontSi
 [totalswitch, filterswitch, newtime_s, ~, toduplicate_x] = guiSelectOnTimeSeries(fh);
 % check number of entries
 if size(toduplicate_x,1) ~= size(newtime_s,1)
-  fprintf('Warning: Inconsistent number of entries (f and s), filter events duplication ignored\n')
+  fprintf('Warning: Inconsistent number of entries (x and s), filter events duplication ignored\n')
   toduplicate_x = [];
   newtime_s = [];
 end
-% duplicate filter events f and s commands
+% duplicate filter events x and s commands
 for j = 1:size(toduplicate_x, 1)
   if strcmp(level, 'raw')
     idx_inst_qc = instru.qc.fsw.dt >= toduplicate_x(j, 1) & instru.qc.fsw.dt <= toduplicate_x(j, 2);

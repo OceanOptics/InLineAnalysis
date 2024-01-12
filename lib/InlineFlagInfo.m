@@ -5,7 +5,7 @@ function InLineFlag = InlineFlagInfo(instrument)
 % Date: 2021-05-28
 %%
 % get rid of numbers in instrument name
-instrument = instrument(isstrprop(instrument,'alpha'));
+% instrument = instrument(isstrprop(instrument,'alpha'));
 warning('off')
 
 switch instrument
@@ -47,6 +47,10 @@ switch instrument
     InLineFlag.name{size(InLineFlag,1)+1} = 'ap_bubbles';
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
     InLineFlag.description{size(InLineFlag,1)} = 'abs(d(ap)/d(lambda460-640)) > 3 * median(abs(d(ap)/d(lambda460-640)))';
+
+    InLineFlag.name{size(InLineFlag,1)+1} = 'cp_bubbles';
+    InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
+    InLineFlag.description{size(InLineFlag,1)} = 'abs(d(cp)/d(lambda460-640)) > 3 * median(abs(d(cp)/d(lambda460-640)))';
     
     InLineFlag.name{size(InLineFlag,1)+1} = 'ap430_700_neg';
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
@@ -90,7 +94,7 @@ switch instrument
     
     InLineFlag.name{size(InLineFlag,1)+1} = 'HH_G50_flag';
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;
-    InLineFlag.description{size(InLineFlag,1)} = 'Housekeeper and Haentjens G50 < 0';
+    InLineFlag.description{size(InLineFlag,1)} = 'Housekeeper and Haentjens G50 < 0 or > 500';
     
     InLineFlag.name{size(InLineFlag,1)+1} = 'chlratio_flag';
     InLineFlag.bit(size(InLineFlag,1)) = size(InLineFlag,1)-1;

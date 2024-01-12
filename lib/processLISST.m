@@ -1,4 +1,4 @@
-function [p, pbin_size, g, gbin_size] = processLISST(param, tot, filt, di, fth, fth_constants, di_method)
+function [p, pbin_size, g, gbin_size] = processLISST(param, tot, filt, di, fth, fth_constants, di_method, days2run)
 % PROCESSLISST process LISST from flow through system with both
 %   filtered and total periods
 %
@@ -113,15 +113,21 @@ if ~isempty(filt)
   filt_interp.laser_reference = interp1(filt_avg.dt, filt_avg.laser_reference, filt_interp.dt);
   filt_interp.(LASER_POWER_VAR) = interp1(filt_avg.dt, filt_avg.(LASER_POWER_VAR), filt_interp.dt);
   
+  % id only day to run in all tables to plot
+  filt_interp_id = filt_interp.dt >= min(days2run) & filt_interp.dt < max(days2run)+1;
+  tot_id = tot.dt >= min(days2run) & tot.dt < max(days2run)+1;
+  filt_avg_id = filt_avg.dt >= min(days2run) & filt_avg.dt < max(days2run)+1;
+  
+  % plot
   if exist('visFlag', 'file') && exist('fth', 'var')
-    fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), ...
+    fh = visFlag([], filt_interp(filt_interp_id, :), tot(tot_id, :), [], filt_avg(filt_avg_id, :), [], 'beta', round(size(tot.beta, 2)/2), ...
       [], fth.qc.tsw, fth.view.spd_variable);
     title('Check filter event interpolation, press q to continue', 'FontSize', 14)
     legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
       'AutoUpdate','off', 'FontSize', 12)
     guiSelectOnTimeSeries(fh);
   elseif exist('visFlag', 'file')
-    fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], []);
+    fh = visFlag([], filt_interp(filt_interp_id, :), tot(tot_id, :), [], filt_avg(filt_avg_id, :), [], 'beta', round(size(tot.beta, 2)/2), [], []);
     title('Check filter event interpolation, press q to continue', 'FontSize', 14)
     legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
       'AutoUpdate','off', 'FontSize', 12)

@@ -51,9 +51,8 @@ for i=1:length(dt)
     if verbose; fprintf('Loading %s... ', fn_out); end
     load(fullfile(dir_out, fn_out));
     if verbose; fprintf('Done\n'); end
-    if all(size(gdata, 2) ~= size(data, 2) & ~isempty(gdata))
-      error('Number of variables in loaded files must be the same')
-    end
+    % check nb of variable and add data of day to the global dataset
+    [gdata, data] = check_nb_variables(gdata, data, datestr(dt(i)));
     gdata = [gdata; data];
   else
     % List files matching date and prefix
@@ -92,10 +91,8 @@ for i=1:length(dt)
       else
         fprintf('WARNING: No data found on %s\n', datestr(dt(i)));
       end
-      % Add data of day to the global dataset
-      if all(size(gdata, 2) ~= size(ddata, 2) & ~isempty(gdata))
-        error('Number of variables in loaded files must be the same')
-      end
+      % check nb of variable and add data of day to the global dataset
+      [gdata, ddata] = check_nb_variables(gdata, ddata, datestr(dt(i)));
       gdata = [gdata; ddata];
     end
   end
@@ -116,7 +113,9 @@ if read_margin
     post_data = post_data(post_data.dt <= dt(end)+1+margin,:);
   end
   if verbose; fprintf('Reading margin ... [Done]\n'); end
-  % Adding margin to dataset
+  % check nb of variable and add margin data to the global dataset
+  [pre_data, gdata] = check_nb_variables(pre_data, gdata, datestr(dt(1)));
+  [gdata, post_data] = check_nb_variables(gdata, post_data, datestr(dt(end)));
   data = [pre_data; gdata; post_data];
 else
   % Export dataset
@@ -278,3 +277,22 @@ end
 function [str] = dt_doy(dt)
   str = sprintf('%03d', datevec2doy(datevec(dt)));
 end
+
+function [gdata, data] = check_nb_variables(gdata, data, dt)
+  if all(size(gdata, 2) ~= size(data, 2) & ~isempty(gdata) & ~isempty(data))
+    if all(ismember(gdata.Properties.VariableNames, data.Properties.VariableNames)) && ...
+        ~all(ismember(data.Properties.VariableNames, gdata.Properties.VariableNames))
+      data = data(:, ismember(data.Properties.VariableNames, gdata.Properties.VariableNames));
+      missing_var = data.Properties.VariableNames(~ismember(data.Properties.VariableNames, gdata.Properties.VariableNames));
+      before_or_after = 'before';
+    elseif ~all(ismember(gdata.Properties.VariableNames, data.Properties.VariableNames)) && ...
+        all(ismember(data.Properties.VariableNames, gdata.Properties.VariableNames))
+      gdata = gdata(:, ismember(gdata.Properties.VariableNames, data.Properties.VariableNames));
+      missing_var = data.Properties.VariableNames(~ismember(gdata.Properties.VariableNames, data.Properties.VariableNames));
+      before_or_after = 'after';
+    end
+    warning('Consolidating files with different number of variables. %s missing in files %s %s: variable ignored', ...
+      ['"' cell2mat(join(missing_var, '", "')) '"'], before_or_after, dt)
+  end
+end
+

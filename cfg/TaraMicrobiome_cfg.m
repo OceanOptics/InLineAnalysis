@@ -7,7 +7,7 @@ cfg = struct('meta', struct(), 'instruments', struct(), 'process', struct());
 %%%%%%%%%%%%%%
 %% METADATA %%
 %%%%%%%%%%%%%%
-cfg.meta.investigators = 'Emmanuel_Boss,Lee_Karp-Boss,Nils_Haentjens,Guillaume_Bourdin';
+cfg.meta.investigators = 'Guillaume_Bourdin,Emmanuel_Boss,Nils_Haentjens,Lee_Karp-Boss';
 cfg.meta.affiliations = 'University_of_Maine';
 cfg.meta.emails = 'emmanuel.boss@maine.edu';
 cfg.meta.experiment = 'Microbiome';
@@ -35,8 +35,9 @@ model = 'SBE3845';
 SN = '0091';
 cfg.instruments.([model SN]) = struct();
 cfg.instruments.([model SN]).model = model;
+cfg.instruments.([model SN]).TSG_source = true;
 cfg.instruments.([model SN]).boat = 'Tara';
-cfg.instruments.([model SN]).logger = 'Inlinino'; % TeraTerm Matlab Inlinino
+cfg.instruments.([model SN]).logger = 'Inlinino_base'; % TeraTerm Matlab Inlinino_base
 cfg.instruments.([model SN]).sn = SN;
 cfg.instruments.([model SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', [model SN]),...
                                   'wk',   fullfile(PATH_ROOT, 'wk', [model SN]),...
@@ -46,9 +47,10 @@ cfg.instruments.([model SN]).view = struct('varname', 't2');
 cfg.instruments.([model SN]).temperature_variable = 't2';
 
 %%% NMEA %%%
+model = 'SC701'; % GPSSC701Tara GPS32Tara GPSCOMPASSAT GPSSC701 GPSGP32
 SN = '';
 cfg.instruments.NMEA = struct();
-cfg.instruments.NMEA.model = 'SC701'; % GPSSC701 GPSGP32
+cfg.instruments.NMEA.model = model;
 cfg.instruments.NMEA.boat = 'Tara';
 cfg.instruments.NMEA.logger = 'Inlinino';
 cfg.instruments.NMEA.sn = SN;
@@ -107,7 +109,7 @@ cfg.instruments.(['ACS' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['
                                     'ui', fullfile(PATH_ROOT, 'ui', ['ACS' SN]));
 cfg.instruments.(['ACS' SN]).view = struct('varname', 'a', 'varcol', 40);
 
-%%% HBB %%%
+%%% HyperBB %%%
 SN = '8005';
 cfg.instruments.(['HyperBB' SN]) = struct();
 cfg.instruments.(['HyperBB' SN]).di = struct();
@@ -152,9 +154,10 @@ cfg.instruments.(['BB3' SN]).view = struct('varname', 'beta', 'varcol', 2);
 SN = '6244';
 cfg.instruments.(['SUVF' SN]) = struct();
 cfg.instruments.(['SUVF' SN]).model = 'CD';
+cfg.instruments.(['SUVF' SN]).CDOM_source = true;
 cfg.instruments.(['SUVF' SN]).sn = SN;
 cfg.instruments.(['SUVF' SN]).slope = 1;
-cfg.instruments.(['SUVF' SN]).dark = 0;
+cfg.instruments.(['SUVF' SN]).dark = 0.076;
 cfg.instruments.(['SUVF' SN]).logger = 'InlininoSUVFSN';
 cfg.instruments.(['SUVF' SN]).analog_channel = '';
 if strcmp(cfg.instruments.(['SUVF' SN]).logger, 'InlininoADU100')
@@ -179,6 +182,7 @@ SN = '859';
 cfg.instruments.(['WSCD' SN]) = struct();
 cfg.instruments.(['WSCD' SN]).sn = SN;
 cfg.instruments.(['WSCD' SN]).model = 'CD';
+cfg.instruments.(['WSCD' SN]).CDOM_source = false;
 cfg.instruments.(['WSCD' SN]).ila_prefix = ['WSCD' SN];
 cfg.instruments.(['WSCD' SN]).logger = 'InlininoWSCDSN';
 cfg.instruments.(['WSCD' SN]).slope = 62;
@@ -258,15 +262,15 @@ cfg.instruments.(['LISST' SN]).view = struct('varname', 'beta', 'varcol', 15);
 
 %%% ALFA %%%
 SN = '011';
-cfg.instruments.ALFA = struct();
-cfg.instruments.ALFA.model = 'ALFA';
-cfg.instruments.ALFA.sn = SN;
-cfg.instruments.ALFA.logger = 'ALFA_LabView_m';
-cfg.instruments.ALFA.path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['ALFA' SN]),...
+cfg.instruments.(['ALFA' SN]) = struct();
+cfg.instruments.(['ALFA' SN]).model = 'ALFA';
+cfg.instruments.(['ALFA' SN]).sn = SN;
+cfg.instruments.(['ALFA' SN]).logger = 'ALFA_LabView_m';
+cfg.instruments.(['ALFA' SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', ['ALFA' SN]),...
                                   'wk',   fullfile(PATH_ROOT, 'wk', ['ALFA' SN]),...
                                   'prod', fullfile(PATH_ROOT, 'prod'),...
                                   'ui', fullfile(PATH_ROOT, 'ui', ['ALFA' SN]));
-cfg.instruments.ALFA.view = struct('varname', 'FvFm');
+cfg.instruments.(['ALFA' SN]).view = struct('varname', 'FvFm');
 
 %% %%%%%%% %%
 %  PROCESS  %
@@ -314,8 +318,8 @@ cfg.process.sync.delay.LISST200X2002 = -90;
 %%% QC Reference (Flow Control/FLOW) %%%
 cfg.process.qcref = struct();
 cfg.process.qcref.reference = 'FLOW';
-cfg.process.qcref.view = cfg.process.instruments2run(find(contains(cfg.process.instruments2run, ...
-  {'ACS', 'AC9'}),1, 'first'));
+cfg.process.qcref.view = cfg.process.instruments2run{find(contains(cfg.process.instruments2run, ...
+  {'ACS', 'AC9'}),1, 'first')};
 cfg.process.qcref.mode = 'ui'; % load or ui
 cfg.process.qcref.remove_old = false; % remove old selection of the same period
 cfg.process.qcref.MinFiltPeriod = 50; % filter even period in minute
@@ -333,17 +337,17 @@ for i = 1:size(cfg.process.instruments2run)
   if any(contains(cfg.process.instruments2run{i}, {'ACS', 'AC9'}))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [180, 60]; % [180, 60] for AC meters
   elseif any(contains(cfg.process.instruments2run{i}, {'BB', 'BB'}) & ~contains(cfg.process.instruments2run{i}, {'HyperBB','HBB','hbb'}))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [420, 220]; % [420, 220] for ECO-BB
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [200, 100]; % [420, 220] for ECO-BB
   elseif any(contains(cfg.process.instruments2run{i}, 'WSCD'))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [540, 100]; % [540, 100] for ECO-fluo
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [200, 100]; % [540, 100] for ECO-fluo
   elseif any(contains(cfg.process.instruments2run{i}, 'WS3S'))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [420, 220]; % [420, 220] for ECO-fluo
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [200, 100]; % [420, 220] for ECO-fluo
   elseif any(contains(cfg.process.instruments2run{i}, 'SUVF'))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [240, 100]; % [240, 100] for Seapoint fluo
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [200, 100]; % [240, 100] for Seapoint fluo
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [240, 140]; % [240, 140] for HyperBB
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [200, 100]; % [240, 140] for HyperBB
   elseif any(contains(cfg.process.instruments2run{i}, 'LISST') & ~contains(cfg.process.instruments2run{i}, {'TAU','tau','Tau','200X','200x'}))
-    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [540, 360]; % [540, 360] for LISST
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [180, 60]; % [540, 360] for LISST
   elseif any(contains(cfg.process.instruments2run{i}, {'LISST200X', 'LISST200x'}))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = [180, 60]; % [540, 360] for LISST
   elseif any(contains(cfg.process.instruments2run{i}, {'LISSTTAU','LISSTTau','LISST-TAU'}))
@@ -390,7 +394,7 @@ for i = 1:size(cfg.process.instruments2run)
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 5; % 5 min for HyperBB
   elseif any(contains(cfg.process.instruments2run{i}, 'LISST') & ~contains(cfg.process.instruments2run{i}, {'TAU','tau','Tau','200X','200x'}))
-    cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 10; % 10 min for LISST
+    cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 2; % 10 min for LISST
   elseif any(contains(cfg.process.instruments2run{i}, 'LISST200X'))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = 1; % 1 min for LISST
   elseif any(contains(cfg.process.instruments2run{i}, {'LISSTTAU','LISSTTau','LISST-TAU'}))
@@ -431,16 +435,18 @@ cfg.process.flag.default = struct();
   
 %%% Auto QC %%%
 cfg.process.qc = struct();
-cfg.process.qc.RawAutoQCLim.filtered.a = 3;
-cfg.process.qc.RawAutoQCLim.filtered.c = 3;
-cfg.process.qc.RawAutoQCLim.total.a = 3;
-cfg.process.qc.RawAutoQCLim.total.c = 3;
-cfg.process.qc.RawAutoQCLim.dissolved.a = 3;
-cfg.process.qc.RawAutoQCLim.dissolved.c = 3;
-cfg.process.qc.RawAutoQCLim.filtered.bb = 3;
-cfg.process.qc.RawAutoQCLim.total.bb = 3;
-cfg.process.qc.RawAutoQCLim.dissolved.bb = 3;
-cfg.process.qc.Saturation_Threshold_bb = 4100; % (counts) max being 4130
+cfg.process.qc.AutoQC_tolerance.filtered.a = 3;
+cfg.process.qc.AutoQC_tolerance.filtered.c = 3;
+cfg.process.qc.AutoQC_tolerance.total.a = 3;
+cfg.process.qc.AutoQC_tolerance.total.c = 3;
+cfg.process.qc.AutoQC_tolerance.dissolved.a = 3;
+cfg.process.qc.AutoQC_tolerance.dissolved.c = 3;
+cfg.process.qc.AutoQC_tolerance.filtered.bb = 3;
+cfg.process.qc.AutoQC_Saturation_Threshold.a = 50; % in uncalibrated m^-1
+cfg.process.qc.AutoQC_Saturation_Threshold.c = 50; % in uncalibrated m^-1
+cfg.process.qc.AutoQC_tolerance.total.bb = 3;
+cfg.process.qc.AutoQC_tolerance.dissolved.bb = 3;
+cfg.process.qc.AutoQC_Saturation_Threshold.bb = 4100; % (counts) max being 4130
 
 %%% Manually QC %%%
 cfg.process.qc.mode = 'ui';
@@ -449,7 +455,7 @@ cfg.process.qc.remove_old = false; % remove old selection of the same period
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
 cfg.process.qc.global.view = cfg.process.qcref.view;
-cfg.process.qc.global.apply = cfg.process.instruments2run(contains(cfg.process.instruments2run, ...
+cfg.process.qc.global.apply = cfg.process.instruments2run(~contains(cfg.process.instruments2run, ...
   {'FLOW','NMEA', 'PAR'}));
 cfg.process.qc.specific = struct();
 cfg.process.qc.specific.active = true;
@@ -459,27 +465,64 @@ cfg.process.qc.specific.run = cfg.process.qcref.view;
 cfg.process.calibrate = struct();
 cfg.process.calibrate.skip = cfg.process.instruments2run(contains(cfg.process.instruments2run, ...
   {'FLOW','TSG','SBE45','SBE3845','ALFA','NMEA'}));
+cfg.process.min_nb_pts_per_cluster = 100;
+cfg.process.time_weight_for_cluster = 0.9;
+% look for TSG and SUVF and automatically turn off CDOM interpolation if not available
+cfg.process.TSG_source = '';
+cfg.process.CDOM_source = '';
+for i = fieldnames(cfg.instruments)'
+  if isfield(cfg.instruments.(i{:}), 'TSG_source')
+    if cfg.instruments.(i{:}).TSG_source
+      cfg.process.TSG_source = i{:};
+    end
+  end
+  if isfield(cfg.instruments.(i{:}), 'CDOM_source')
+    if cfg.instruments.(i{:}).CDOM_source
+      cfg.process.CDOM_source = i{:};
+    end
+  end
+end
+% if no TSG and CDOM source indicated in cfg: find TSG and CDOM instruments automatically
+if isempty(cfg.process.TSG_source)
+  if any(contains(cfg.process.instruments2run, {'SBE3845', 'SBE45', 'ATLASECRTD'}))
+    cfg.process.TSG_source = cfg.process.instruments2run{find(contains(cfg.process.instruments2run, {'SBE3845', 'SBE45', 'ATLASECRTD'}), 1, 'first')};
+  end
+end
+if isempty(cfg.process.CDOM_source)
+  if any(contains(cfg.process.instruments2run, {'WSCD', 'SUVF'}))
+    cfg.process.CDOM_source = cfg.process.instruments2run{find(contains(cfg.process.instruments2run, {'WSCD', 'SUVF'}), 1, 'first')};
+  end
+end
+
 % Set calibrate options depending on instrument type (default).
 for i = 1:size(cfg.process.instruments2run)
   % AC meter options
   if any(contains(cfg.process.instruments2run{i}, {'ACS', 'AC9'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
-                                      'interpolation_method', 'CDOM', ... % 
-                                      'CDOM_source', 'SUVF6244', ... % WSCD859
+                                      'TSG_source', cfg.process.TSG_source, ...
+                                      'interpolation_method', 'CDOM', ... % choose one: linear CDOM
+                                      'CDOM_source', cfg.process.CDOM_source, ...
                                       'FLOW_source', 'FLOW', ...
-                                      'di_method', 'normal', ... % best_di normal
+                                      'di_method', 'best_di', ... % best_di normal
+                                      'scattering_correction', 'Rottgers2013_semiempirical', ... % Zaneveld1994_proportional Rottgers2013_semiempirical
                                       'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
   % ECO-BB options
   elseif any(contains(cfg.process.instruments2run{i}, {'BB', 'BB'}) & ~contains(cfg.process.instruments2run{i}, {'HyperBB','HBB','hbb'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', true, ...
-                                      'TSG_source', 'SBE38450091', ...
+                                      'TSG_source', cfg.process.TSG_source, ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'SW_scattering', ... % interpolate constant SW_scattering
+                                      'filt_method', 'exponential_fit'); % 25percentil exponential_fit
+  % ECO-FL options
+  elseif any(contains(cfg.process.instruments2run{i}, {'WS3S'}))
+    cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', true, ...
+                                      'FLOW_source', 'FLOW', ...
+                                      'di_method', 'best_di', ... % best_di interpolate constant SW_scattering
                                       'filt_method', 'exponential_fit'); % 25percentil exponential_fit
   % HyperBB options
   elseif any(contains(cfg.process.instruments2run{i}, {'HyperBB', 'HBB', 'hbb'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
-                                      'TSG_source', 'SBE38450091', ...
+                                      'TSG_source', cfg.process.TSG_source, ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'SW_scattering', ... % interpolate constant SW_scattering
                                       'filt_method', 'exponential_fit'); % 25percentil exponential_fit
@@ -496,8 +539,8 @@ for i = 1:size(cfg.process.instruments2run)
   % LISST-Tau options
   elseif any(contains(cfg.process.instruments2run{i}, {'LISSTTau','LISSTTAU','LISST-Tau','TAU'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', false, ...
-                                      'interpolation_method', 'CDOM', ... % 
-                                      'CDOM_source', 'SUVF6244', ... % WSCD859
+                                      'interpolation_method', 'CDOM', ... 
+                                      'CDOM_source', cfg.process.CDOM_source, ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'normal');
   % SUVF options

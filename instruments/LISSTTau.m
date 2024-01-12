@@ -53,32 +53,27 @@ classdef LISSTTau < Instrument
       end
         end
     
-    function Calibrate(obj, compute_dissolved, interpolation_method, CDOM, SWT, di_method)
+    function Calibrate(obj, days2run, compute_dissolved, interpolation_method, CDOM, SWT, di_method)
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       switch interpolation_method
         case 'linear'
           if compute_dissolved
             [obj.prod.p, obj.prod.g] = processTAU(obj.qc.tsw, obj.qc.fsw, ...
-              obj.bin.diw, [], SWT, SWT_constants, interpolation_method, di_method);
+              obj.bin.diw, [], SWT, SWT_constants, interpolation_method, di_method, days2run);
           else
             [obj.prod.p, ~] = processTAU(obj.qc.tsw, obj.qc.fsw, [], [], SWT, ...
-              SWT_constants, interpolation_method, []);
+              SWT_constants, interpolation_method, [], days2run);
           end
         case 'CDOM'
           if ~isfield(CDOM.prod, 'pd') && isempty(CDOM.qc.tsw)
             error('No CDOM data loaded');
           end
-          if isempty(CDOM.qc.tsw)
-            cdom = CDOM.prod.pd;
-          else
-            cdom = CDOM.qc.tsw;            
-          end
           if compute_dissolved
             [obj.prod.p, obj.prod.g] = processTAU(obj.qc.tsw, obj.qc.fsw, obj.bin.diw, ...
-              cdom, SWT, SWT_constants, interpolation_method, di_method);
+              CDOM, SWT, SWT_constants, interpolation_method, di_method, days2run);
           else
-            [obj.prod.p, ~] = processTAU(obj.qc.tsw, obj.qc.fsw, [], cdom, SWT, ...
-              SWT_constants, interpolation_method, []);
+            [obj.prod.p, ~] = processTAU(obj.qc.tsw, obj.qc.fsw, [], CDOM, SWT, ...
+              SWT_constants, interpolation_method, [], days2run);
           end
         otherwise
           error('Method not supported.');

@@ -4,21 +4,25 @@
 clear
 close all
 
-cd('/Volumes/Data/TaraEuropa/InLineAnalysis-master')
+% cd('/Volumes/Data/TaraEuropa/InLineAnalysis-master')
+cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master')
 
 % Load InLineAnalysis and the configuration
 ila = InLineAnalysis('cfg/TaraEuropa_cfg.m');
 
 % Quick cfg update
 %% set the date to process
-ila.cfg.days2run = datenum(2023,4,4):datenum(2023,4,19); %datenum(2023,5,10):datenum(2023,5,30);datenum(2023,6,6):datenum(2023,6,30);datenum(2023,7,8):datenum(2023,8,3)
+% ila.cfg.days2run = datenum(2023,4,4):datenum(2023,4,19); %datenum(2023,5,10):datenum(2023,5,30);datenum(2023,6,6):datenum(2023,6,30);datenum(2023,7,8):datenum(2023,8,3)
 % ila.cfg.days2run = datenum(2023,4,9):datenum(2023,4,19);
 % ila.cfg.days2run = datenum(2023,4,20):datenum(2023,5,26);
 % ila.cfg.days2run = datenum(2023,5,2):datenum(2023,5,3);
 % ila.cfg.days2run = datenum(2023,4,4):datenum(2023,4,6);
 
-%% 'SBE38450269','NMEA','FLOW','ACS412','HyperBB8002','BB3349','SUVF6254','WS3S1081','LISST1183'
-ila.cfg.instruments2run = {'FLOW','SUVF6244','SBE384504970269','ACS3'};%SBE384504970286'};
+ila.cfg.days2run = datenum(2023,8,24):datenum(2023,8,24);
+
+
+%% 'SBE384504970286','SBE38450269','NMEA','FLOW','ACS412','HyperBB8002','BB3349','SUVF6254','WS3S1081','LISST1183'
+ila.cfg.instruments2run = {'FLOW','SUVF6244','SBE384504970286','ACS3'}; 
 ila.cfg.qcref.view = 'ACS3';
 % ila.cfg.instruments2run = {'FLOW','SUVF6244'};
 % ila.cfg.qcref.view = 'SUVF6244';
@@ -100,7 +104,7 @@ ila.CheckDataStatus();
 ila.SpectralQC('AC',{'raw'});
 
 %% 5. Automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR & ALFA values
-% fudge factor for auto QC ACS.
+% Tolerance factor for auto QC ACS.
 % Varies between ACS: 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
 ila.cfg.qc.AutoQC_tolerance.filtered.a = 2; %
 ila.cfg.qc.AutoQC_tolerance.filtered.c = 2; %
@@ -109,7 +113,7 @@ ila.cfg.qc.AutoQC_tolerance.total.c = 3; %
 % define saturation threshold of a and c in uncalibrated m^-1
 ila.cfg.qc.AutoQC_Saturation_Threshold.a = 10; % remove any spectra > threshold m^-1 (uncalibrated)
 ila.cfg.qc.AutoQC_Saturation_Threshold.c = 40; % remove any spectra > threshold m^-1 (uncalibrated)
-% tolerance factor for auto QC BB
+% Tolerance factor for auto QC BB
 % 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
 ila.cfg.qc.AutoQC_tolerance.filtered.bb = 100; % 10
 ila.cfg.qc.AutoQC_tolerance.total.bb = 10; % 10
@@ -208,14 +212,16 @@ ila.QCSwitchPosition()
 ila.Write('qc', 'part')
 
 %% 10. Calibrate
-% ila.cfg.calibrate.skip = {'FLOW', 'TSG', 'ALFA', 'NMEA','SBE384504970286','SUVF6244'};
-ila.cfg.calibrate.skip = {'FLOW', 'TSG', 'ALFA', 'NMEA','SBE384504970269'};%SBE384504970286'};
-% update filter method if needed
-ila.cfg.calibrate.(ila.cfg.qcref.view).filt_method = 'exponential_fit'; % exponential_fit 25percentil
-% update filter interpolation method if needed
-ila.cfg.calibrate.(ila.cfg.qcref.view).interpolation_method = 'CDOM'; % CDOM linear
-% update scattering correction method if needed
-ila.cfg.calibrate.(ila.cfg.qcref.view).scattering_correction = 'Rottgers2013_semiempirical'; % Rottgers2013_semiempirical Zaneveld1994_proportional
+% ila.cfg.calibrate.skip = {'FLOW', 'TSG', 'ALFA', 'NMEA','SBE384504970269','SBE384504970286','SUVF6244'};
+ila.cfg.calibrate.skip = {'FLOW', 'TSG', 'ALFA', 'NMEA','SBE384504970269','SBE384504970286'};%SBE384504970286'};
+% update filter event calcualtion method if needed: exponential_fit 25percentil
+ila.cfg.calibrate.(ila.cfg.qcref.view).filt_method = '25percentil'; 
+% update filter interpolation method if needed: CDOM linear
+ila.cfg.calibrate.(ila.cfg.qcref.view).interpolation_method = 'CDOM';
+ila.cfg.min_nb_pts_per_cluster = 100;
+ila.cfg.time_weight_for_cluster = 0.9;
+% update scattering correction method if needed: Rottgers2013_semiempirical Zaneveld1994_proportional
+ila.cfg.calibrate.(ila.cfg.qcref.view).scattering_correction = 'Rottgers2013_semiempirical';
 ila.Calibrate();
 ila.CheckDataStatus();
 
@@ -223,7 +229,7 @@ ila.CheckDataStatus();
 save_figures = false;
 
 %%% AC or BB 3D plots %%%
-% ila.SpectralQC('AC', {'prod'}, save_figures); % AC or BB
+ila.SpectralQC('AC', {'prod'}, save_figures); % AC or BB
 
 %%% ACS BB3 TSG PAR WSCD SUVF ALFA LISST final product visualisation %%%
 ila.visProd_timeseries()

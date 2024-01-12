@@ -54,17 +54,55 @@ if nargin < 2
   error('input data in missing');
 end
 if nargin < 4
-  tolerance.a = 3;
-  tolerance.c = 3;
-  warning('tolerance missing, set to default (3)');
+  tolerance.a = 'auto';
+  tolerance.c = 'auto';
+  tolerance.bb = 3;
+  warning('tolerance missing, set to default (a|c: "auto", bb: 3)');
 end
 if nargin < 7
   DI = false;
 end
 
 if contains(instrument, 'AC')
-  if any(tolerance.a < 3 | tolerance.c < 3)
-    warning('QC threshold might be too low, data might be lost');
+  if ischar(tolerance.a)
+    if strcmpi(tolerance.a, 'auto')
+      auto_a = true;
+    else
+      if ~isnan(str2double(tolerance.a))
+        auto_a = false;
+        tolerance.a = str2double(tolerance.a);
+      else
+        auto_a = true;
+        warning('tolerance.a was a character not convertible to double, tolerance.a was set to "auto"');
+      end
+    end
+  else
+    auto_a = false;
+  end
+  if ischar(tolerance.c)
+    if strcmpi(tolerance.c, 'auto')
+      auto_c = true;
+    else
+      if ~isnan(str2double(tolerance.c))
+        auto_c = false;
+        tolerance.a = str2double(tolerance.c);
+      else
+        auto_c = true;
+        warning('tolerance.c was a character not convertible to double, tolerance.c was set to "auto"');
+      end
+    end
+  else
+    auto_c = false;
+  end
+  if auto_a
+    if tolerance.a < 3
+      warning('QC threshold a is low (< 3), data might be lost');
+    end
+  end
+  if auto_c
+    if tolerance.c < 3
+      warning('QC threshold c is low (< 3), data might be lost');
+    end
   end
   if nargin < 6
     saturation_threshold.a = 50;
@@ -72,7 +110,11 @@ if contains(instrument, 'AC')
     saturation_threshold.c = 50;
     warning('c threshold missing, set to default (50 m^{-1} uncalibrated)');
   end
-  
+  idinf_a = any(~isfinite(data_in.a), 2);
+  data_in.a(idinf_a, :) = NaN;
+  idinf_c = any(~isfinite(data_in.c), 2);
+  data_in.c(idinf_c, :) = NaN;
+
   data_out = data_in;
   Nbad.a = sum(any(data_in.a >= saturation_threshold.a, 2));
   Nbad.c = sum(any(data_in.c >= saturation_threshold.c, 2));
@@ -90,11 +132,22 @@ if contains(instrument, 'AC')
 
   diff_a = [diff(datanorm.a(:, lambda.a > 500 & lambda.a < 600),[],2) NaN(size(datanorm,1),1)];
   diff_c = [diff(datanorm.c(:, lambda.c > 500 & lambda.c < 600),[],2) NaN(size(datanorm,1),1)];
-  
-  bad_a = max(abs(diff_a(:,wl_a >= 550 & wl_a < 600)),[],2)...
-    > tolerance.a*median(abs(diff_a(:,wl_a > 500 & wl_a < 550)),2);
-  bad_c = max(abs(diff_c(:,wl_c >= 550 & wl_c < 600)),[],2)...
-    > tolerance.c*median(abs(diff_c(:,wl_c > 500 & wl_c < 550)),2);
+
+  if auto_a
+    ratio_diff_a = max(abs(diff_a(:,wl_a >= 550 & wl_a < 600)),[],2) ./ median(abs(diff_a(:,wl_a > 450 & wl_a < 550)),2);
+    bad_a = ratio_diff_a > prctile(ratio_diff_a, 90); % 95
+  else
+    bad_a = max(abs(diff_a(:,wl_a >= 550 & wl_a < 600)),[],2)...
+      > tolerance.a*median(abs(diff_a(:,wl_a > 450 & wl_a < 550)),2);
+  end
+  if auto_c
+    ratio_diff_c = max(abs(diff_c(:,wl_c >= 550 & wl_c < 600)),[],2) ./ median(abs(diff_c(:,wl_c > 450 & wl_c < 550)),2);
+    bad_c = ratio_diff_c > prctile(ratio_diff_c, 80); % 90
+  else
+    bad_c = max(abs(diff_c(:,wl_c >= 550 & wl_c < 600)),[],2)...
+      > tolerance.c*median(abs(diff_c(:,wl_c > 450 & wl_c < 550)),2);
+  end
+
   if DI 
     % segment database per DI event
     foo = find(diff(datetime(datanorm.dt, 'ConvertFrom', 'datenum')) > hours(0.5)) + 1;

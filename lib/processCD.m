@@ -7,6 +7,10 @@ function pd = processCD(param, data, diw)
 % gain = 4.33;
 gain = 1;
 
+if min(data.(param.varname))*gain < param.dark
+  param.dark = min(data.(param.varname))*gain; % prctile(data.(param.varname), 1)
+end
+
 % Compute CDOM fluorescence
 pd = table(data.dt, 'VariableNames', {'dt'});
 
@@ -15,8 +19,8 @@ if isempty(diw)
 %   pd.fdom = param.slope * (data.(param.varname) * gain - param.dark) / 1000;
   pd.fdom = param.slope * (data.(param.varname) * gain - param.dark);
   % Propagate error
-  pd.fdom_sd = param.slope * (data.([param.varname '_avg_sd']) * gain - param.dark);
-%   pd.fdom_sd = param.slope * (data.([param.varname '_avg_sd'] * gain - param.dark) / 1000;
+  pd.fdom_sd = param.slope * (data.([param.varname '_avg_sd']) * gain);
+%   pd.fdom_sd = param.slope * (data.([param.varname '_avg_sd'] * gain) / 1000;
   pd.fdom_n = data.([param.varname '_avg_n']);
   
 else % method with DIW measurement (dark not required)

@@ -1,4 +1,4 @@
-function [p, g, FiltStat] = processBB3(param, tot, filt_qc, filt_raw, filt_bad, di, tsg, di_method, filt_method, fth, fth_constants)
+function [p, g, FiltStat] = processBB3(param, tot, filt_qc, filt_raw, filt_bad, di, tsg, di_method, filt_method, fth, fth_constants, days2run)
 % Note DI is not interpolated as it's assume to be stable in time
 % BB3 parameters is a structure
 %   param.lambda <1x3 double> wavelength (nm)
@@ -136,15 +136,21 @@ filt_interp = table(tot.dt, 'VariableNames', {'dt'});
 filt_interp.beta = interp1(filt_avg.dt, filt_avg.beta, filt_interp.dt);%, 'linear', 'extrap');
 filt_interp.beta_avg_sd = interp1(filt_avg.dt, filt_avg.beta_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
 
+% id only day to run in all tables to plot
+filt_interp_id = filt_interp.dt >= min(days2run) & filt_interp.dt < max(days2run)+1;
+tot_id = tot.dt >= min(days2run) & tot.dt < max(days2run)+1;
+filt_avg_id = filt_avg.dt >= min(days2run) & filt_avg.dt < max(days2run)+1;
+
+% plot
 if exist('visFlag', 'file') && exist('fth', 'var')
-  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), ...
+  fh = visFlag([], filt_interp(filt_interp_id, :), tot(tot_id, :), [], filt_avg(filt_avg_id, :), [], 'beta', round(size(tot.beta, 2)/2), ...
     [], fth_temp, fth.view.spd_variable);
   title('Check filter event interpolation, press q to continue', 'FontSize', 14)
   legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
     'AutoUpdate','off', 'FontSize', 12)
   guiSelectOnTimeSeries(fh);
 elseif exist('visFlag', 'file')
-  fh = visFlag([], filt_interp, tot, [], filt_avg, [], 'beta', round(size(tot.beta, 2)/2), [], []);
+  fh = visFlag([], filt_interp(filt_interp_id, :), tot(tot_id, :), [], filt_avg(filt_avg_id, :), [], 'beta', round(size(tot.beta, 2)/2), [], []);
   title('Check filter event interpolation, press q to continue', 'FontSize', 14)
   legend('Filtered interpolated', 'Total', 'Filtered median', 'Flow rate',...
     'AutoUpdate','off', 'FontSize', 12)

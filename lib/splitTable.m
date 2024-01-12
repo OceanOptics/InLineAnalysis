@@ -58,8 +58,6 @@ if verbose
   end
 end
 
-
-
 % Rows must be sorted by dt !!
 % Sort Rows of data (assume dt is first column)
 data = sortrows(data);
@@ -73,6 +71,7 @@ data = sortrows(data);
 % Get intersect of reference and data
 % Improved method by interpolation (assume switch has only zeros and ones)
 [urefdt, i] = unique(ref.dt);
+if islogical(ref.swt); ref.swt = double(ref.swt); end
 iref.swt = interp1(urefdt, ref.swt(i), data.dt);
 i_data = iref.swt == 0 | iref.swt == 1;
 dt = data.dt(i_data);

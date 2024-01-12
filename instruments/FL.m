@@ -27,29 +27,29 @@ classdef FL < ECO
     % end
 
 
-    function Calibrate(obj, compute_dissolved, SWT, di_method, filt_method)
+    function Calibrate(obj, days2run, compute_dissolved, SWT, di_method, filt_method)
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       param = struct('slope', obj.slope, 'dark', obj.dark);
-      % linear interpolation only, CDOM interpolation is not yet available
+      % linear interpolation only, CDOM interpolation is not yet available (TODO)
       if compute_dissolved
         switch filt_method
           case '25percentil'
             [obj.prod.p, obj.prod.g] = processFL(param, obj.qc.tsw, obj.qc.fsw, [], [], ...
-              obj.bin.diw, di_method, filt_method, SWT, SWT_constants);
+              obj.bin.diw, di_method, filt_method, SWT, SWT_constants, days2run);
           case 'exponential_fit'
             [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processFL(param, obj.qc.tsw, ...
               obj.qc.fsw, obj.raw.fsw, obj.raw.bad, obj.bin.diw, di_method, ...
-              filt_method, SWT, SWT_constants);
+              filt_method, SWT, SWT_constants, days2run);
         end
       else
         switch filt_method
           case '25percentil'
-            obj.prod.p = processFL(param, obj.qc.tsw, obj.qc.fsw, [], [], [], [], [], ...
-              filt_method, SWT, SWT_constants);
+            obj.prod.p = processFL(param, obj.qc.tsw, obj.qc.fsw, [], [], [], [], ...
+              filt_method, SWT, SWT_constants, days2run);
           case 'exponential_fit'
             [obj.prod.p, ~, obj.prod.FiltStat] = processFL(param, obj.qc.tsw, ...
-              obj.qc.fsw, obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT, ...
-              SWT_constants);
+              obj.qc.fsw, obj.raw.fsw, obj.raw.bad, [], [], filt_method, SWT, ...
+              SWT_constants, days2run);
         end
       end
     end

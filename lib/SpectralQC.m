@@ -1,4 +1,4 @@
-function user_selection = SpectralQC(data, instrument, level, save_figure, prefix, toClean)
+function user_selection = SpectralQC(data, dt_toclean, instrument, level, save_figure, prefix, toClean)
 % Plot all level of processing 3D spectrums of BB and AC sensors to
 % quality check while processing
 % Option to save the plots (save_figure)
@@ -11,6 +11,7 @@ function user_selection = SpectralQC(data, instrument, level, save_figure, prefi
 %   data: <NxM table> data containing:
 %     - <1xM datenum> time vector
 %     - <N-1xM double> data
+%   dt_toclean: <1x2 datenum> days to clean
 %   instrument: <char> instrument name
 %   level: <1xL cellstr> processing levels to plot
 %
@@ -24,16 +25,16 @@ function user_selection = SpectralQC(data, instrument, level, save_figure, prefi
 %%
 if nargin < 3
   error('Not enough input argument')
-elseif nargin == 3
+elseif nargin == 4
   save_figure = false;
   prefix = 'plot';
   toClean = {'',''};
-elseif nargin == 4
+elseif nargin == 5
   prefix = 'plot';
   toClean = {'',''};
-elseif nargin == 5
+elseif nargin == 6
   toClean = {'',''};
-elseif nargin > 6
+elseif nargin > 7
   error('Too many input argument')
 end
   
@@ -54,9 +55,9 @@ else
   error('Intrument not supported')
 end
 
-ACsize_to_plot = 50000; % 50000
-BBsize_to_plot = 220000; % 120000
-LISSTsz_to_plot = 220000; % 120000
+ACsize_to_plot = 100000; % 50000
+BBsize_to_plot = 220000; % 220000
+LISSTsz_to_plot = 220000; % 220000
 
 user_selection = [];
 for j = 1:length(level)
@@ -78,19 +79,17 @@ for j = 1:length(level)
     tabletoplot(strcmp(tabletoplot, 'bad')) = [];
     tabletoplot(strcmp(tabletoplot, 'FiltStat')) = [];
   end
-  sztoplot = table(0.4, 8, 8, 'VariableNames', {'AC', 'BB', 'LISST'});
-  szdt = NaN(size(tabletoplot, 1), 2);
+  if isempty(tabletoplot)
+      warning('No data to plot in %s level %s: ignored', instrument, level{j})
+    return
+  end
+  for i = 1:size(tabletoplot, 1)
+    if isempty(data.(level{j}).(tabletoplot{i}))
+      warning('Instrument %s level %s table %s empty: ignored', instrument, level{j}, tabletoplot{i})
+    end
+  end
   switch level{j}
     case 'raw'
-      for i = 1:size(tabletoplot, 1)
-        if ~isempty(data.(level{j}).(tabletoplot{i}))
-          szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
-          szdt(i, 2) = min(data.(level{j}).(tabletoplot{i}).dt);
-        else
-          warning('Instrument %s level %s table %s empty: ignored', instrument, level{j}, tabletoplot{i})
-        end
-      end
-      day_to_plot = [max(szdt(:,1)) max(szdt(:,2)) + sztoplot.(instrument)];
       if contains(instrument,'AC')
         if ~isempty(toClean{1})
           toplot = toClean(2);
@@ -98,6 +97,7 @@ for j = 1:length(level)
           toplot = repmat({'a','c'}, size(tabletoplot));
         end
         if strcmp(toClean{end}, 'all')
+          toplot{end} = 'a';
           toClean{end} = 'a';
         end
       elseif contains(instrument,'BB') || contains(instrument,'LISST')
@@ -107,19 +107,11 @@ for j = 1:length(level)
           toplot = repmat({'beta'}, size(tabletoplot));
         end
         if strcmp(toClean{end}, 'all')
+          toplot{end} = 'beta';
           toClean{end} = 'beta';
         end
       end
     case {'bin', 'qc'}
-      for i = 1:size(tabletoplot, 1)
-        if ~isempty(data.(level{j}).(tabletoplot{i}))
-          szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
-          szdt(i, 2) = max(data.(level{j}).(tabletoplot{i}).dt);
-        else
-          warning('Instrument %s level %s table %s empty: ignored', instrument, level{j}, tabletoplot{i})
-        end
-      end
-      day_to_plot = [min(szdt(:,1)) max(szdt(:,2))];
       if contains(instrument,'AC')
         if ~isempty(toClean{1})
           toplot = toClean(2);
@@ -128,6 +120,7 @@ for j = 1:length(level)
         end
         if strcmp(toClean{end}, 'all')
           toClean{end} = 'a';
+          toplot{end} = 'a';
         end
       elseif contains(instrument,'BB') || contains(instrument,'LISST')
         if ~isempty(toClean{1})
@@ -136,19 +129,11 @@ for j = 1:length(level)
           toplot = repmat({'beta'}, size(tabletoplot));
         end
         if strcmp(toClean{end}, 'all')
+          toplot{end} = 'beta';
           toClean{end} = 'beta';
         end
       end
     case 'prod'
-      for i = 1:size(tabletoplot, 1)
-        if ~isempty(data.(level{j}).(tabletoplot{i}))
-          szdt(i, 1) = min(data.(level{j}).(tabletoplot{i}).dt);
-          szdt(i, 2) = max(data.(level{j}).(tabletoplot{i}).dt);
-        else
-          warning('Instrument %s level %s table %s empty: ignored', instrument, level{j}, tabletoplot{i})
-        end
-      end
-      day_to_plot = [min(szdt(:,1)) max(szdt(:,2))];
       if contains(instrument,'AC')
         if ~isempty(toClean{1})
           toplot = toClean(2);
@@ -157,6 +142,7 @@ for j = 1:length(level)
             cellfun(@(x) ['c' x], tabletoplot, 'un', 0)];
         end
         if strcmp(toClean{end}, 'all')
+          toplot(end) = cellfun(@(x) ['a' x], tabletoplot, 'un', 0);
           toClean{end} = cellfun(@(x) ['a' x], tabletoplot, 'un', 0);
         end
         if any(contains(toplot, 'QCfailed'))
@@ -169,6 +155,7 @@ for j = 1:length(level)
           toplot = [cellfun(@(x) ['beta' x], tabletoplot, 'un', 0) 'PSD' 'VSD'];
         end
         if strcmp(toClean{end}, 'all')
+          toplot(end) = cellfun(@(x) ['beta' x], tabletoplot, 'un', 0);
           toClean{end} = cellfun(@(x) ['beta' x], tabletoplot, 'un', 0);
         end
         if any(contains(toplot, 'QCfailed'))
@@ -182,6 +169,7 @@ for j = 1:length(level)
             cellfun(@(x) ['bb' x], tabletoplot, 'un', 0)];
         end
         if strcmp(toClean{end}, 'all')
+          toplot(end) = cellfun(@(x) ['bb' x], tabletoplot, 'un', 0);
           toClean{end} = cellfun(@(x) ['bb' x], tabletoplot, 'un', 0);
         end
         if any(contains(toplot, 'QCfailed'))
@@ -192,40 +180,42 @@ for j = 1:length(level)
   
   for i = 1:size(tabletoplot,1)
     if ~isempty(data.(level{j}).(tabletoplot{i}))
+      % keep only day2clean without margin
+      day2clean = data.(level{j}).(tabletoplot{i}).dt >= min(dt_toclean) & data.(level{j}).(tabletoplot{i}).dt < max(dt_toclean)+1;
+      sel = false(size(data.(level{j}).(tabletoplot{i}).dt));
       for k = 1:size(toplot,2)
-        if strcmp(tabletoplot{i}, 'diw') % if DI plot entire dataset
-          sel = true(size(data.(level{j}).(tabletoplot{i}).dt));
-        else
-          sel = false(size(data.(level{j}).(tabletoplot{i}).dt));
-          if contains(instrument,'AC') && size(sel,1) < ACsize_to_plot
-            sel(1:end) = true;
-          elseif contains(instrument,'AC')
-            warning('Large dataset, only the first %i %s %s %s spectrum were plotted to save computer memory', ...
-              ACsize_to_plot, level{j}, tabletoplot{i}, toplot{i, k})
-            sel(1:ACsize_to_plot) = true;
-          elseif contains(instrument,'LISST') && size(sel,1) < LISSTsz_to_plot
-            sel(1:end) = true;
-          elseif contains(instrument,'LISST')
-            warning('Large dataset, only the first %i %s %s %s spectrum were plotted to save computer memory', ...
-              LISSTsz_to_plot, level{j}, tabletoplot{i}, toplot{i, k})
-            sel(1:LISSTsz_to_plot) = true;
-          elseif contains(instrument,'BB') && size(sel,1) < BBsize_to_plot
-            sel(1:end) = true;
-          elseif contains(instrument,'BB')
-            warning('Large dataset, only the first %i %s %s %s spectrum were plotted to save computer memory', ...
-              BBsize_to_plot, level{j}, tabletoplot{i}, toplot{i, k})
-            sel(1:BBsize_to_plot) = true;
-          end
-%           sel = data.(level{j}).(tabletoplot{i}).dt >= day_to_plot(1) & ...
-%             data.(level{j}).(tabletoplot{i}).dt <= day_to_plot(2);
+        % select 0.5-99.5th percentiles spectra to plot
+        grp = datenum(dateshift(datetime(data.(level{j}).(tabletoplot{i}).dt, 'ConvertFrom', 'datenum'), 'start', 'hour'));
+        ugrp = unique(grp);
+        outliers = false(size(data.(level{j}).(tabletoplot{i}).dt));
+        for g = 1:size(ugrp, 1)
+          prct_1_99 = prctile(data.(level{j}).(tabletoplot{i}).(toplot{i, k})(grp == ugrp(g),:), [0.5 99.5], 1);
+          outliers(grp == ugrp(g) & any(data.(level{j}).(tabletoplot{i}).(toplot{i, k}) < prct_1_99(1,:) | data.(level{j}).(tabletoplot{i}).(toplot{i, k}) > prct_1_99(2,:), 2)) = true;
         end
+        % add total 5-95th percentiles to the spectra to plot
+        prct_5_95 = prctile(data.(level{j}).(tabletoplot{i}).(toplot{i, k}), [5 95], 1);
+        outliers(any(data.(level{j}).(tabletoplot{i}).(toplot{i, k}) < prct_5_95(1,:) | data.(level{j}).(tabletoplot{i}).(toplot{i, k}) > prct_5_95(2,:), 2)) = true;
+        % reduce number of spectra to plot as a function of spectra non-outliers
+        foo = false(size(outliers));
+        keep_pts = ceil(log10(sum(~outliers))*log10(sum(~outliers))/5);
+        foo(1:keep_pts:end) = true;
+        non_outliers = ~outliers & foo;
+        pts_toclean = find(day2clean & (outliers | non_outliers));
+        if contains(instrument,'AC') && size(pts_toclean,1) > ACsize_to_plot
+          warning('Large dataset, only the first %i %s %s %s spectrum were plotted to save computer memory', ...
+            ACsize_to_plot, level{j}, tabletoplot{i}, toplot{i, k})
+          pts_toclean = pts_toclean(1:ACsize_to_plot);
+        elseif contains(instrument,'LISST') && size(pts_toclean,1) > LISSTsz_to_plot
+          warning('Large dataset, only the first %i %s %s %s spectrum were plotted to save computer memory', ...
+            LISSTsz_to_plot, level{j}, tabletoplot{i}, toplot{i, k})
+          pts_toclean = pts_toclean(1:LISSTsz_to_plot);
+        elseif contains(instrument,'BB') && size(pts_toclean,1) > BBsize_to_plot
+          warning('Large dataset, only the first %i %s %s %s spectrum were plotted to save computer memory', ...
+            BBsize_to_plot, level{j}, tabletoplot{i}, toplot{i, k})
+          pts_toclean = pts_toclean(1:BBsize_to_plot);
+        end
+        sel(pts_toclean) = true;
         sel = sel & any(~isnan(data.(level{j}).(tabletoplot{i}).(toplot{i, k})),2);
-%         if strcmp(tabletoplot{i}, 'diw') % if DI plot entire dataset
-%           sel = true(size(data.(level{j}).(tabletoplot{i}).dt));
-%         else
-%           sel = data.(level{j}).(tabletoplot{i}).dt >= day_to_plot(1) & ...
-%             data.(level{j}).(tabletoplot{i}).dt <= day_to_plot(2);
-%         end
         if contains(instrument,'AC') && contains(toplot{i, k}, 'a')
           wl = wla;
         elseif contains(instrument,'AC') && contains(toplot{i, k}, 'c')
@@ -241,7 +231,7 @@ for j = 1:length(level)
           xlabel(ylab);
           ylabel('time');
           title([instrument ' ' level{j} ' ' tabletoplot{i}], 'FontSize', 16);
-        elseif sum(sel) < 2
+        elseif sum(sel) == 1
           fh = visProd2D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, j*i+k*10);
@@ -249,6 +239,8 @@ for j = 1:length(level)
           xlabel(ylab);
           title([instrument ' ' level{j} ' ' tabletoplot{i} ' ' datestr(data.(level{j}).(tabletoplot{i}).dt(sel))], ...
             'FontSize', 16);
+        else
+          continue
         end
         % plot plan at 676 nm to check shift in chl a peak wavelength
         if contains(instrument,'AC') && contains(toplot{i, k}, 'a') && ...
@@ -275,7 +267,8 @@ for j = 1:length(level)
               mkdir(fullfile(data.path.prod, 'plots'))
             end
             filename = fullfile(data.path.prod, 'plots', [prefix '_' ...
-              datestr(day_to_plot(1), 'yyyymmdd') '_' datestr(day_to_plot(2), 'yyyymmdd') '_' ...
+              datestr(min(data.(level{j}).(tabletoplot{i}).dt(sel)), 'yyyymmdd') '_' ...
+              datestr(max(data.(level{j}).(tabletoplot{i}).dt(sel)), 'yyyymmdd') '_' ...
               data.model data.sn '_' level{j} '_' toplot{i, k} '_' tabletoplot{i}]);
             savefig(fh, filename, 'compact')
           end

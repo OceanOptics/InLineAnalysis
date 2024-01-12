@@ -123,7 +123,8 @@ classdef ACS < Instrument
       end
     end
     
-    function Calibrate(obj, compute_dissolved, interpolation_method, CDOM, SWT, di_method, scattering_corr, compute_ad_aphi, TSG)
+    function Calibrate(obj, days2run, compute_dissolved, interpolation_method, CDOM, SWT, di_method, ...
+        scattering_corr, compute_ad_aphi, TSG, min_nb_pts_per_cluster, time_weight_for_cluster)
       lambda = struct('ref', obj.lambda_ref, 'a', obj.lambda_a, 'c', obj.lambda_c);
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       % Load model from Haëntjens et al. 2021v22 to estimate cross-sectional
@@ -135,27 +136,29 @@ classdef ACS < Instrument
             [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, [], obj.modelG50, obj.modelmphi, obj.bin.diw, ...
               [], SWT, SWT_constants, interpolation_method, di_method, scattering_corr, ...
-              compute_ad_aphi);
+              compute_ad_aphi, [], days2run);
           else
             [obj.prod.p, ~, obj.prod.QCfailed] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, [], obj.modelG50, obj.modelmphi, [], ...
               [], SWT, SWT_constants, interpolation_method, [], scattering_corr, ...
-              compute_ad_aphi);
+              compute_ad_aphi, [], days2run);
           end
         case 'CDOM'
           if ~isfield(CDOM.prod, 'pd') && isempty(CDOM.qc.tsw)
             error('No CDOM data loaded: required for CDOM interpolation');
           end
+          obj.cal_param.min_nb_pts_per_cluster = min_nb_pts_per_cluster;
+          obj.cal_param.time_weight_for_cluster = time_weight_for_cluster;
           if compute_dissolved
             [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, obj.cal_param, obj.modelG50, obj.modelmphi, obj.bin.diw, ...
               CDOM, SWT, SWT_constants, interpolation_method, di_method, scattering_corr, ...
-              compute_ad_aphi, TSG);
+              compute_ad_aphi, TSG, days2run);
           else
             [obj.prod.p, ~, obj.prod.QCfailed] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, obj.cal_param, obj.modelG50, obj.modelmphi, [], ...
               CDOM, SWT, SWT_constants, interpolation_method, [], scattering_corr, ...
-              compute_ad_aphi, TSG);
+              compute_ad_aphi, TSG, days2run);
           end
         otherwise
           error('Method not supported.');
