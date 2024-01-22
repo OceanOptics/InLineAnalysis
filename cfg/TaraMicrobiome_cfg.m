@@ -289,7 +289,8 @@ cfg.process.di.skip = cfg.process.instruments2run(contains(cfg.process.instrumen
   {'FLOW','TSG','SBE45','SBE3845','NMEA','PAR'}));
 cfg.process.di.qc = struct('mode', 'ui',... % ui or load
                            'qc_once_for_all', false,... % true = QC all variables | false = QC variables separately);
-                           'remove_old', false); % remove old selection of the same period
+                           'remove_old', false,... % remove old selection of the same period
+                           'remove_when_flow_below', false); % true = remove data when flow <= 0.5 | false = no data removal data depending on flow | number = remove data when flow <= number)
 cfg.process.di.bin = struct('bin_size', 30);
 
 %%% Synchronization %%%
@@ -330,7 +331,7 @@ cfg.process.split = struct();
 cfg.process.split.reference = 'FLOW';
 cfg.process.split.buffer = struct();
 cfg.process.split.skip = cfg.process.instruments2run(contains(cfg.process.instruments2run, ...
-  {'FLOW','TSG','SBE45','SBE3845','ALFA','NMEA', 'PAR'}));
+  {'TSG','SBE45','SBE3845','ALFA','NMEA', 'PAR'}));
 % Set buffer length depending on instrument type (default).
 % To customize buffer length, uncomment section below
 for i = 1:size(cfg.process.instruments2run)
@@ -452,6 +453,7 @@ cfg.process.qc.AutoQC_Saturation_Threshold.bb = 4100; % (counts) max being 4130
 cfg.process.qc.mode = 'ui';
 cfg.process.qc.qc_once_for_all = false;  % true = QC all variables | false = QC variables separately);
 cfg.process.qc.remove_old = false; % remove old selection of the same period
+cfg.process.qc.remove_when_flow_below = false; % true = remove data when flow <= 0.5 | false = no data removal data depending on flow | number = remove data when flow <= number)
 cfg.process.qc.global = struct();
 cfg.process.qc.global.active = false;
 cfg.process.qc.global.view = cfg.process.qcref.view;

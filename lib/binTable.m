@@ -216,7 +216,7 @@ switch mode
         if sum(sel) > 0
           raw_var_sel = raw_var(sel,:);
           % Compute percentiles
-          foo = prctile(raw_var_sel,[prctile_avg],1);
+          foo = prctile(raw_var_sel, prctile_avg,1);
           avg_pl(i,:) = foo(1,:); % low percentile
           avg_ph(i,:) = foo(2,:); % high percentile
           
@@ -228,8 +228,8 @@ switch mode
             avg_n(i) = 1;
           else
             avg_n(i) = sum(avg_sel);
-            avg_mn(i,:) = nanmean(raw_var_sel(avg_sel,:));
-            avg_sd(i,:) = nanstd(raw_var_sel(avg_sel,:));
+            avg_mn(i,:) = mean(raw_var_sel(avg_sel,:), 'omitnan');
+            avg_sd(i,:) = std(raw_var_sel(avg_sel,:), 'omitnan');
           end
         end
         
@@ -291,8 +291,8 @@ switch mode
         avg_n(i) = sum(sel);
         if sum(sel) > 0
 %           avg_md(i,:) = nanmedian(raw_var(sel,:));
-          avg_mn(i,:) = nanmean(raw_var(sel,:));
-          avg_sd(i,:) = nanstd(raw_var(sel,:));
+          avg_mn(i,:) = mean(raw_var(sel,:), 'omitnan');
+          avg_sd(i,:) = std(raw_var(sel,:), 'omitnan');
         end
         % Display Progress
 %         if verbose

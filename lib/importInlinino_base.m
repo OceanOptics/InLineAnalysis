@@ -105,7 +105,7 @@ fclose(fid);
 dat = [];
 for i = 1:size(hd, 2)
   if strcmp(hd{i}, 'dt')
-    if contains(t{1}, '/')
+    if contains(t{1}(1), '/')
       dat = [dat datenum(t{i}, 'yyyy/mm/dd HH:MM:SS.FFF')];
     else
       dat = [dat datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF')];
@@ -122,19 +122,25 @@ end
 
 % detect if lambda to extract
 hd_tx = cell(size(hd));
+hd_digit = cell(size(hd));
 for i = 1:size(hd, 2)
   hd_tx{i} = hd{i}(isstrprop(hd{i},'alpha'));
   hd_digit{i} = hd{i}(isstrprop(hd{i},'digit'));
 end
 [~, d] = unique(hd_tx, 'first');
+var_lambda = hd_tx(not(ismember(1:numel(hd_tx), d)));
+var_lambda = var_lambda(logical(sum(categorical(var_lambda) == ...
+  {'beta','betap','bb','bbp','a','ap','c','cp'}', 1)));
 % find wavelength and extract
-lambda = str2double(hd_digit(contains(hd, unique(hd_tx(not(ismember(1:numel(hd_tx), d)))))));
+if ~isempty(var_lambda)
+  lambda = str2double(hd_digit(contains(hd, unique())));
+end
 
 data = array2table(dat, 'VariableNames', hd);
 data.Properties.VariableUnits = unit;
 
 % merge into one column when spectral data
-if ~isempty(lambda)
+if ~isempty(var_lambda) & ~isempty(var_lambda)
   merged_lambda = cat(2, dat(:, contains(hd, unique(hd_tx(not(ismember(1:numel(hd_tx), d)))))));
   data(:, contains(hd, unique(hd_tx(not(ismember(1:numel(hd_tx), d)))))) = [];
   data.(cell2mat(unique(hd_tx(not(ismember(1:numel(hd_tx), d)))))) = merged_lambda;

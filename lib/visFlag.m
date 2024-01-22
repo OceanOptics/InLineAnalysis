@@ -19,6 +19,11 @@ col_flag = ColorSet(4, :);
 fh = fig(52); hold('on');
 yyaxis('left');
 
+% check if data is loaded
+if isempty(raw_filt) && isempty(bin_tot_good) && isempty(bin_filt_good)
+  error('No data loaded, check previous step')
+end
+
 % Plot second bin data
 sc = [];
 leg = {};

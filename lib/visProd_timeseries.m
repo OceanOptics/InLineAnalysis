@@ -34,7 +34,8 @@ switch instrument
         'chl_Halh')};
       varPOC = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
         {'poc','POC','POC_cp'})};
-      fig(77);
+      wl550 = abs(lambda - 550) == min(abs(lambda - 550));
+      fig(10);
       clf
       subplot(3,1,1)
       hold on
@@ -60,18 +61,23 @@ switch instrument
       ylabel('[poc] (mg.m^{-3})')
       xlim([min(data.dt) max(data.dt)]);
       %
-      fig(78);
+      fig(11);
       clf
-      subplot(1,2,1)
-      scatter(data.(vargam), data.(varHH_G50), 6, 'filled')
-      set(gca, 'XScale', 'log', 'YScale', 'log')
-      xlabel('gamma (unitless)')
-      ylabel('H&H phytoplankton G50: cross-sectional area (\mum)')
-      subplot(1,2,2)
+      subplot(1,3,1)
       scatter(data.(varchl), data.(varHchl), 6, 'filled')
       set(gca, 'XScale', 'log', 'YScale', 'log')
       xlabel('a_{p676}[chl] (mg.m^{-3})')
       ylabel('Houskeeper [chl] (mg.m^{-3})')
+      subplot(1,3,2)
+      scatter(data.(vargam), data.(varHH_G50), 6, 'filled')
+      set(gca, 'XScale', 'log', 'YScale', 'log')
+      xlabel('gamma (unitless)')
+      ylabel('H&H phytoplankton G50: cross-sectional area (\mum)')
+      subplot(1,3,3)
+      scatter(data.cp(:, wl550), data.(vargam), 6, 'filled')
+      set(gca, 'XScale', 'log', 'YScale', 'log')
+      xlabel('c_{p} 550 nm')
+      ylabel('gamma (unitless)')
     elseif any(contains(data.Properties.VariableNames, 'gamma'))
       vargam = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
         'gamma')};
@@ -79,26 +85,26 @@ switch instrument
         {'chl_ap676lh', 'Chl_lineheight'})};
       varPOC = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
         {'poc','POC','POC_cp'})};
-      fig(77);
+      fig(12);
       clf
       subplot(2,1,1)
       hold on
       yyaxis('left')
-      scatter(data.dt, data.(vargam), 6, 'filled')
+      scatter(data.dt, data.(vargam), 7, 'filled')
       ylabel('gamma (unitless)')
       xlim([min(data.dt) max(data.dt)]);
       yyaxis('right')
-      scatter(data.dt, data.(varchl), 6, 'filled')
+      scatter(data.dt, data.(varchl), 7, 'filled')
       ylabel('[chl] (mg.m^{-3})')
       legend('gamma', 'a_{p676}[chl]')
       hold off
       subplot(2,1,2)
-      scatter(data.dt, data.(varPOC), 6, 'filled')
+      scatter(data.dt, data.(varPOC), 7, 'filled')
       ylabel('[poc] (mg.m^{-3})')
       xlim([min(data.dt) max(data.dt)]);
     end
     if any(contains(data.Properties.VariableNames, 'base_fit_ag'))
-      fig(79);
+      fig(15);
       clf
       hold on
       yyaxis('left')
@@ -135,18 +141,17 @@ switch instrument
       legend(p, leg)
       hold off
     end
-      
   case {'BB', 'HBB', 'HyperBB'}
     if size(lambda, 1) > size(lambda, 2); lambda = lambda'; end
     lambda_orig = lambda;
     if any(contains(data.Properties.VariableNames, 'betap'))
       toplot = {'poc', 'bbp'};
       unit = '(mg.m^{-3})';
-      fignum = [85 86];
+      fignum = [20 21];
     elseif any(contains(data.Properties.VariableNames, 'betag'))
       toplot = {'betag'};
       unit = 'm^{-1}';
-      fignum = 87;
+      fignum = 25;
     end
     for i = 1:size(toplot, 2)
       if contains(instrument, 'HBB')
@@ -179,6 +184,15 @@ switch instrument
       legend(leg)
       xlim([min(data.dt) max(data.dt)]);
     end
+    if any(contains(data.Properties.VariableNames, 'gamma_bbp'))
+      wl550 = abs(lambda - 550) == min(abs(lambda - 550));
+      fig(11);
+      clf
+      scatter(data.bbp(:, wl550), data.gamma_bbp, 7, 'filled')
+      set(gca, 'XScale', 'log', 'YScale', 'log')
+      xlabel('b_{bp} 550 nm')
+      ylabel('gamma (unitless)')
+    end
   case {'TSG','SBE','atlasTSG'}
     varT = data.Properties.VariableNames{strcmp(data.Properties.VariableNames, 't') | ...
       strcmp(data.Properties.VariableNames, 't2') | ...
@@ -190,7 +204,7 @@ switch instrument
       strcmp(data.Properties.VariableNames, 'sss') | ...
       strcmp(data.Properties.VariableNames, 'SSS') | ...
       strcmp(data.Properties.VariableNames, 'sss_adj')};
-    fig(96);
+    fig(30);
     clf
     yyaxis('left')
     scatter(data.dt, data.(varT), 6, 'filled'); ylabel('TSG T (°C)');
@@ -198,25 +212,25 @@ switch instrument
     scatter(data.dt, data.(varS), 6, 'filled'); ylabel('TSG S (PSU)');
     xlim([min(data.dt) max(data.dt)]);
   case 'PAR'
-    fig(92);
+    fig(40);
     clf
     scatter(data.dt, data.par, 6, 'filled');
     ylabel('PAR (\muE.m^{-2}.s^{-1})');
     xlim([min(data.dt) max(data.dt)]);
   case {'WSCD','WSCDP','SUVF'}
-    fig(94);
+    fig(50);
     clf
     scatter(data.dt, data.fdom, 6, 'filled');
     ylabel('FDOM [v uncalibrated]');
     xlim([min(data.dt) max(data.dt)]);
   case 'WSS'
-    fig(95);
+    fig(60);
     clf
     scatter(data.dt, data.chl, 6, 'filled');
     ylabel('Chl (mg.m^{-3})');
     xlim([min(data.dt) max(data.dt)]);
   case 'ALFA'
-    fig(96);
+    fig(70);
     clf
     subplot(4, 1, 1);
     yyaxis('left'); hold on
@@ -259,7 +273,7 @@ switch instrument
     xlim([min(data.dt) max(data.dt)]);
     legend('FvFm', 'FvFmC', 'FvFmG', 'FvFmCG')
   case 'LISST'
-    fig(100);
+    fig(80);
     clf
     scatter(data.dt, data.cp, 6, 'filled');
     ylabel('cp m^{-1}');
@@ -275,7 +289,7 @@ switch instrument
     xlabel('Angle [degree]');
     ylabel('Time');
   case {'LISSTTau', 'LISSTTAU', 'TAU'}
-    fig(110);
+    fig(90);
     clf
     scatter(data.dt, data.Beamcp, 6, 'filled'); ylabel('c_p [m^{-1}]');
     xlim([min(data.dt) max(data.dt)]);

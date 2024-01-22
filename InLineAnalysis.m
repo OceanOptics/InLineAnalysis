@@ -418,6 +418,9 @@ classdef InLineAnalysis < handle
               if contains(i, {'BB'})
                 visProd_timeseries(obj.instrument.(i).prod.(ifieldn{j}), i, ...
                   obj.instrument.(i).lambda);
+              elseif contains(i, {'AC'})
+                visProd_timeseries(obj.instrument.(i).prod.(ifieldn{j}), i, ...
+                  obj.instrument.(i).lambda_c);
               else
                 visProd_timeseries(obj.instrument.(i).prod.(ifieldn{j}), i);
               end
@@ -579,7 +582,7 @@ classdef InLineAnalysis < handle
         if isempty(obj.instrument.(i).data)
           error('%s data table is empty', i)
         end
-        if  any(strcmp(i,obj.cfg.split.skip))
+        if any(strcmp(i, obj.cfg.split.skip))
           fprintf('SPLIT: Skip %s (copy data to next level)\n', i);
           obj.instrument.(i).raw.tsw = obj.instrument.(i).data;
         elseif strcmp(obj.instrument.(i).split.mode, 'None')
@@ -651,17 +654,58 @@ classdef InLineAnalysis < handle
     end
     
     function QC(obj)
+      % Check if remove data when flow below threshold
+      if isfield(obj.cfg.qc, 'remove_when_flow_below')
+        if islogical(obj.cfg.qc.remove_when_flow_below)
+          if obj.cfg.qc.remove_when_flow_below
+            flow_threshold = 0.5;
+            rm_with_flow = true;
+          else
+            rm_with_flow = false;
+          end
+        elseif isnumeric(obj.cfg.qc.remove_when_flow_below)
+          flow_threshold = obj.cfg.qc.remove_when_flow_below;
+          rm_with_flow = true;
+        else
+          rm_with_flow = false;
+        end
+      else
+        rm_with_flow = false;
+      end
+      % select flow while rounding timestamps
+      if ~isempty(obj.instrument.FLOW.raw.tsw)
+        flow_level = 'raw';
+      elseif ~isempty(obj.instrument.FLOW.bin.tsw)
+        flow_level = 'bin';
+      elseif ~isempty(obj.instrument.FLOW.qc.tsw)
+        flow_level = 'qc';
+      else
+        warning('Flow data not loaded')
+        flow_level = 'raw';
+      end
+      obj.instrument.FLOW.(flow_level).tsw = round_timestamp(obj.instrument.FLOW.(flow_level).tsw);
+      % remove sections with low flow
+      for i=obj.cfg.qc.specific.run(:)'; i = i{1};
+        if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
+        % round timestamps
+        if ~isempty(obj.instrument.(i).qc.fsw)
+          obj.instrument.(i).qc.fsw = round_timestamp(obj.instrument.(i).qc.fsw);
+        end
+        if ~isempty(obj.instrument.(i).qc.tsw)
+          obj.instrument.(i).qc.tsw = round_timestamp(obj.instrument.(i).qc.tsw);
+        end
+        if rm_with_flow
+          remove_low_flow(obj, i, flow_level, flow_threshold)
+        end
+      end
+      fooflow = obj.instrument.FLOW.(flow_level).tsw;
+
       % Manual quality check of the data resulting in good and bad data
       switch obj.cfg.qc.mode
         case 'ui'
           if obj.cfg.qc.global.active
             % Display interactive figure
             foo = obj.instrument.(obj.cfg.qc.global.view{:});
-            if isempty(obj.instrument.FLOW.qc.tsw)
-              fooflow = obj.instrument.FLOW.bin.tsw;
-            else
-              fooflow = obj.instrument.FLOW.qc.tsw;
-            end
             fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
                        foo.qc.fsw, foo.suspect.fsw, foo.view.varname, foo.view.varcol,...
                        foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
@@ -701,35 +745,24 @@ classdef InLineAnalysis < handle
             % For each instrument
             for i=obj.cfg.qc.specific.run(:)'; i = i{1};
               if ~any(strcmp(obj.cfg.instruments2run, i)); continue; end
-              % Display interactive figure
-              foo = obj.instrument.(i);
-              if ~isempty(obj.instrument.FLOW.qc.tsw)
-                fooflow = obj.instrument.FLOW.qc.tsw;
-              elseif ~isempty(obj.instrument.FLOW.bin.tsw)
-                fooflow = obj.instrument.FLOW.bin.tsw;
-              elseif ~isempty(obj.instrument.FLOW.raw.tsw)
-                fooflow = obj.instrument.FLOW.raw.tsw;
-              else
-                warning('Flow data not loaded')
-                fooflow = obj.instrument.FLOW.qc.tsw;
-              end
               if ~isfolder(obj.instrument.(i).path.ui); mkdir(obj.instrument.(i).path.ui); end
               if contains(i, 'AC')
                 channel = {'a', 'c'};
               elseif contains(i, {'TSG', 'SBE45', 'SBE3845'})
-                if ~strcmp(foo.qc.tsw.Properties.VariableNames, 's')
-                  channel = {foo.temperature_variable, 'c'};
+                if ~strcmp(obj.instrument.(i).qc.tsw.Properties.VariableNames, 's')
+                  channel = {obj.instrument.(i).temperature_variable, 'c'};
                 else
-                  channel = {foo.temperature_variable, 's'};
+                  channel = {obj.instrument.(i).temperature_variable, 's'};
                 end
               end
               if contains(i, {'AC', 'TSG', 'SBE45', 'SBE3845'}) && ~obj.cfg.qc.qc_once_for_all
                 for j = channel
-                  fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
-                             foo.qc.fsw, foo.suspect.fsw, j{:}, foo.view.varcol,...
-                             foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
+                  % Display interactive figure
+                  fh=visFlag(obj.instrument.(i).raw.tsw, obj.instrument.(i).raw.fsw, ...
+                        obj.instrument.(i).qc.tsw, obj.instrument.(i).suspect.tsw, obj.instrument.(i).qc.fsw, ...
+                        obj.instrument.(i).suspect.fsw, j{:}, obj.instrument.(i).view.varcol,...
+                        obj.instrument.(i).raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
                   title(['\fontsize{22}\color{red}' i ' QC of "' j{:} '" only:' newline '\fontsize{18}\color{black}Press t to trash section (press q to save)'], 'interpreter', 'tex');
-                  % title([i ' QC of "' j{:} '" only' newline 'Press t to trash section (press q to save)']);
                   fprintf([i ' QC of "' j{:} '" only: Press t to trash section (press q to save)\n']);
                   % Get user selection
                   user_selection = guiSelectOnTimeSeries(fh);
@@ -745,20 +778,20 @@ classdef InLineAnalysis < handle
                   clf(52)
                 end
               elseif contains(i, 'ALFA') && ~obj.cfg.qc.qc_once_for_all
-                channel = foo.qc.tsw.Properties.VariableNames;
+                channel = obj.instrument.(i).qc.tsw.Properties.VariableNames;
                 channel(contains(channel, {'dt', '_avg_sd', '_avg_n'})) = [];
                 for j = channel
                   % delete crazy values
                   if contains(j{:}, 'WL')
-                    foo.qc.tsw.(j{:})(foo.qc.tsw.(j{:}) > 1000 | foo.qc.tsw.(j{:}) < 540) = NaN;
+                    obj.instrument.(i).qc.tsw.(j{:})(obj.instrument.(i).qc.tsw.(j{:}) > 1000 | obj.instrument.(i).qc.tsw.(j{:}) < 540) = NaN;
                   else
-                    foo.qc.tsw.(j{:})(foo.qc.tsw.(j{:}) > 100) = NaN;
+                    obj.instrument.(i).qc.tsw.(j{:})(obj.instrument.(i).qc.tsw.(j{:}) > 100) = NaN;
                   end
-                  fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
-                             foo.qc.fsw, foo.suspect.fsw, j{:}, foo.view.varcol,...
-                             foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
+                  fh=visFlag(obj.instrument.(i).raw.tsw, obj.instrument.(i).raw.fsw, ...
+                        obj.instrument.(i).qc.tsw, obj.instrument.(i).suspect.tsw, obj.instrument.(i).qc.fsw, ...
+                        obj.instrument.(i).suspect.fsw, j{:}, obj.instrument.(i).view.varcol,...
+                        obj.instrument.(i).raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
                   title(['\fontsize{22}\color{red}' i ' QC of "' j{:} '" only:' newline '\fontsize{18}\color{black}Press t to trash section (press q to save)'], 'interpreter', 'tex');
-                  % title([i ' QC of "' j{:} '" only' newline 'Press t to trash section (press q to save)']);
                   fprintf([i ' QC of "' j{:} '" only: Press t to trash section (press q to save)\n']);
                   % Get user selection
                   user_selection = guiSelectOnTimeSeries(fh);
@@ -771,18 +804,18 @@ classdef InLineAnalysis < handle
                   clf(52)
                 end
               else
-                if ~isempty(foo.raw.tsw)
-                  fh=visFlag(foo.raw.tsw, foo.raw.fsw, foo.qc.tsw, foo.suspect.tsw,...
-                             foo.qc.fsw, foo.suspect.fsw, foo.view.varname, foo.view.varcol,...
-                             foo.raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
+                if ~isempty(obj.instrument.(i).raw.tsw)
+                  fh=visFlag(obj.instrument.(i).raw.tsw, obj.instrument.(i).raw.fsw, obj.instrument.(i).qc.tsw, ...
+                        obj.instrument.(i).suspect.tsw, obj.instrument.(i).qc.fsw, obj.instrument.(i).suspect.fsw, ...
+                        obj.instrument.(i).view.varname, obj.instrument.(i).view.varcol,...
+                        obj.instrument.(i).raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
                 else
-                  fh=visFlag([], [],...
-                             foo.qc.tsw, foo.suspect.tsw, foo.qc.fsw, foo.suspect.fsw,...
-                             foo.view.varname, foo.view.varcol, foo.raw.bad, fooflow,...
-                             obj.instrument.FLOW.view.spd_variable);
+                  fh=visFlag([], [], obj.instrument.(i).qc.tsw, obj.instrument.(i).suspect.tsw, ...
+                        obj.instrument.(i).qc.fsw, obj.instrument.(i).suspect.fsw,...
+                        obj.instrument.(i).view.varname, obj.instrument.(i).view.varcol, ...
+                        obj.instrument.(i).raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
                 end
                 title(['\fontsize{22}\color{red}' i ' QC all variables:' newline '\fontsize{18}\color{black}Press t to trash section (press q to save)'], 'interpreter', 'tex');
-                % title([i ' specific QC all' newline 'Trash full section pressing t (q to save)']);
                 fprintf([i ' QC all: Press t to trash section (press q to save)\n']);
                 user_selection = guiSelectOnTimeSeries(fh);
                 % Apply user selection
@@ -1269,7 +1302,67 @@ classdef InLineAnalysis < handle
       end
       fprintf('---------------------------------------------------------------------------------------------+\n');
     end
-    
+
+    % Remove sections with low flow
+    function remove_low_flow(obj, i, flow_level, flow_threshold)
+      % get flow data
+      fooflow = obj.instrument.FLOW.(flow_level).tsw;
+      if isempty(fooflow)
+        error('Trying to delete data when low flow but FLOW data not loaded, either load FLOW data or choose "remove_when_flow_below = false"')
+      else
+        flow_dt = datetime(fooflow.dt, 'ConvertFrom', 'datenum');
+        % speed up the process
+        if median(diff(flow_dt)) == seconds(1)
+          flow_dt = flow_dt(1:60:end);
+        end
+      end
+      % find flow speed variable
+      if isfield(obj.instrument.FLOW.view, 'spd_variable')
+        spd_var = obj.instrument.FLOW.view.spd_variable;
+      else
+        if ~any(strcmp(fooflow.Properties.VariableNames, 'spd'))
+          spd_vid = contains(fooflow.Properties.VariableNames, 'spd') & ...
+            ~contains(fooflow.Properties.VariableNames, 'avg');
+          spd_var = fooflow.Properties.VariableNames{spd_vid & any(~isnan(table2array(fooflow)) & ...
+            table2array(fooflow) > 0)};
+        end
+      end
+      % ID low flow period if fsw
+      if ~isempty(obj.instrument.(i).qc.fsw) && ~isempty(fooflow)
+        % FSW
+        fprintf('Deleting %s filtered data when flow <= %.1f LPM ... \n', i, flow_threshold)
+        interp_flow = interp1(fooflow.dt, fooflow.(spd_var), obj.instrument.(i).qc.fsw.dt, 'previous');
+        var_dt = datetime(obj.instrument.(i).qc.fsw.dt, 'ConvertFrom', 'datenum');
+        has_flow = false(size(var_dt));
+        for f = progress(1:size(var_dt, 1))
+          if any(min(abs(var_dt(f) - flow_dt)) < minutes(2))
+            has_flow(f) = true;
+          end
+        end
+        low_flow = interp_flow <= flow_threshold;
+        low_flow_id_fsw = obj.instrument.(i).qc.fsw.dt(has_flow & low_flow);
+        obj.instrument.(i).DeleteUserSelection(low_flow_id_fsw, 'qc', ['fsw' {'all'}]);
+        fprintf(' done\n')
+      end
+      if ~isempty(obj.instrument.(i).qc.tsw) && ~isempty(fooflow)
+        % TSW
+        fprintf('Deleting %s total data when flow <= %.1f LPM ...', i, flow_threshold)
+        interp_flow = interp1(fooflow.dt, fooflow.(spd_var), obj.instrument.(i).qc.tsw.dt, 'previous');
+        var_dt = datetime(obj.instrument.(i).qc.tsw.dt, 'ConvertFrom', 'datenum');
+        has_flow = false(size(var_dt));
+        for f = progress(1:size(var_dt, 1))
+          if any(min(abs(var_dt(f) - flow_dt)) < minutes(2))
+            has_flow(f) = true;
+          end
+        end
+        low_flow = interp_flow <= flow_threshold;
+        low_flow_id_tsw = obj.instrument.(i).qc.tsw.dt(has_flow & low_flow);
+        obj.instrument.(i).DeleteUserSelection(low_flow_id_tsw, 'qc', ['tsw' {'all'}]);
+        fprintf(' done\n')
+      end
+    end
+                          
+
     % Merge products of two instruments (same model)
     function MergeProducts(obj, primary_instrument, secondary_instrument)
       % Data (at prod level) from the secondary instrument is copied to the
