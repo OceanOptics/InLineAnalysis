@@ -65,14 +65,18 @@ for i=1:length(dt)
       ddata = [];
       % for j=1:size(l,1)
       parfor (j=1:size(l,1), parallel_flag)
-        if isempty(otherarg1) && isempty(otherarg2)
-          foo = fun(fullfile(dir_in, l{j}), verbose);
-        elseif isempty(otherarg2)
-          foo = fun(fullfile(dir_in, l{j}), otherarg1, verbose);
+        if dir(fullfile(dir_in, l{j})).bytes > 0
+          if isempty(otherarg1) && isempty(otherarg2)
+            foo = fun(fullfile(dir_in, l{j}), verbose);
+          elseif isempty(otherarg2)
+            foo = fun(fullfile(dir_in, l{j}), otherarg1, verbose);
+          else
+            foo = fun(fullfile(dir_in, l{j}), otherarg1, otherarg2, verbose);
+          end
+          ddata = [ddata; foo];
         else
-          foo = fun(fullfile(dir_in, l{j}), otherarg1, otherarg2, verbose);
+          warning('Empty file: %i\File ignored', fullfile(dir_in, l{j}))
         end
-        ddata = [ddata; foo];
       end
       % Keep only data of day
       if ~any(strcmp(software, {'internal_logger', 'TeraTerm', 'WetView', 'Compass_2.1rc'}))
