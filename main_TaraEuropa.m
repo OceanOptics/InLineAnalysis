@@ -106,10 +106,10 @@ ila.SpectralQC('AC',{'raw'});
 %% 5. Automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR & ALFA values
 % Tolerance factor for auto QC ACS.
 % Varies between ACS: 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
-ila.cfg.qc.AutoQC_tolerance.filtered.a = 2; %
-ila.cfg.qc.AutoQC_tolerance.filtered.c = 2; %
-ila.cfg.qc.AutoQC_tolerance.total.a = 2; %
-ila.cfg.qc.AutoQC_tolerance.total.c = 3; %
+ila.cfg.qc.AutoQC_tolerance.filtered.a = 'auto'; %
+ila.cfg.qc.AutoQC_tolerance.filtered.c = 'auto'; %
+ila.cfg.qc.AutoQC_tolerance.total.a = 'auto'; %
+ila.cfg.qc.AutoQC_tolerance.total.c = 'auto'; %
 % define saturation threshold of a and c in uncalibrated m^-1
 ila.cfg.qc.AutoQC_Saturation_Threshold.a = 10; % remove any spectra > threshold m^-1 (uncalibrated)
 ila.cfg.qc.AutoQC_Saturation_Threshold.c = 40; % remove any spectra > threshold m^-1 (uncalibrated)
@@ -171,6 +171,7 @@ ila.CheckDataStatus();
 ila.cfg.qc.mode='ui';  % load or ui
 ila.cfg.qc.remove_old = false;  % remove old selection of this period
 ila.cfg.qc.qc_once_for_all = false; % true = QC all variables | false = QC variables separately)
+ila.cfg.qc.remove_when_flow_below = 0; % true = remove data when flow <= 0.5 | false = no data removal data depending on flow | number = remove data when flow <= number)
 % Glob
 ila.cfg.qc.global.view = {ila.cfg.qcref.view};
 ila.cfg.qc.global.active = false;

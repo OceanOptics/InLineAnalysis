@@ -25,12 +25,12 @@ cfg.meta.measurement_depth = 2;
 %%%%%%%%%%%%%%%%%
 
 %PATH_ROOT = '/Users/emmanuelboss/Desktop/TaraEuropa';
-% PATH_ROOT = '/Volumes/Data/TaraEuropa/';
-PATH_ROOT = '/Volumes/Samsung_T5/Data/TaraEuropa';
+PATH_ROOT = '/Volumes/Data2/TaraEuropa/';
+% PATH_ROOT = '/Volumes/Samsung_T5/Data/TaraEuropa';
 
 %%% TSG %%%
 model = 'SBE3845';
-SN = '04970286'; % 04970269
+SN = '04970286';
 cfg.instruments.([model SN]) = struct();
 cfg.instruments.([model SN]).model = model;
 cfg.instruments.([model SN]).TSG_source = true;
@@ -44,6 +44,21 @@ cfg.instruments.([model SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', [m
 cfg.instruments.([model SN]).view = struct('varname', 't2');
 cfg.instruments.([model SN]).temperature_variable = 't2';
 
+%%% TSG %%%
+model = 'SBE3845';
+SN = '04970269';
+cfg.instruments.([model SN]) = struct();
+cfg.instruments.([model SN]).model = model;
+cfg.instruments.([model SN]).TSG_source = true;
+cfg.instruments.([model SN]).boat = 'Tara';
+cfg.instruments.([model SN]).logger = 'Inlinino_base'; % TeraTerm Matlab Inlinino
+cfg.instruments.([model SN]).sn = SN;
+cfg.instruments.([model SN]).path = struct('raw',  fullfile(PATH_ROOT, 'raw', [model SN]),...
+                                  'wk',   fullfile(PATH_ROOT, 'wk', [model SN]),...
+                                  'prod', fullfile(PATH_ROOT, 'prod'),...
+                                  'ui', fullfile(PATH_ROOT, 'ui', [model SN]));
+cfg.instruments.([model SN]).view = struct('varname', 't2');
+cfg.instruments.([model SN]).temperature_variable = 't2';
 
 %%% NMEA %%%
 model = 'GPSSC701Tara'; % GPSSC701Tara GPS32Tara GPSCOMPASSAT
