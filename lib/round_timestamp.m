@@ -32,6 +32,9 @@ function data_out = round_timestamp(data_in)
   vars = data_in.Properties.VariableNames;
   vars(strcmp(vars, 'dt')) = [];
   for v = vars
-    data_out.(v{:}) = interp1(data_in.dt, data_in.(v{:}), data_out.dt, 'linear');
+    data_out.(v{:}) = interp1(data_in.dt, double(data_in.(v{:})), data_out.dt, 'linear');
+    if islogical(data_in.(v{:}))
+      data_out.(v{:}) = data_out.(v{:}) > 0;
+    end
   end
 end
