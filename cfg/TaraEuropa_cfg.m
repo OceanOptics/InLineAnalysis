@@ -90,7 +90,7 @@ cfg.instruments.FLOW.path = struct('raw',  fullfile(PATH_ROOT, 'raw', 'FlowContr
                                   'ui', fullfile(PATH_ROOT, 'ui', 'FlowControl'));
 cfg.instruments.FLOW.view = struct('varname', 'swt','spd_variable','spd1'); % spd1 spd2
 
-%%% ACS003 %%%
+%%% ACS3 %%%
 SN = '3';
 cfg.instruments.(['ACS' SN]) = struct();
 cfg.instruments.(['ACS' SN]).di = struct();

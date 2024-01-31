@@ -61,23 +61,30 @@ switch instrument
       ylabel('[poc] (mg.m^{-3})')
       xlim([min(data.dt) max(data.dt)]);
       %
+      if any(strcmp(data.Properties.VariableNames, 'cp'))
+        nb_subplot = 3;
+      else
+        nb_subplot = 2;
+      end
       fig(11);
       clf
-      subplot(1,3,1)
+      subplot(1,nb_subplot,1)
       scatter(data.(varchl), data.(varHchl), 6, 'filled')
       set(gca, 'XScale', 'log', 'YScale', 'log')
       xlabel('a_{p676}[chl] (mg.m^{-3})')
       ylabel('Houskeeper [chl] (mg.m^{-3})')
-      subplot(1,3,2)
+      subplot(1,nb_subplot,2)
       scatter(data.(vargam), data.(varHH_G50), 6, 'filled')
       set(gca, 'XScale', 'log', 'YScale', 'log')
       xlabel('gamma (unitless)')
       ylabel('H&H phytoplankton G50: cross-sectional area (\mum)')
-      subplot(1,3,3)
-      scatter(data.cp(:, wl550), data.(vargam), 6, 'filled')
-      set(gca, 'XScale', 'log', 'YScale', 'log')
-      xlabel('c_{p} 550 nm')
-      ylabel('gamma (unitless)')
+      if nb_subplot == 3
+        subplot(1,nb_subplot,3)
+        scatter(data.cp(:, wl550), data.(vargam), 6, 'filled')
+        set(gca, 'XScale', 'log', 'YScale', 'log')
+        xlabel('c_{p} 550 nm')
+        ylabel('gamma c_p (unitless)')
+      end
     elseif any(contains(data.Properties.VariableNames, 'gamma'))
       vargam = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
         'gamma')};
@@ -191,7 +198,7 @@ switch instrument
       scatter(data.bbp(:, wl550), data.gamma_bbp, 7, 'filled')
       set(gca, 'XScale', 'log', 'YScale', 'log')
       xlabel('b_{bp} 550 nm')
-      ylabel('gamma (unitless)')
+      ylabel('gamma b_{bp} (unitless)')
     end
   case {'TSG','SBE','atlasTSG'}
     varT = data.Properties.VariableNames{strcmp(data.Properties.VariableNames, 't') | ...

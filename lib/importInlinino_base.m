@@ -140,7 +140,7 @@ data = array2table(dat, 'VariableNames', hd);
 data.Properties.VariableUnits = unit;
 
 % merge into one column when spectral data
-if ~isempty(var_lambda) & ~isempty(var_lambda)
+if ~isempty(var_lambda)
   merged_lambda = cat(2, dat(:, contains(hd, unique(hd_tx(not(ismember(1:numel(hd_tx), d)))))));
   data(:, contains(hd, unique(hd_tx(not(ismember(1:numel(hd_tx), d)))))) = [];
   data.(cell2mat(unique(hd_tx(not(ismember(1:numel(hd_tx), d)))))) = merged_lambda;
