@@ -22,7 +22,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
   end
   % check scattering correction method
-  if ~any(strcmp(scattering_correction, {'Zaneveld1994_proportional', 'Rottgers2013_semiempirical'}))
+  if ~any(strcmp(scattering_correction, {'Zaneveld1994_proportional', 'Rottgers2013_semiempirical', 'ZaneveldRottgers'}))
     error('%s residual temperature and scattering correction not supported', scattering_correction)
   end
   flow_data = fth.qc.tsw;
@@ -307,8 +307,8 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       scatter(filt_interp.dt(filt_interp_id), filt_interp.fdom(filt_interp_id), '.', 'MarkerEdgeColor', [0	205	205]/255, 'MarkerEdgeAlpha', 0.5)
       plot(filt_avg.dt(filt_avg_id), filt_avg.fdom(filt_avg_id), 'o', 'MarkerEdgeColor', 'k', 'MarkerFaceColor', [0	205	205]/255)
       ylabel('FDOM (volts)')
-      legend('Filtered interpolated', 'Total', 'Filtered percentile average', 'fCDOM', ...
-        'fCDOM filtered percentile average', 'AutoUpdate','off', 'FontSize', 12)
+      legend('Filtered interpolated', 'Total', 'Filtered (avg filter event)', 'fCDOM (raw)', ...
+        'fCDOM (avg filter event)', 'AutoUpdate','off', 'FontSize', 12)
     else
       legend('Filtered interpolated', 'Total', 'Filtered median',...
         'AutoUpdate','off', 'FontSize', 12)
@@ -349,6 +349,8 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       [p.ap, ~] = ResidualTempScatterCorrRottgers_semiempirical(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
     elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
       [p.ap, ~] = ResidualTempScatterCorrZaneveld_proportional(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
+    elseif strcmp(scattering_correction, 'ZaneveldRottgers')
+      [p.ap, ~] = ResidualTempScatterCorrZaneveldRottgers(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
     end
     fprintf('Done\n')
     fprintf('cp %s residual temperature and scattering correction ... ', strrep(scattering_correction, '_', ' '))
@@ -356,6 +358,8 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       [~, p.cp] = ResidualTempScatterCorrRottgers_semiempirical(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
     elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
       [~, p.cp] = ResidualTempScatterCorrZaneveld_proportional(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
+    elseif strcmp(scattering_correction, 'ZaneveldRottgers')
+      [~, p.cp] = ResidualTempScatterCorrZaneveldRottgers(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
     end
     fprintf('Done\n')
   else
@@ -364,6 +368,8 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       [p.ap, p.cp] = ResidualTempScatterCorrRottgers_semiempirical(p.ap, p.cp, lambda.ref, psi);
     elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
       [p.ap, p.cp] = ResidualTempScatterCorrZaneveld_proportional(p.ap, p.cp, lambda.ref, psi);
+    elseif strcmp(scattering_correction, 'ZaneveldRottgers')
+      [p.ap, p.cp] = ResidualTempScatterCorrZaneveldRottgers(p.ap, p.cp, lambda.ref, psi);
     end
   end
   
@@ -887,14 +893,14 @@ function [ap_corr, cp_corr] = ResidualTempScatterCorrZaneveld_proportional(ap, c
   iNIR = 710 <= wl &  wl <= 750;  % spectral srange for optimization (710 to 750nm)
   if isempty(iNIR); error('Unable to perform correction as no wavelength available in NIR.'); end
   % Find nearest wavelength to greater than 730 nm to use as reference for correction
-  iref = find(730 <= wl, 1,'first'); % 715 730
+  iref = abs(wl - 715) == min(abs(wl - 715)); % 715 730
   % If ACS spectra do not go up to 730 nm take the closest wavelength to 730 nm
   if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
   
   % Initialize output arrays
   deltaT = NaN(size(ap,1),1);
   
-  % Init routine parameters
+ % Init routine parameter scattering correction
   bp = cp - ap;
   
   % Run minimization routine on good spectra only
@@ -925,14 +931,14 @@ function [ap_corr, cp_corr] = ResidualTempScatterCorrRottgers_semiempirical(ap, 
   iNIR = 710 <= wl &  wl <= 750;  % spectral srange for optimization (710 to 750nm)
   if isempty(iNIR); error('Unable to perform correction as no wavelength available in NIR.'); end
   % Find nearest wavelength to greater than 730 nm to use as reference for correction
-  iref = find(715 <= wl, 1,'first'); % 715 730
+  iref = abs(wl - 715) == min(abs(wl - 715)); % 715 730
   % If ACS spectra do not go up to 730 nm take the closest wavelength to 730 nm
   if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
   
   % Initialize output arrays
   deltaT = NaN(size(ap,1),1);
   
-  % Init routine parameters
+  % Init routine parameter scattering correction
   bp = cp - ap;
   
   % Run minimization routine on good spectra only
@@ -940,18 +946,62 @@ function [ap_corr, cp_corr] = ResidualTempScatterCorrRottgers_semiempirical(ap, 
   for k = sel'
     deltaT(k) = fminsearch(@costFun_RTSC, 0, opts, ap(k,:), bp(k,:), psiT, iNIR, iref);         
   end
-  % split up temperature correction base and exponent and replace negative base by NaN to avoid complex solution leakage
-  Tb = ap(:,iref) - psiT(iref).*deltaT;
-  Tb(Tb < 0) = NaN;
-  % apply correction
-  ap_corr = ap - psiT.*deltaT - (ap(:,iref) - psiT(iref).*deltaT) + 0.212*Tb.^1.135;
+  % apply temperature correction and replace negative values at iref by NaN to avoid complex solution leakage
+  ap_Tcorr = ap - psiT.*deltaT;
   cp_corr = cp - psiT.*deltaT;
+  ap_Tcorr_iref = ap_Tcorr(:,iref);
+  ap_Tcorr_iref(ap_Tcorr_iref < 0) = NaN;
+  % apply flat scattering correction
+  ap_corr = ap_Tcorr - (ap_Tcorr_iref - 0.212*ap_Tcorr_iref.^1.135);
 end
 
+%% Residual Temperature And Scattering Correction (Zaneveld 1994 proportional + NIR offset from Rottgers2013 semiempirical)
+function [ap_corr, cp_corr] = ResidualTempScatterCorrZaneveldRottgers(ap, cp, wl, psi)
+  % Function from Emmanuel Boss after Zaneveld 1994 method 3 and Rottgers et al. 2013
+  % Scattering correction + allows absorption in NIR in case of high NAP
+  psiT = interp1(psi.wl, psi.psiT, wl);
+  
+  % Parameters of minization routine
+  opts = optimset('fminsearch');
+  % opts = optimset(opts,'NonlEqnAlgorithm', 'gn'); % Does not work on R2017a
+  opts = optimset(opts,'MaxIter',20000000); 
+  opts = optimset(opts,'MaxFunEvals',20000);
+  opts = optimset(opts,'TolX',1e-8);
+  opts = optimset(opts,'TolFun',1e-8);
+  
+  % Find Near Infrared & references
+  iNIR = 710 <= wl &  wl <= 750;  % spectral srange for optimization (710 to 750nm)
+  if isempty(iNIR); error('Unable to perform correction as no wavelength available in NIR.'); end
+  % Find nearest wavelength to greater than 730 nm to use as reference for correction
+  iref = abs(wl - 715) == min(abs(wl - 715)); % 715 730
+  % If ACS spectra do not go up to 730 nm take the closest wavelength to 730 nm
+  if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
+  
+  % Initialize output arrays
+  deltaT = NaN(size(ap,1),1);
+  
+  % Init routine parameter scattering correction
+  bp = cp - ap;
+  
+  % Run minimization routine on good spectra only
+  sel = find(all(isfinite(ap),2));
+  for k = sel'
+    % deltaT(k) = fminsearch(@costFun_RTSC_RottgersBoss, 0, opts, ap(k,:), bp(k,:), psiT, iNIR, iref);         
+    deltaT(k) = fminsearch(@costFun_RTSC, 0, opts, ap(k,:), bp(k,:), psiT, iNIR, iref);         
+  end
+  % apply temperature correction and replace negative values at iref by NaN to avoid complex solution leakage
+  ap_Tcorr = ap - psiT.*deltaT;
+  cp_corr = cp - psiT.*deltaT;
+  ap_Tcorr_iref = ap_Tcorr(:,iref);
+  ap_Tcorr_iref(ap_Tcorr_iref < 0) = NaN;
+  % apply scattering correction
+  ap_corr = ap_Tcorr - ap_Tcorr_iref ./ bp(:,iref) .* bp + 0.212*ap_Tcorr_iref.^1.135;
+end
+
+%% Residual Temperature And Scattering Correction cost function 
 function cost = costFun_RTSC(deltaT, ap, bp, psiT, iNIR, iref)
   cost = sum(abs(ap(iNIR) - psiT(iNIR).*deltaT - ((ap(iref)-psiT(iref).*deltaT)./bp(iref)).*bp(iNIR)));
 end
-
 
 %% Temperature And Salinity Correction
 function [a_ts, c_ts] = TemperatureAndSalinityCorrection(a, c, a_wl, c_wl, delta_t, delta_s, psi)
@@ -963,7 +1013,7 @@ function [a_ts, c_ts] = TemperatureAndSalinityCorrection(a, c, a_wl, c_wl, delta
   c_psi_s = interp1(psi.wl, psi.c_psiS, c_wl, 'linear', 'extrap');
   %a_sigma_psi_t = interp1(psi.wl, psi.a_sigma_psiS, wl_a, 'linear', 'extrap');
   %c_sigma_psi_t = interp1(psi.wl, psi.c_sigma_psiS, wl_c, 'linear', 'extrap');
-  
+    
   %correct acdata_raw for temp-dependent water absorbance, propagate error
   %into del_raw.  Output acdata_t and del_t.
    

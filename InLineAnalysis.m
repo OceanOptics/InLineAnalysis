@@ -1114,7 +1114,7 @@ classdef InLineAnalysis < handle
     function Calibrate(obj)
       % Note: Run all days loaded (independent of days2run)
       for i=obj.cfg.instruments2run; i = i{1};
-        if  any(strcmp(i,obj.cfg.calibrate.skip))
+        if any(strcmp(i,obj.cfg.calibrate.skip))
           fprintf('CALIBRATE: Skip %s (copy data to next level)\n', i);
           obj.instrument.(i).prod.a = obj.instrument.(i).qc.tsw;
         else
@@ -1122,7 +1122,31 @@ classdef InLineAnalysis < handle
           if contains(i, {'AC','LISSTTau','LISSTTAU','LISST-Tau','TAU','CSTAR'})
             if isempty(obj.cfg.calibrate.(i).CDOM_source)
               cdom_source = [];
-            else
+            elseif strcmp(obj.cfg.calibrate.(i).interpolation_method, 'CDOM')
+              % make sure the right cdom source was input, and if not select the good one
+              instrument_class = table(fieldnames(obj.instrument), 'VariableNames', {'instruments'});
+              instrument_class.class = cell(size(instrument_class.instruments));
+              for co = 1:size(instrument_class, 1)
+                instrument_class.class{co} = class(obj.instrument.(instrument_class.instruments{co}));
+              end
+              % find cdom table name
+              cdom_tblname = fieldnames(obj.instrument.(obj.cfg.calibrate.(i).CDOM_source).prod);
+              if isempty(cdom_tblname)
+                obj.cfg.calibrate.(i).CDOM_source = instrument_class.instruments{strcmp(instrument_class.class, 'CD') & ...
+                  ~strcmp(instrument_class.instruments, obj.cfg.calibrate.(i).CDOM_source)};
+              else
+                time_match = obj.instrument.(obj.cfg.calibrate.(i).CDOM_source).prod.(cdom_tblname{1}).dt >= min(obj.cfg.days2run) & ...
+                  obj.instrument.(obj.cfg.calibrate.(i).CDOM_source).prod.(cdom_tblname{1}).dt < max(obj.cfg.days2run) + 1;
+                if ~any(time_match)
+                  obj.cfg.calibrate.(i).CDOM_source = instrument_class.instruments{strcmp(instrument_class.class, 'CD') & ...
+                    ~strcmp(instrument_class.instruments, obj.cfg.calibrate.(i).CDOM_source)};
+                end
+              end
+              % find good cdom table name
+              cdom_tblname = fieldnames(obj.instrument.(obj.cfg.calibrate.(i).CDOM_source).prod);
+              if isempty(cdom_tblname)
+                warning('No CDOM data available for CDOM interpolation: linear interpolation')
+              end
               cdom_source = obj.instrument.(obj.cfg.calibrate.(i).CDOM_source);
             end
           end
