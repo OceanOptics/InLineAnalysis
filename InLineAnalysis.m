@@ -1119,16 +1119,17 @@ classdef InLineAnalysis < handle
           obj.instrument.(i).prod.a = obj.instrument.(i).qc.tsw;
         else
           fprintf('CALIBRATE: %s\n', i);
+          % extract instrument classes
+          if contains(i, {'AC','LISSTTau','LISSTTAU','LISST-Tau','TAU','CSTAR','BB', 'BB3', 'HBB'})
+            instrument_class = table(fieldnames(obj.instrument), 'VariableNames', {'instruments'});
+            instrument_class.class = cell(size(instrument_class.instruments));
+            for co = 1:size(instrument_class, 1)
+              instrument_class.class{co} = class(obj.instrument.(instrument_class.instruments{co}));
+            end
+          end
+          % make sure the right CDOM source was input, and if not, select the good one
           if contains(i, {'AC','LISSTTau','LISSTTAU','LISST-Tau','TAU','CSTAR'})
-            if isempty(obj.cfg.calibrate.(i).CDOM_source)
-              cdom_source = [];
-            elseif strcmp(obj.cfg.calibrate.(i).interpolation_method, 'CDOM')
-              % make sure the right cdom source was input, and if not select the good one
-              instrument_class = table(fieldnames(obj.instrument), 'VariableNames', {'instruments'});
-              instrument_class.class = cell(size(instrument_class.instruments));
-              for co = 1:size(instrument_class, 1)
-                instrument_class.class{co} = class(obj.instrument.(instrument_class.instruments{co}));
-              end
+            if strcmp(obj.cfg.calibrate.(i).interpolation_method, 'CDOM') && ~isempty(obj.cfg.calibrate.(i).CDOM_source)
               % find cdom table name
               cdom_tblname = fieldnames(obj.instrument.(obj.cfg.calibrate.(i).CDOM_source).prod);
               if isempty(cdom_tblname)
@@ -1148,8 +1149,37 @@ classdef InLineAnalysis < handle
                 warning('No CDOM data available for CDOM interpolation: linear interpolation')
               end
               cdom_source = obj.instrument.(obj.cfg.calibrate.(i).CDOM_source);
+            else
+              cdom_source = [];
             end
           end
+          % make sure the right TSG source was input, and if not, select the good one
+          if contains(i, {'AC','LISSTTau','LISSTTAU','LISST-Tau','TAU','CSTAR','BB', 'BB3', 'HBB'})
+            if ~isempty(obj.cfg.calibrate.(i).TSG_source)
+              % find tsg table name
+              tsg_tblname = fieldnames(obj.instrument.(obj.cfg.calibrate.(i).TSG_source).prod);
+              if isempty(tsg_tblname)
+                obj.cfg.calibrate.(i).TSG_source = instrument_class.instruments{strcmp(instrument_class.class, 'TSG') & ...
+                  ~strcmp(instrument_class.instruments, obj.cfg.calibrate.(i).TSG_source)};
+              else
+                time_match = obj.instrument.(obj.cfg.calibrate.(i).TSG_source).prod.(tsg_tblname{1}).dt >= min(obj.cfg.days2run) & ...
+                  obj.instrument.(obj.cfg.calibrate.(i).TSG_source).prod.(tsg_tblname{1}).dt < max(obj.cfg.days2run) + 1;
+                if ~any(time_match)
+                  obj.cfg.calibrate.(i).TSG_source = instrument_class.instruments{strcmp(instrument_class.class, 'TSG') & ...
+                    ~strcmp(instrument_class.instruments, obj.cfg.calibrate.(i).TSG_source)};
+                end
+              end
+              % find good cdom table name
+              tsg_tblname = fieldnames(obj.instrument.(obj.cfg.calibrate.(i).TSG_source).prod);
+              if isempty(tsg_tblname)
+                warning('No TSG data available for T/S correction: S/T are assumed to be constant between filter and total events\n The remaining T impact will be corrected using the residual temperature correction')
+              end
+              tsg_source = obj.instrument.(obj.cfg.calibrate.(i).TSG_source);
+            else
+              cdom_source = [];
+            end
+          end
+          % Calibrate
           switch obj.instrument.(i).model
             case 'AC9'
               obj.instrument.(i).Calibrate(obj.cfg.days2run, ...
@@ -1160,7 +1190,7 @@ classdef InLineAnalysis < handle
                                            obj.cfg.calibrate.(i).di_method, ...
                                            obj.cfg.calibrate.(i).scattering_correction, ...
                                            obj.cfg.calibrate.(i).compute_ad_aphi, ...
-                                           obj.instrument.(obj.cfg.calibrate.(i).TSG_source), ...
+                                           tsg_source, ...
                                            obj.cfg.min_nb_pts_per_cluster, ...
                                            obj.cfg.time_weight_for_cluster);
             case 'ACS'
@@ -1172,7 +1202,7 @@ classdef InLineAnalysis < handle
                                            obj.cfg.calibrate.(i).di_method, ...
                                            obj.cfg.calibrate.(i).scattering_correction, ...
                                            obj.cfg.calibrate.(i).compute_ad_aphi, ...
-                                           obj.instrument.(obj.cfg.calibrate.(i).TSG_source), ...
+                                           tsg_source, ...
                                            obj.cfg.min_nb_pts_per_cluster, ...
                                            obj.cfg.time_weight_for_cluster);
             case {'BB', 'BB3', 'HBB'}

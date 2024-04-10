@@ -22,7 +22,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
   end
   % check scattering correction method
-  if ~any(strcmp(scattering_correction, {'Zaneveld1994_proportional', 'Rottgers2013_semiempirical', 'ZaneveldRottgers'}))
+  if ~any(strcmp(scattering_correction, {'Zaneveld1994_proportional', 'Rottgers2013_semiempirical', 'ZaneveldRottgers_blended'}))
     error('%s residual temperature and scattering correction not supported', scattering_correction)
   end
   flow_data = fth.qc.tsw;
@@ -349,8 +349,8 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       [p.ap, ~] = ResidualTempScatterCorrRottgers_semiempirical(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
     elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
       [p.ap, ~] = ResidualTempScatterCorrZaneveld_proportional(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
-    elseif strcmp(scattering_correction, 'ZaneveldRottgers')
-      [p.ap, ~] = ResidualTempScatterCorrZaneveldRottgers(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
+    elseif strcmp(scattering_correction, 'ZaneveldRottgers_blended')
+      [p.ap, ~] = ResidualTempScatterCorrZaneveldRottgers_blended(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
     end
     fprintf('Done\n')
     fprintf('cp %s residual temperature and scattering correction ... ', strrep(scattering_correction, '_', ' '))
@@ -358,8 +358,8 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       [~, p.cp] = ResidualTempScatterCorrRottgers_semiempirical(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
     elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
       [~, p.cp] = ResidualTempScatterCorrZaneveld_proportional(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
-    elseif strcmp(scattering_correction, 'ZaneveldRottgers')
-      [~, p.cp] = ResidualTempScatterCorrZaneveldRottgers(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
+    elseif strcmp(scattering_correction, 'ZaneveldRottgers_blended')
+      [~, p.cp] = ResidualTempScatterCorrZaneveldRottgers_blended(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
     end
     fprintf('Done\n')
   else
@@ -368,8 +368,8 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
       [p.ap, p.cp] = ResidualTempScatterCorrRottgers_semiempirical(p.ap, p.cp, lambda.ref, psi);
     elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
       [p.ap, p.cp] = ResidualTempScatterCorrZaneveld_proportional(p.ap, p.cp, lambda.ref, psi);
-    elseif strcmp(scattering_correction, 'ZaneveldRottgers')
-      [p.ap, p.cp] = ResidualTempScatterCorrZaneveldRottgers(p.ap, p.cp, lambda.ref, psi);
+    elseif strcmp(scattering_correction, 'ZaneveldRottgers_blended')
+      [p.ap, p.cp] = ResidualTempScatterCorrZaneveldRottgers_blended(p.ap, p.cp, lambda.ref, psi);
     end
   end
   
@@ -956,7 +956,7 @@ function [ap_corr, cp_corr] = ResidualTempScatterCorrRottgers_semiempirical(ap, 
 end
 
 %% Residual Temperature And Scattering Correction (Zaneveld 1994 proportional + NIR offset from Rottgers2013 semiempirical)
-function [ap_corr, cp_corr] = ResidualTempScatterCorrZaneveldRottgers(ap, cp, wl, psi)
+function [ap_corr, cp_corr] = ResidualTempScatterCorrZaneveldRottgers_blended(ap, cp, wl, psi)
   % Function from Emmanuel Boss after Zaneveld 1994 method 3 and Rottgers et al. 2013
   % Scattering correction + allows absorption in NIR in case of high NAP
   psiT = interp1(psi.wl, psi.psiT, wl);
