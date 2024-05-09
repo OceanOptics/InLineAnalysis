@@ -86,7 +86,7 @@ classdef InLineAnalysis < handle
               obj.instrument.(i) = TSG(cfg.instruments.(i));
             case 'atlasTSG'
               obj.instrument.(i) = atlasTSG(cfg.instruments.(i));
-            case {'FTH', 'ADU100'}
+            case {'FTH', 'ADU100', 'ADU200'}
               obj.instrument.(i) = FTH(cfg.instruments.(i));
             case 'ACS'
               obj.instrument.(i) = ACS(cfg.instruments.(i));
@@ -98,12 +98,12 @@ classdef InLineAnalysis < handle
 %               obj.instrument.(i) = BB3(cfg.instruments.(i));
 %             case 'WSCD'
 %               obj.instrument.(i) = WSCD(cfg.instruments.(i));
-            case 'LISST'
-              obj.instrument.(i) = LISST(cfg.instruments.(i));
-            case {'LISSTTau', 'LISSTTAU', 'TAU'}
-              obj.instrument.(i) = LISSTTau(cfg.instruments.(i));
+            case {'LISST', 'LISST100X'}
+              obj.instrument.(i) = LISST100X(cfg.instruments.(i));
             case 'LISST200X'
               obj.instrument.(i) = LISST200X(cfg.instruments.(i));
+            case {'LISSTTau', 'LISSTTAU', 'TAU'}
+              obj.instrument.(i) = LISSTTau(cfg.instruments.(i));
             case 'ECO'
               obj.instrument.(i) = ECO(cfg.instruments.(i));
             case 'FL'

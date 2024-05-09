@@ -59,10 +59,10 @@ function [ data ] = importInlininoNMEA( filename, verbose )
     % get units skipping empty lines (bug in old Inlinino)
     unit = fgetl(fid);
     while isempty(unit)
-        unit = fgetl(fid);
+      unit = fgetl(fid);
     end
     % get units and lambda
-    unit = strip(strsplit(unit, ','));
+    unit = strip(strsplit(strrep(unit, ',,', ', ,'), ','));
   
     % Set parser
     parser = ['%s%s' repmat('%f', 1, size(hd,2)-2)];
