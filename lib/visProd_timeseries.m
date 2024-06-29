@@ -69,18 +69,27 @@ switch instrument
       fig(11);
       clf
       subplot(1,nb_subplot,1)
-      scatter(data.(varchl), data.(varHchl), 6, 'filled')
+      binscatter(data.(varchl), data.(varHchl), 250);
+      colormap('parula')
+      set(gca, 'ColorScale', 'log')
+      % scatter(data.(varchl), data.(varHchl), 6, 'filled')
       set(gca, 'XScale', 'log', 'YScale', 'log')
       xlabel('a_{p676}[chl] (mg.m^{-3})')
       ylabel('Houskeeper [chl] (mg.m^{-3})')
       subplot(1,nb_subplot,2)
-      scatter(data.(vargam), data.(varHH_G50), 6, 'filled')
+      binscatter(data.(vargam), data.(varHH_G50), 250);
+      colormap('parula')
+      set(gca, 'ColorScale', 'log')
+      % scatter(data.(vargam), data.(varHH_G50), 6, 'filled')
       set(gca, 'XScale', 'log', 'YScale', 'log')
       xlabel('gamma (unitless)')
       ylabel('H&H phytoplankton G50: cross-sectional area (\mum)')
       if nb_subplot == 3
         subplot(1,nb_subplot,3)
-        scatter(data.cp(:, wl550), data.(vargam), 6, 'filled')
+        binscatter(data.cp(:, wl550), data.(vargam), 250);
+        colormap('parula')
+        set(gca, 'ColorScale', 'log')
+        % scatter(data.cp(:, wl550), data.(vargam), 6, 'filled')
         set(gca, 'XScale', 'log', 'YScale', 'log')
         xlabel('c_{p} 550 nm')
         ylabel('gamma c_p (unitless)')
@@ -195,7 +204,10 @@ switch instrument
       wl550 = abs(lambda - 550) == min(abs(lambda - 550));
       fig(11);
       clf
-      scatter(data.bbp(:, wl550), data.gamma_bbp, 7, 'filled')
+      binscatter(data.bbp(:, wl550), data.gamma_bbp, 250);
+      colormap('parula')
+      set(gca, 'ColorScale', 'log')
+      % scatter(data.bbp(:, wl550), data.gamma_bbp, 7, 'filled')
       set(gca, 'XScale', 'log', 'YScale', 'log')
       xlabel('b_{bp} 550 nm')
       ylabel('gamma b_{bp} (unitless)')

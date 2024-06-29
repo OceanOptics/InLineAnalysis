@@ -1099,9 +1099,16 @@ classdef InLineAnalysis < handle
     end
     
     function QCSwitchPosition(obj)
-      if isfield(obj.cfg.calibrate.(obj.cfg.qcref.view), 'filt_method')
+      if contains(obj.cfg.qcref.view, 'BB') && isfield(obj.cfg.calibrate.(obj.cfg.qcref.view), 'filt_method')
         if strcmp(obj.cfg.calibrate.(obj.cfg.qcref.view).filt_method, 'exponential_fit')
           QCSwitchPosition(obj.instrument.(obj.cfg.qcref.view), obj.instrument.FLOW, 'raw')
+        else
+          QCSwitchPosition(obj.instrument.(obj.cfg.qcref.view), obj.instrument.FLOW, 'qc')
+        end
+      elseif contains(obj.cfg.qcref.view, 'AC') && isfield(obj.cfg.calibrate.(obj.cfg.qcref.view), 'interpolation_method')
+        if strcmp(obj.cfg.calibrate.(obj.cfg.qcref.view).interpolation_method, 'CDOM') && ~isempty(obj.instrument.(obj.cfg.CDOM_source).qc)
+          QCSwitchPosition(obj.instrument.(obj.cfg.qcref.view), obj.instrument.FLOW, 'qc', [], ...
+            obj.instrument.(obj.cfg.CDOM_source))
         else
           QCSwitchPosition(obj.instrument.(obj.cfg.qcref.view), obj.instrument.FLOW, 'qc')
         end
@@ -1303,7 +1310,19 @@ classdef InLineAnalysis < handle
             case 'One day one file'
               % Read each day from days2run in independent files
               for d=day2read
-                obj.instrument.(i).Read([i '*_' datestr(d,'yyyymmdd')], d, level);
+                if isstruct(obj.instrument.(i))
+                  fnam = fieldnames(obj.instrument);
+                  instru_loaded = false(size(fnam, 1),1);
+                  for s = 1:size(fnam, 1)
+                    if ~isstruct(obj.instrument.(fnam{s}))
+                      instru_loaded(s) = true;
+                    end
+                  end
+                  warning('Instrument loaded from cfg file: %s', strjoin(fnam(instru_loaded), ', '))
+                  error("%s entered in instruments2run doesn't correspond to any intrument loaded from cfg file", i)
+                else
+                  obj.instrument.(i).Read([i '*_' datestr(d,'yyyymmdd')], d, level);
+                end
               end
             otherwise
               error('Unknow loading mode.');

@@ -23,6 +23,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   end
   % check scattering correction method
   if ~any(strcmp(scattering_correction, {'Zaneveld1994_proportional', 'Rottgers2013_semiempirical', 'ZaneveldRottgers_blended'}))
+    warning('only scattering correction supported: %s', strjoin({'Zaneveld1994_proportional', 'Rottgers2013_semiempirical', 'ZaneveldRottgers_blended'}, ', '))
     error('%s residual temperature and scattering correction not supported', scattering_correction)
   end
   flow_data = fth.qc.tsw;
@@ -698,7 +699,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   % chl_Halh_suspicious if ap676_lh is one order of magnitude different from Halh
   flag.chlratio_flag(p.ap676_lh./p.Halh <= 0.1 | p.ap676_lh./p.Halh >= 10 | p.chl_Halh > 30) = true;
   % HH_G50_mphi_suspicious
-  flag.HH_G50_mphi_suspicious(p.HH_G50 < 0.3 | p.HH_mphi < -5 | p.HH_G50 > 20) = true;
+  flag.HH_G50_mphi_suspicious(p.HH_G50 < 0.3 | p.HH_mphi < -5 | p.HH_G50 > 50) = true;
   
   % set flag column
   p.flag_bit = set_flagbit(flag);
