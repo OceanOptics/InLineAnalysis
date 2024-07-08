@@ -222,12 +222,13 @@ filename = sprintf('%s_InLine_%s_%s_%s_Product_v%s.sb', cruise, ila.cfg.instrume
   datetime('today', 'Format', 'yyyyMMdd'));
 
 % export product to SeaBASS format
-ila.meta.documents = sprintf('%s_HBB_ProcessingReport_v%s.pdf', cruise, datetime('today', 'Format', 'yyyyMMdd'));
-ila.meta.calibration_files = 'HBB8005_CharSheet.pdf';
+ila.meta.documents = sprintf('%s_%s_ProcessingReport_v%s.pdf', cruise, ...
+  ila.cfg.instruments2run, datetime('today', 'Format', 'yyyyMMdd'));
+ila.meta.calibration_files = [ila.cfg.instruments2run '_CharSheet.pdf'];
 exportSeaBASS(fullfile(ila.instrument.FLOW.path.prod, filename),...
     ila.meta,...
     bb3,...
-    {string(bb3_lambda)',string(bb3_lambda)',string(bb3_lambda)',''});
+    {string(bb3_lambda),string(bb3_lambda),string(bb3_lambda),''});
 fprintf('%s_InLine_%s_Particulate_v%s.sb saved\n', cruise, ila.cfg.instruments2run{:}, ...
   datetime('today', 'Format', 'yyyyMMdd'))
 
