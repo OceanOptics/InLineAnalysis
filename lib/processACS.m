@@ -995,8 +995,9 @@ function [ap_corr, cp_corr] = ResidualTempScatterCorrZaneveldRottgers_blended(ap
   cp_corr = cp - psiT.*deltaT;
   ap_Tcorr_iref = ap_Tcorr(:,iref);
   ap_Tcorr_iref(ap_Tcorr_iref < 0) = NaN;
+  bp_Tcorr = cp_corr - ap_Tcorr;
   % apply scattering correction
-  ap_corr = ap_Tcorr - ap_Tcorr_iref ./ bp(:,iref) .* bp + 0.212*ap_Tcorr_iref.^1.135;
+  ap_corr = ap_Tcorr - ap_Tcorr_iref ./ bp_Tcorr(:,iref) .* bp_Tcorr + 0.212*ap_Tcorr_iref.^1.135;
 end
 
 %% Residual Temperature And Scattering Correction cost function 

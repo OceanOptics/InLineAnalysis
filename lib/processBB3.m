@@ -165,13 +165,10 @@ p.betap = tot.beta - filt_interp.beta;
 p.betap = param.slope .* p.betap; % Dark independent
 
 % Interpolate X_p with values from Sullivan et al. 2013
-if param.theta ~= 124
-  theta_ref = 90:10:170;
-  X_p_ref = [0.684 0.858 1.000 1.097 1.153 1.167 1.156 1.131 1.093];
-  X_p = interp1(theta_ref, X_p_ref, param.theta, 'spline');
-else
-  X_p = 1.076; % Specific to ECO-BB3 with a scattering angle of 124
-end
+theta_ref = 90:10:170;
+X_p_ref = [0.709 0.884 1.024 1.121 1.174 1.171 1.138 1.039 0.931]; % Weighted averages
+% X_p_ref = [0.684 0.858 1.000 1.097 1.153 1.167 1.156 1.131 1.093];
+X_p = interp1(theta_ref, X_p_ref, param.theta, 'spline');
 
 % Compute backscattering
 p.bbp = 2 * pi * X_p .* p.betap;
