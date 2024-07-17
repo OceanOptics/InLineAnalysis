@@ -198,11 +198,22 @@ fprintf('Done\n')
 p(any(p.bbp < 0,2),:) = [];
 
 if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering'))
-  if isempty(tsg)
-    error('T/S data required:, no TSG data loaded')
+  if ~isempty(tsg.prod.a)
+    tsg_data = tsg.prod.a;
+  elseif ~isempty(tsg.qc.tsw)
+    tsg_data = tsg.qc.tsw;
+  else
+    error('No TSG qc or prod data loaded')
   end
-  t = interp1(tsg.dt, tsg.t, filt_qc.dt);
-  s = interp1(tsg.dt, tsg.s, filt_qc.dt);
+  if ~any(tsg_data.dt >= min([tot.dt; filt.dt]) & tsg_data.dt <= max([tot.dt; filt.dt]))
+    fprintf('Warning: TSG dates do not correspond to ACS dates: salinity correction not performed\n')
+  else
+    % round time stamp and remove time duplicates
+    tsg_data = round_timestamp(tsg_data);
+  end
+
+  replace_consecutive_nan = 3*60; % 3h
+  filt_avg = merge_timeseries(suvf_temp, tsg_data, {tsg.temperature_variable, 's'}, '', replace_consecutive_nan);
   switch di_method
     case 'interpolate'
       % Interpolate DI on Filtered
@@ -241,9 +252,9 @@ if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering'))
     case {'interpolate', 'constant'}
       % Get beta salt from Zhang et al. 2009
       beta_s = NaN(size(filt_qc.beta));
-      for j = 1:size(t,1)
-        beta_s(j, :) = betasw_ZHH2009(param.lambda, t(j), param.theta, s(j)) - ...
-          betasw_ZHH2009(param.lambda, t(j), param.theta, 0);
+      for j = 1:size(tsg_data,1)
+        beta_s(j, :) = betasw_ZHH2009(param.lambda, filt_avg.(tsg.temperature_variable)(j), param.theta, filt_avg.s(j)) - ...
+          betasw_ZHH2009(param.lambda, filt_avg.(tsg.temperature_variable)(j), param.theta, 0);
       end
       % Compute beta dissolved
       g = table(filt_qc.dt, 'VariableNames', {'dt'});
@@ -256,8 +267,8 @@ if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering'))
     case 'SW_scattering'
       % Get beta salt from Zhang et al. 2009
       beta_sw = NaN(size(filt_qc.beta));
-      for j = 1:size(t,1)
-        beta_sw(j, :) = betasw_ZHH2009(param.lambda, t(j), param.theta, s(j));
+      for j = 1:size(tsg_data,1)
+        beta_sw(j, :) = betasw_ZHH2009(param.lambda, filt_avg.(tsg.temperature_variable)(j), param.theta, filt_avg.s(j));
       end
       % Compute beta dissolved
       g = table(filt_qc.dt, 'VariableNames', {'dt'});
