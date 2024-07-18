@@ -81,7 +81,7 @@ switch instrument
       colormap('parula')
       set(gca, 'ColorScale', 'log')
       % scatter(data.(vargam), data.(varHH_G50), 6, 'filled')
-      set(gca, 'XScale', 'log', 'YScale', 'log')
+      set(gca, 'XScale', 'linear', 'YScale', 'log')
       xlabel('gamma (unitless)')
       ylabel('H&H phytoplankton G50: cross-sectional area (\mum)')
       if nb_subplot == 3
@@ -90,7 +90,7 @@ switch instrument
         colormap('parula')
         set(gca, 'ColorScale', 'log')
         % scatter(data.cp(:, wl550), data.(vargam), 6, 'filled')
-        set(gca, 'XScale', 'log', 'YScale', 'log')
+        set(gca, 'XScale', 'log', 'YScale', 'linear')
         xlabel('c_{p} 550 nm')
         ylabel('gamma c_p (unitless)')
       end
@@ -208,21 +208,21 @@ switch instrument
       colormap('parula')
       set(gca, 'ColorScale', 'log')
       % scatter(data.bbp(:, wl550), data.gamma_bbp, 7, 'filled')
-      set(gca, 'XScale', 'log', 'YScale', 'log')
+      set(gca, 'XScale', 'log', 'YScale', 'linear')
       xlabel('b_{bp} 550 nm')
       ylabel('gamma b_{bp} (unitless)')
     end
   case {'TSG','SBE','atlasTSG'}
-    varT = data.Properties.VariableNames{strcmp(data.Properties.VariableNames, 't') | ...
-      strcmp(data.Properties.VariableNames, 't2') | ...
-      strcmp(data.Properties.VariableNames, 'sst') | ...
-      strcmp(data.Properties.VariableNames, 'SST') | ...
-      strcmp(data.Properties.VariableNames, 'SST') | ...
-      strcmp(data.Properties.VariableNames, 'SST')};
-    varS = data.Properties.VariableNames{strcmp(data.Properties.VariableNames, 's') | ...
-      strcmp(data.Properties.VariableNames, 'sss') | ...
-      strcmp(data.Properties.VariableNames, 'SSS') | ...
-      strcmp(data.Properties.VariableNames, 'sss_adj')};
+    idvar = strcmpi(data.Properties.VariableNames, 't') | ...
+      strcmpi(data.Properties.VariableNames, 't2') | ...
+      strcmpi(data.Properties.VariableNames, 'sst');
+    if ~any(idvar)
+      idvar = strcmpi(data.Properties.VariableNames, 't1');
+    end
+    varT = data.Properties.VariableNames{idvar};
+    varS = data.Properties.VariableNames{strcmpi(data.Properties.VariableNames, 's') | ...
+      strcmpi(data.Properties.VariableNames, 'sss') | ...
+      strcmpi(data.Properties.VariableNames, 'sss_adj')};
     fig(30);
     clf
     yyaxis('left')
