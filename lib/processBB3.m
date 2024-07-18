@@ -248,7 +248,7 @@ if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering')) && ~isem
     case {'interpolate', 'constant'}
       % Get beta salt from Zhang et al. 2009
       beta_s = NaN(size(filt_avg.beta));
-      for j = 1:size(tsg_data,1)
+      for j = 1:size(filt_avg,1)
         beta_s(j, :) = betasw_ZHH2009(param.lambda, filt_avg.(tsg.temperature_variable)(j), param.theta, filt_avg.s(j)) - ...
           betasw_ZHH2009(param.lambda, filt_avg.(tsg.temperature_variable)(j), param.theta, 0);
       end
@@ -262,7 +262,7 @@ if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering')) && ~isem
     case 'SW_scattering'
       % Get beta salt from Zhang et al. 2009
       beta_sw = NaN(size(filt_avg.beta));
-      for j = 1:size(tsg_data,1)
+      for j = 1:size(filt_avg,1)
         beta_sw(j, :) = betasw_ZHH2009(param.lambda, filt_avg.(tsg.temperature_variable)(j), param.theta, filt_avg.s(j));
       end
       % Compute beta dissolved

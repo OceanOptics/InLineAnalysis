@@ -1,8 +1,10 @@
 function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replace_consecutive_nan)
   if ~isdatetime(data.dt)
+    data_wasdatenum = true;
     data.dt = datetime(data.dt, 'ConvertFrom', 'datenum');
   end
   if ~isdatetime(data_tomerge.dt)
+    data_tomerge_wasdatenum = true;
     data_tomerge.dt = datetime(data_tomerge.dt, 'ConvertFrom', 'datenum');
   end
   
@@ -93,6 +95,9 @@ function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replac
     end
   end
   merged_data = merged_data(idex, :);
+  if data_wasdatenum && data_tomerge_wasdatenum
+    merged_data.dt = datenum(merged_data.dt);
+  end
 end
 
 function cleaned_tbl = clean_dt(data)
