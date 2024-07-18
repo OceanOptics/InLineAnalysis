@@ -1,4 +1,14 @@
 function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replace_consecutive_nan)
+  if ~isdatetime(data.dt)
+    data.dt = datetime(data.dt, 'ConvertFrom', 'datenum');
+  end
+  if ~isdatetime(data_tomerge.dt)
+    data_tomerge.dt = datetime(data_tomerge.dt, 'ConvertFrom', 'datenum');
+  end
+  
+  % order data
+  data = sortrows(data, 'dt');
+  data_tomerge = sortrows(data_tomerge, 'dt');
   % merge variable on timeseries
   data = clean_dt(data);
   data_tomerge = clean_dt(data_tomerge);
@@ -6,8 +16,15 @@ function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replac
   merged_data = table();
   merged_data.dt = (min(data.dt):minutes(1):max(data.dt))';
   idex = ismember(merged_data.dt, data.dt);
-  for i = data.Properties.VariableNames(2:end)
-    merged_data.(i{:}) = NaN(size(merged_data.dt, 1), size(data.(i{:}), 2));
+  var_todo = data.Properties.VariableNames(~strcmp(data.Properties.VariableNames, 'dt'));
+  for i = var_todo
+    if iscell(data.(i{:}))
+      merged_data.(i{:}) = repmat({''}, size(merged_data.dt, 1), size(data.(i{:}), 2));
+    elseif isdatetime(data.(i{:}))
+      merged_data.(i{:}) = NaT(size(merged_data.dt, 1), size(data.(i{:}), 2));
+    else
+      merged_data.(i{:}) = NaN(size(merged_data.dt, 1), size(data.(i{:}), 2));
+    end
     merged_data.(i{:})(idex, :) = data.(i{:});
   end
   merged_data.Properties.VariableUnits = data.Properties.VariableUnits;
@@ -31,10 +48,20 @@ function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replac
   for j = 1:size(vars, 2)
     % create variable if not already in target table
     if ~any(strcmp(merged_data.Properties.VariableNames, [vars{j} suffix]))
-      merged_data = addvars(merged_data, NaN(size(merged_data.dt)), 'NewVariableNames', [vars{j} suffix], 'After', 'dt');
+      if iscell(data_tomerge.(vars{j}))
+        merged_data = addvars(merged_data, repmat({''}, size(merged_data.dt)), 'NewVariableNames', [vars{j} suffix], 'After', 'dt');
+      elseif isdatetime(data_tomerge.(vars{j}))
+        merged_data = addvars(merged_data, NaT(size(merged_data.dt)), 'NewVariableNames', [vars{j} suffix], 'After', 'dt');
+      else
+        merged_data = addvars(merged_data, NaN(size(merged_data.dt)), 'NewVariableNames', [vars{j} suffix], 'After', 'dt');
+      end
     end
     % find only id of variable with nan to replace
-    idnan = isnan(merged_data.([vars{j} suffix]));
+    if iscell(data_tomerge.(vars{j}))
+      idnan = cellfun('isempty', merged_data.([vars{j} suffix]));
+    else
+      idnan = isnan(merged_data.([vars{j} suffix]));
+    end
     id_tomerge = ismember(data_tomerge.dt, merged_data.dt(idnan));
     % merge data
     merged_data.([vars{j} suffix])(id & idnan, :) = data_tomerge.(vars{j})(id_tomerge);

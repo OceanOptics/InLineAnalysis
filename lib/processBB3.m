@@ -192,7 +192,7 @@ fprintf('Done\n')
 % remove negative values
 p(any(p.bbp < 0,2),:) = [];
 
-if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering'))
+if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering')) && ~isempty(tsg)
   if ~isempty(tsg.prod.a)
     tsg_data = tsg.prod.a;
   elseif ~isempty(tsg.qc.tsw)
@@ -200,7 +200,7 @@ if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering'))
   else
     error('No TSG qc or prod data loaded')
   end
-  if ~any(tsg_data.dt >= min([tot.dt; filt.dt]) & tsg_data.dt <= max([tot.dt; filt.dt]))
+  if ~any(tsg_data.dt >= min([tot.dt; filt_qc.dt]) & tsg_data.dt <= max([tot.dt; filt_qc.dt]))
     fprintf('Warning: TSG dates do not correspond to ACS dates: salinity correction not performed\n')
   else
     % round time stamp and remove time duplicates
@@ -208,7 +208,7 @@ if nargout > 1 && any(~isempty(di) | strcmp(di_method,'SW_scattering'))
   end
 
   replace_consecutive_nan = 3*60; % 3h
-  filt_avg = merge_timeseries(suvf_temp, tsg_data, {tsg.temperature_variable, 's'}, '', replace_consecutive_nan);
+  filt_avg = merge_timeseries(filt_avg, tsg_data, {tsg.temperature_variable, 's'}, '', replace_consecutive_nan);
   switch di_method
     case 'interpolate'
       % Interpolate DI on Filtered
