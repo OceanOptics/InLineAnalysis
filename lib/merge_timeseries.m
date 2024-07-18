@@ -1,4 +1,6 @@
 function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replace_consecutive_nan)
+  data_wasdatenum = false;
+  data_tomerge_wasdatenum = false;
   if ~isdatetime(data.dt)
     data_wasdatenum = true;
     data.dt = datetime(data.dt, 'ConvertFrom', 'datenum');
