@@ -48,9 +48,9 @@ elseif contains(instrument,'AC')
   instrument = 'AC';
   ylab = 'Lambda (nm)';
 elseif contains(instrument,'LISST')
-  theta = data.theta;
+  diam = data.diameters  ;
   instrument = 'LISST';
-  ylab = 'theta (°)';
+  ylab = 'Diameter (\mum)';
 else
   error('Intrument not supported')
 end
@@ -221,12 +221,15 @@ for j = 1:length(level)
         elseif contains(instrument,'AC') && contains(toplot{i, k}, 'c')
           wl = wlc;
         elseif contains(instrument,'LISST')
-          wl = theta;
+          wl = diam;
         end
         if sum(sel) > 1
           fh = visProd3D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, 'Wavelength', false, j*i+k*10);
+          if contains(instrument,'LISST')
+            set(fh.CurrentAxes, 'XScale', 'log', 'ZScale', 'log')
+          end
           zlabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
           xlabel(ylab);
           ylabel('time');
@@ -235,6 +238,9 @@ for j = 1:length(level)
           fh = visProd2D(wl, data.(level{j}).(tabletoplot{i}).dt(sel), ...
             data.(level{j}).(tabletoplot{i}).(toplot{i, k})(sel,:), ...
             false, j*i+k*10);
+          if contains(instrument,'LISST')
+            set(fh.CurrentAxes, 'XScale', 'log', 'YScale', 'log')
+          end
           ylabel([(level{j}) ' ' toplot{i, k} ' (' tabletoplot{i} ') (m^{-1})']);
           xlabel(ylab);
           title([instrument ' ' level{j} ' ' tabletoplot{i} ' ' datestr(data.(level{j}).(tabletoplot{i}).dt(sel))], ...
