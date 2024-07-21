@@ -19,7 +19,7 @@ function QCSwitchPosition(instru, flow, level, shift_flow, fdom)
     error('No FLOW %s data loaded', level)
   end
   if strcmp(level, 'raw')
-    shif = secondes(1);
+    shif = seconds(1);
   else
     shif = minutes(1);
   end
