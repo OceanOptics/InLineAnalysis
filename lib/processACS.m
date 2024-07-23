@@ -348,29 +348,38 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
     fprintf('ap %s residual temperature and scattering correction ... ', strrep(scattering_correction, '_', ' '))
     if strcmp(scattering_correction, 'Rottgers2013_semiempirical')
       [p.ap, ~] = ResidualTempScatterCorrRottgers_semiempirical(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
+      nap_offset = true;
     elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
       [p.ap, ~] = ResidualTempScatterCorrZaneveld_proportional(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
+      nap_offset = false;
     elseif strcmp(scattering_correction, 'ZaneveldRottgers_blended')
       [p.ap, ~] = ResidualTempScatterCorrZaneveldRottgers_blended(p.ap, cp_for_apresiduals_corr, lambda.a, psi);
+      nap_offset = true;
     end
     fprintf('Done\n')
     fprintf('cp %s residual temperature and scattering correction ... ', strrep(scattering_correction, '_', ' '))
     if strcmp(scattering_correction, 'Rottgers2013_semiempirical')
       [~, p.cp] = ResidualTempScatterCorrRottgers_semiempirical(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
+      nap_offset = true;
     elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
       [~, p.cp] = ResidualTempScatterCorrZaneveld_proportional(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
+      nap_offset = false;
     elseif strcmp(scattering_correction, 'ZaneveldRottgers_blended')
       [~, p.cp] = ResidualTempScatterCorrZaneveldRottgers_blended(ap_for_cpresiduals_corr, p.cp, lambda.c, psi);
+      nap_offset = true;
     end
     fprintf('Done\n')
   else
     fprintf('ap and cp %s residual temperature and scattering correction ... ', strrep(scattering_correction, '_', ' '))
     if strcmp(scattering_correction, 'Rottgers2013_semiempirical')
       [p.ap, p.cp] = ResidualTempScatterCorrRottgers_semiempirical(p.ap, p.cp, lambda.ref, psi);
+      nap_offset = true;
     elseif strcmp(scattering_correction, 'Zaneveld1994_proportional')
       [p.ap, p.cp] = ResidualTempScatterCorrZaneveld_proportional(p.ap, p.cp, lambda.ref, psi);
+      nap_offset = false;
     elseif strcmp(scattering_correction, 'ZaneveldRottgers_blended')
       [p.ap, p.cp] = ResidualTempScatterCorrZaneveldRottgers_blended(p.ap, p.cp, lambda.ref, psi);
+      nap_offset = true;
     end
   end
   
@@ -626,7 +635,7 @@ function [p, g, bad, regression_stats] = processACS(lambda, tot, filt, param, mo
   % p.cp(todelete, :) = NaN;
   
   % run gaussian decomposition
-  agaus = GaussDecomp(p, lambda.a, compute_ad_aphi);
+  agaus = GaussDecomp(p, lambda.a, compute_ad_aphi, nap_offset);
   p = [p agaus];
   
   fprintf('Calculating Chl line height, POC & gamma ... ')
@@ -1116,7 +1125,7 @@ end
 
 
 %%
-function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
+function agaus = GaussDecomp(p, lambda, compute_ad_aphi, nap_offset)
   % Gaussian decomposition
   % Ron Zaneveld, WET Labs, Inc., 2005
   % Ali Chase, University of Maine, 2014
@@ -1135,6 +1144,10 @@ function agaus = GaussDecomp(p, lambda, compute_ad_aphi)
   lambda(all(isnan(p.ap),1)) = [];
   p.ap_sd(:, all(isnan(p.ap),1)) = [];
   p.ap(:, all(isnan(p.ap),1)) = [];
+  if nap_offset
+    ap_715 = interp1(lambda, p.ap', 715, 'linear')';
+    p.ap = p.ap - ap_715;
+  end
   
   % Peak center values ("peak_loc") determined using a interative approach that allows the location to vary (uses the matlab
   % function LSQNONLIN), and are rounded to nearest integer. Sigma values ("lsqsig") are determined similarly. FWHM = sigma*2.355
