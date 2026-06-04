@@ -1,4 +1,4 @@
-function [ bin, gflag ] = binTable( raw, bin_size, mode, prctile_dtc, prctile_avg, dt_discontinus, parallel_flag, verbose )
+function [ bin, gflag ] = binTable( raw, bin_size, mode, prctile_dtc, prctile_avg, dt_discontinuous, parallel_flag, verbose )
 %BINTABLE compute median, 5 and 95 percentiles, standard deviation, and number
 %  observation for each bin. The size of each bin is defined by bin_size
 % bin_size is in seconds
@@ -35,11 +35,17 @@ function [ bin, gflag ] = binTable( raw, bin_size, mode, prctile_dtc, prctile_av
 % => similar speed for 4 and 8 Threads
 
 % Set default parameters
-if nargin < 2; bin_size = 1/60/24; end
-if nargin < 3; mode = '4flag'; end
+% if nargin < 2; bin_size = 1/60/24; end
+if nargin < 2
+  bin_size = minutes(1);
+elseif isnumeric(bin_size)
+  foo = datetime(bin_size, 'ConvertFrom', 'datenum');
+  bin_size = duration(hour(foo), minute(foo), second(foo));
+end
+if nargin < 3; mode = 'SB_IN_PRCTL'; end
 if nargin < 4; prctile_dtc = [2.5 97.5]; end
 if nargin < 5; prctile_avg = [5 75]; end
-if nargin < 6; dt_discontinus = false; end
+if nargin < 6; dt_discontinuous = false; end
 if nargin < 7; parallel_flag = 0; end
 if nargin < 8; verbose = false; end
 
@@ -51,32 +57,51 @@ end
 % Get other fields
 lvar = raw.Properties.VariableNames(~idt);
 
-
 if verbose; fprintf('Binning %s ... ', inputname(1)); end
 
 % Get start dt
-% start_dt = min(raw.dt);
-% start_dt = start_dt - second(start_dt)/3600/24; % Start at 0 second
-start_dt = datevec(min(raw.dt));
-start_dt(end) = 0;
-start_dt = datenum(start_dt); % Start at 0 second
+% start_dt = datevec(min(raw.dt));
+% start_dt(end) = 0;
+% start_dt = datenum(start_dt); % Start at 0 second
+if bin_size < minutes(1)
+  start_dt = dateshift(min(raw.dt), 'Start', 'second');
+  end_dt = dateshift(max(raw.dt), 'End', 'second');
+elseif bin_size < hours(1)
+  start_dt = dateshift(min(raw.dt), 'Start', 'minute');
+  end_dt = dateshift(max(raw.dt), 'End', 'minute');
+elseif bin_size < days(1)
+  start_dt = dateshift(min(raw.dt), 'Start', 'hour');
+  end_dt = dateshift(max(raw.dt), 'End', 'hour');
+else
+  start_dt = dateshift(min(raw.dt), 'Start', 'day');
+  end_dt = dateshift(max(raw.dt), 'End', 'day');
+end
 
 % Init bin array with NaN values
-if dt_discontinus  
-  dt = [];
-  i = 1; n = size(raw.dt, 1);
-  while i <= n
-    dti = raw.dt(i);
-    sel = find(dti <= raw.dt & raw.dt < dti + bin_size);
-    if isempty(sel)
-      error('Issue with discontinuous time code');
-    end
-    dt(end+1,1) = mean(raw.dt(sel));
-    i = sel(end) + 1;
-  end
+if dt_discontinuous  
+  % Detect single DIW event
+  id_diw_end = [find(diff(raw.dt) > minutes(0.5)); size(raw.dt,1)];
+  dt_end = raw.dt(id_diw_end);
+  dt_start = [min(raw.dt); raw.dt(id_diw_end(1:end-1)+1)];
+  dt = mean([dt_start dt_end], 2);
+  % dt = NaT(size(raw.dt));
+  % i = 1; n = size(raw.dt, 1);
+  % while i <= n
+  %   dti = raw.dt(i);
+  %   sel = find(dti <= raw.dt & raw.dt < dti + bin_size);
+  %   if isempty(sel)
+  %     error('Issue with discontinuous time code');
+  %   end
+  %   dt(i) = mean(raw.dt(sel));
+  %   i = sel(end) + 1;
+  % end
+  % dt(isnat(dt)) = [];
 else
-  dt(:,1) = start_dt:bin_size:max(raw.dt); % max range
+  dt = (start_dt:bin_size:end_dt)'; % max range
+  dt_start = dt - bin_size/2;
+  dt_end = dt + bin_size/2;
 end
+
 bin = table(dt);
 gflag = table(); % Used only in clean 1 mode;
 % Compute stats for each bin
@@ -90,25 +115,37 @@ switch mode
       raw_dt = raw.dt;
       raw_var = raw.(lvar{j});
       % Init var Out for detection (used for flagging data)
-      dtc_pl = NaN(size(dt,1),size(raw_var,2));
-      dtc_ph = NaN(size(dt,1),size(raw_var,2));
-      dtc_md = NaN(size(dt,1),size(raw_var,2));
-      dtc_mn = NaN(size(dt,1),size(raw_var,2));
-      dtc_sd = NaN(size(dt,1),size(raw_var,2));
-%       dtc_n  = NaN(size(dt,1),size(raw_var,2));
+      if isdatetime(raw_var)
+        dtc_pl = NaT(size(dt,1),size(raw_var,2));
+        dtc_ph = NaT(size(dt,1),size(raw_var,2));
+        dtc_md = NaT(size(dt,1),size(raw_var,2));
+        dtc_mn = NaT(size(dt,1),size(raw_var,2));
+        % Init car out for averaging (used in rest of program)
+        avg_pl = NaT(size(dt,1),size(raw_var,2));
+        avg_ph = NaT(size(dt,1),size(raw_var,2));
+        avg_md = NaT(size(dt,1),size(raw_var,2));
+        avg_mn = NaT(size(dt,1),size(raw_var,2));
+      else
+        dtc_pl = NaN(size(dt,1),size(raw_var,2));
+        dtc_ph = NaN(size(dt,1),size(raw_var,2));
+        dtc_md = NaN(size(dt,1),size(raw_var,2));
+        dtc_mn = NaN(size(dt,1),size(raw_var,2));
+        dtc_sd = NaN(size(dt,1),size(raw_var,2));
+        % Init car out for averaging (used in rest of program)
+        avg_pl = NaN(size(dt,1),size(raw_var,2));
+        avg_ph = NaN(size(dt,1),size(raw_var,2));
+        avg_md = NaN(size(dt,1),size(raw_var,2));
+        avg_mn = NaN(size(dt,1),size(raw_var,2));
+        avg_sd = NaN(size(dt,1),size(raw_var,2));
+      end
+  %       dtc_n  = NaN(size(dt,1),size(raw_var,2));
       dtc_n  = NaN(size(dt));
-      % Init car out for averaging (used in rest of program)
-      avg_pl = NaN(size(dt,1),size(raw_var,2));
-      avg_ph = NaN(size(dt,1),size(raw_var,2));
-      avg_md = NaN(size(dt,1),size(raw_var,2));
-      avg_mn = NaN(size(dt,1),size(raw_var,2));
-      avg_sd = NaN(size(dt,1),size(raw_var,2));
-%       avg_n  = NaN(size(dt,1),size(raw_var,2));
+  %       avg_n  = NaN(size(dt,1),size(raw_var,2));
       avg_n  = NaN(size(dt));
       parfor (i=1:size(dt,1), parallel_flag)
 %       for i=1:size(dt,1)
         % Select minute to bin
-        sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
+        sel = dt_start(i) <= raw_dt & raw_dt < dt_end(i);
         % Unselect raw with NaN values
         foo = ~isnan(raw_var); % step required for 2d variables
         sel = sel & any(foo,2);
@@ -145,10 +182,12 @@ switch mode
           avg_n(i) = sum(avg_sel);
           dtc_md(i,:) = median(raw_var_sel(dtc_sel,:), 'omitnan');
           dtc_mn(i,:) = mean(raw_var_sel(dtc_sel,:), 'omitnan');
-          dtc_sd(i,:) = std(raw_var_sel(dtc_sel,:), 'omitnan');
           avg_md(i,:) = median(raw_var_sel(avg_sel,:), 'omitnan');
           avg_mn(i,:) = mean(raw_var_sel(avg_sel,:), 'omitnan');
-          avg_sd(i,:) = std(raw_var_sel(avg_sel,:), 'omitnan');
+          if ~isdatetime(raw_var)
+            dtc_sd(i,:) = std(raw_var_sel(dtc_sel,:), 'omitnan');
+            avg_sd(i,:) = std(raw_var_sel(avg_sel,:), 'omitnan');
+          end
         end
       end
       % Detection stats
@@ -156,21 +195,23 @@ switch mode
 %       bin.([lvar{j} '_dtc_ph']) = dtc_ph; % high percentile
       bin.([lvar{j} '_dtc_md']) =  dtc_md;% median
       bin.([lvar{j} '_dtc_mn']) = dtc_mn; % mean
-%       bin.([lvar{j} '_dtc_sd']) = dtc_sd; % standard deviation
 %       bin.([lvar{j} '_dtc_n']) = dtc_n;   % number of samples
       bin.([lvar{j} '_dtc_var']) = (dtc_ph - dtc_pl) ./ 2; % variance
       bin.([lvar{j} '_dtc_unc']) = bin.([lvar{j} '_dtc_var']) ./ sqrt(dtc_n); % uncertainty median
-      bin.([lvar{j} '_dtc_se']) = dtc_sd ./ sqrt(dtc_n);  % uncertainty mean
       % Average Stats
       bin.([lvar{j} '_avg_pl']) = avg_pl; % low percentile
       bin.([lvar{j} '_avg_ph']) = avg_ph; % high percentile
       bin.([lvar{j} '_avg_md']) =  avg_md;% median
       bin.(lvar{j}) = avg_mn; % mean
-      bin.([lvar{j} '_avg_sd']) = avg_sd; % standard deviation
       bin.([lvar{j} '_avg_n']) = avg_n;   % number of samples
 %       bin.([lvar{j} '_avg_var']) = (bin.([lvar{j} '_avg_ph']) - bin.([lvar{j} '_avg_pl'])) ./ 2; % variance
 %       bin.([lvar{j} '_avg_unc']) = bin.([lvar{j} '_avg_var']) ./ sqrt(bin.([lvar{j} '_avg_n'])); % uncertainty median 
-      bin.([lvar{j} '_avg_se']) = bin.([lvar{j} '_avg_sd']) ./ sqrt(bin.([lvar{j} '_avg_n']));   % uncertainty mean   (coefficient of error | standard error)
+      if ~isdatetime(raw_var)
+%       bin.([lvar{j} '_dtc_sd']) = dtc_sd; % standard deviation
+        bin.([lvar{j} '_dtc_se']) = dtc_sd ./ sqrt(dtc_n);  % uncertainty mean
+        bin.([lvar{j} '_avg_sd']) = avg_sd; % standard deviation
+        bin.([lvar{j} '_avg_se']) = bin.([lvar{j} '_avg_sd']) ./ sqrt(bin.([lvar{j} '_avg_n']));   % uncertainty mean   (coefficient of error | standard error)
+      end
     end
     % Remove empty lines
     sel = all(isnan(bin.(lvar{1})),2);
@@ -188,12 +229,18 @@ switch mode
       raw_var = raw.(lvar{j});
 
       % Init for averaging
-      avg_pl = NaN(size(dt,1),size(raw_var,2));
-      avg_ph = NaN(size(dt,1),size(raw_var,2));
-      avg_mn = NaN(size(dt,1),size(raw_var,2));
-      avg_sd = NaN(size(dt,1),size(raw_var,2));
+      if isdatetime(raw_var)
+        avg_pl = NaT(size(dt,1),size(raw_var,2));
+        avg_ph = NaT(size(dt,1),size(raw_var,2));
+        avg_mn = NaT(size(dt,1),size(raw_var,2));
+      else
+        avg_pl = NaN(size(dt,1),size(raw_var,2));
+        avg_ph = NaN(size(dt,1),size(raw_var,2));
+        avg_mn = NaN(size(dt,1),size(raw_var,2));
+        avg_sd = NaN(size(dt,1),size(raw_var,2));
+      end
       avg_n  = NaN(size(dt));
-      
+
       % Init Parpool (needed for proper display of completion)
       %parpool(parallel_flag)
       
@@ -205,12 +252,16 @@ switch mode
 %       end
 %       startTime=tic;
       parfor (i=1:size(dt,1), parallel_flag)
-%       for i=1:size(dt,1)
+      % for i=1:size(dt,1)
 %         fprintf('\t%s %s\n', lvar{j}, datestr(dt(i))); 
         % Select minute to bin
-        sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
+        sel = dt_start(i) <= raw_dt & raw_dt < dt_end(i);
         % Unselect raw with NaN values
-        foo = ~isnan(raw_var); % step required for 2d variables
+        if isdatetime(raw_var)
+          foo = ~isnat(raw_var); % step required for 2d variables
+        else
+          foo = ~isnan(raw_var); % step required for 2d variables
+        end
         sel = sel & any(foo,2);
         % Check number of samples
         if sum(sel) > 0
@@ -224,12 +275,16 @@ switch mode
           avg_sel = any(avg_pl(i,:) <= raw_var_sel & raw_var_sel <= avg_ph(i,:),2);
           if sum(avg_sel) == 1
             avg_mn(i,:) = raw_var_sel(avg_sel,:);
-            avg_sd(i,:) = 0;
+            if ~isdatetime(raw_var)
+              avg_sd(i,:) = 0;
+            end
             avg_n(i) = 1;
           else
             avg_n(i) = sum(avg_sel);
             avg_mn(i,:) = mean(raw_var_sel(avg_sel,:), 'omitnan');
-            avg_sd(i,:) = std(raw_var_sel(avg_sel,:), 'omitnan');
+            if ~isdatetime(raw_var)
+              avg_sd(i,:) = std(raw_var_sel(avg_sel,:), 'omitnan');
+            end
           end
         end
         
@@ -245,7 +300,9 @@ switch mode
 %       bin.([lvar{j} '_avg_pl']) = avg_pl; % low percentile
 %       bin.([lvar{j} '_avg_ph']) = avg_ph; % high percentile
       bin.(lvar{j}) = avg_mn; % mean
-      bin.([lvar{j} '_avg_sd']) = avg_sd; % standard deviation
+      if ~isdatetime(raw_var)
+        bin.([lvar{j} '_avg_sd']) = avg_sd; % standard deviation
+      end
       bin.([lvar{j} '_avg_n']) = avg_n;
     end
     % Remove empty lines
@@ -269,8 +326,12 @@ switch mode
       raw_dt = raw.dt;
       raw_var = raw.(lvar{j});
       % Init var Out
-      avg_mn = NaN(size(dt,1),size(raw_var,2));
-      avg_sd = NaN(size(dt,1),size(raw_var,2));
+      if isdatetime(raw_var)
+        avg_mn = NaT(size(dt,1),size(raw_var,2));
+      else
+        avg_mn = NaN(size(dt,1),size(raw_var,2));
+        avg_sd = NaN(size(dt,1),size(raw_var,2));
+      end
       avg_n  = NaN(size(dt));
       
       % Init Display Progress
@@ -281,18 +342,24 @@ switch mode
 %       end
 %       startTime=tic;
       parfor (i=1:size(dt,1), parallel_flag)
-%       for i=1:size(dt,1)
+      % for i=progress(1:size(dt,1))
         % Select minute to bin
-        sel = dt(i) - bin_size/2 <= raw_dt & raw_dt < dt(i) + bin_size/2;
+        sel = dt_start(i) <= raw_dt & raw_dt < dt_end(i);
         % Unselect raw with NaN values
-        foo = ~isnan(raw_var); % step required for 2d variables
+        if isdatetime(raw_var)
+          foo = ~isnat(raw_var); % step required for 2d variables
+        else
+          foo = ~isnan(raw_var); % step required for 2d variables
+        end
         sel = sel & any(foo,2);
         % Check number of samples
         avg_n(i) = sum(sel);
         if sum(sel) > 0
 %           avg_md(i,:) = nanmedian(raw_var(sel,:));
           avg_mn(i,:) = mean(raw_var(sel,:), 'omitnan');
-          avg_sd(i,:) = std(raw_var(sel,:), 'omitnan');
+          if ~isdatetime(raw_var)
+            avg_sd(i,:) = std(raw_var(sel,:), 'omitnan');
+          end
         end
         % Display Progress
 %         if verbose
@@ -302,13 +369,23 @@ switch mode
       end
       % Average Stats
       bin.(lvar{j}) = avg_mn; % mean
-      bin.([lvar{j} '_avg_sd']) = avg_sd; % standard deviation
+      if ~isdatetime(raw_var)
+        bin.([lvar{j} '_avg_sd']) = avg_sd; % standard deviation
+      end
       bin.([lvar{j} '_avg_n']) = avg_n;   % number of samples
     end
     % Remove empty lines
-    sel = all(isnan(bin.(lvar{1})),2);
+    if isdatetime(bin.(lvar{1}))
+      sel = all(isnat(bin.(lvar{1})),2);
+    else
+      sel = all(isnan(bin.(lvar{1})),2);
+    end
     for j=2:size(lvar,2)
-      sel = sel & all(isnan(bin.(lvar{j})),2);
+      if isdatetime(bin.(lvar{j}))
+        sel = sel & all(isnat(bin.(lvar{j})),2);
+      else
+        sel = sel & all(isnan(bin.(lvar{j})),2);
+      end
     end
     bin(sel,:) = [];
 %   case 'classic'

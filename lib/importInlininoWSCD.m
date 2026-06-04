@@ -35,11 +35,13 @@ fclose(fid);
 
 % Build table
 if all(contains(t{1}, '/'))
-    data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{2}, ...
-             'VariableNames', {'dt', 'fdom'});
+  data = table(datetime(t{1}, 'InputFormat', 'yyyy/MM/dd HH:mm:ss.SSS'), t{2}, 'VariableNames', {'dt', 'fdom'});
+  % data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{2}, 'VariableNames', {'dt', 'fdom'});
 else
-    data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
-             t{2}, 'VariableNames', {'dt', 'fdom'});
+  data = table(datetime(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'InputFormat', 'yyyyMMddHH:mm:ss.SSS',...
+    t{2}, 'VariableNames', {'dt', 'fdom'});
+  % data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
+  %   t{2}, 'VariableNames', {'dt', 'fdom'});
 end
 
 

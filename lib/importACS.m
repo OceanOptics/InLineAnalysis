@@ -79,7 +79,8 @@ s = strsplit(filename, '/');
 s = strsplit(s{end}, '_');
 if strcmp(file_type, 'Scheduled'); si = 2; % Scheduled recording
 else; si = 3; end% Manual recording (save at prompt when start acquisition with compass)
-data.dt = datenum(s{si}(1:14), 'yyyymmddHHMMSS') + datenum(0,0,0, 0,0,(data.dt - data.dt(1))/1000);
+data.dt = datetime(s{si}(1:14), 'InputFormat', 'yyyyMMddHHmmss') + seconds(data.dt - data.dt(1))/1000;
+% data.dt = datenum(s{si}(1:14), 'yyyymmddHHMMSS') + datenum(0,0,0,0,0,(data.dt - data.dt(1))/1000);
 if strcmp(file_type, 'Scheduled')
   % Scheduled recording
   % File time stamp is done at the end of the recording

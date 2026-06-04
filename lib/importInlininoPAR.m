@@ -27,12 +27,16 @@ t = textscan(fid, parser, 'delimiter',',');
 fclose(fid);
 
 % Build table
-try 
-    data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
-             t{2}, t{3}, t{4}, 'VariableNames', {'dt', 'par', 't', 'v'});
+try
+  data = table(datetime(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'InputFormat', 'yyyyMMddHH:mm:ss.SSS'),...
+    t{2}, t{3}, t{4}, 'VariableNames', {'dt', 'par', 't', 'v'});
+  % data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
+  %   t{2}, t{3}, t{4}, 'VariableNames', {'dt', 'par', 't', 'v'});
 catch
-    data = table(datenum(t{1},'yyyy-mm-dd HH:MM:SS'),...
-             t{2}, t{3}, t{4}, 'VariableNames', {'dt', 'par', 't', 'v'});
+  data = table(datetime(t{1},'InputFormat', 'yyyy-MM-dd HH:mm:ss'),...
+    t{2}, t{3}, t{4}, 'VariableNames', {'dt', 'par', 't', 'v'});
+  % data = table(datenum(t{1},'yyyy-mm-dd HH:MM:SS'),...
+  %   t{2}, t{3}, t{4}, 'VariableNames', {'dt', 'par', 't', 'v'});
 end
 
 % Remove last line if it's past midnight (Bug in Inlinino)

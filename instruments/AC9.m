@@ -101,7 +101,7 @@ classdef AC9 < Instrument
     end
     
     function Calibrate(obj, days2run, compute_dissolved, interpolation_method, CDOM, SWT, di_method, ...
-        scattering_corr, compute_ad_aphi, TSG, min_nb_pts_per_cluster, time_weight_for_cluster)
+        scattering_corr, compute_ad_aphi, TSG) % , time_weight_for_cluster, min_nb_pts_per_cluster
       lambda = struct('ref', obj.lambda_ref, 'a', obj.lambda_ref, 'c', obj.lambda_ref);
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       % Load model from Haëntjens et al. 2021v22 to estimate cross-sectional
@@ -110,24 +110,24 @@ classdef AC9 < Instrument
       switch interpolation_method
         case 'linear'
           if compute_dissolved
-            [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, ...
+            [obj.prod.p, obj.prod.g, obj.prod.QCfailed, DIW_biofouling_correction_new] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, [], obj.modelG50, obj.modelmphi, obj.bin.diw, ...
-              [], [], SWT, SWT_constants, interpolation_method, di_method, scattering_corr, ...
-              compute_ad_aphi, [], days2run);
+              [], SWT, SWT_constants, interpolation_method, di_method, scattering_corr, ...
+              compute_ad_aphi, TSG, days2run);
           else
             [obj.prod.p, ~, obj.prod.QCfailed] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, [], obj.modelG50, obj.modelmphi, [], ...
-              [], [], SWT, SWT_constants, interpolation_method, [], scattering_corr, ...
-              compute_ad_aphi, [], days2run);
+              [], SWT, SWT_constants, interpolation_method, [], scattering_corr, ...
+              compute_ad_aphi, TSG, days2run);
           end
         case 'CDOM'
           if ~isfield(CDOM.prod, 'pd') && isempty(CDOM.qc.tsw)
             error('No CDOM data loaded: required for CDOM interpolation');
           end
-          obj.cal_param.min_nb_pts_per_cluster = min_nb_pts_per_cluster;
-          obj.cal_param.time_weight_for_cluster = time_weight_for_cluster;
+          % obj.cal_param.min_nb_pts_per_cluster = min_nb_pts_per_cluster;
+          % obj.cal_param.time_weight_for_cluster = time_weight_for_cluster;
           if compute_dissolved
-            [obj.prod.p, obj.prod.g, obj.prod.QCfailed] = processACS(lambda, ...
+            [obj.prod.p, obj.prod.g, obj.prod.QCfailed, DIW_biofouling_correction_new] = processACS(lambda, ...
               obj.qc.tsw, obj.qc.fsw, obj.cal_param, obj.modelG50, obj.modelmphi, obj.bin.diw, ...
               CDOM, SWT, SWT_constants, interpolation_method, di_method, scattering_corr, ...
               compute_ad_aphi, TSG, days2run);
@@ -139,6 +139,38 @@ classdef AC9 < Instrument
           end
         otherwise
           error('Method not supported.');
+      end
+      if compute_dissolved
+        filename = fullfile(ila.instrument.ACS91.path.ui, [obj.model obj.sn '_QCDI_BiofoulingCorrection.mat']);
+        if isfile(filename)
+          load(filename, 'DIW_biofouling_correction')
+          % % Remove old correction for the same period
+          % DIW_biofouling_correction(DIW_biofouling_correction.cleaning_dt > min(days2run) & ...
+          %   DIW_biofouling_correction.cleaning_dt < min(days2run)+1, :) = [];
+          % add missing variable in old table to merge with new
+          missing_var_old = find(~ismember(DIW_biofouling_correction_new.Properties.VariableNames, ...
+            DIW_biofouling_correction.Properties.VariableNames));
+          if ~isempty(missing_var_old)
+            for i = 1:size(missing_var_old, 2)
+              DIW_biofouling_correction = addvars(DIW_biofouling_correction, NaT(size(DIW_biofouling_correction,1), 2), ...
+                'NewVariableNames', DIW_biofouling_correction_new.Properties.VariableNames(missing_var_old(i)), ...
+                'Before', DIW_biofouling_correction.Properties.VariableNames{missing_var_old(i)});
+            end
+          end
+          % add missing variable in new table to merge with old
+          missing_var_new = find(~ismember(DIW_biofouling_correction.Properties.VariableNames, ...
+            DIW_biofouling_correction_new.Properties.VariableNames));
+          if ~isempty(missing_var_new)
+            for i = 1:size(missing_var_new, 2)
+              DIW_biofouling_correction_new = addvars(DIW_biofouling_correction_new, NaT(size(DIW_biofouling_correction_new,1), 2), ...
+                'NewVariableNames', DIW_biofouling_correction.Properties.VariableNames(missing_var_new(i)), ...
+                'Before', DIW_biofouling_correction_new.Properties.VariableNames{missing_var_new(i)});
+            end
+          end
+          % merge tables
+          DIW_biofouling_correction = [DIW_biofouling_correction; DIW_biofouling_correction_new];
+        end
+        save(filename, 'DIW_biofouling_correction')
       end
     end
   end

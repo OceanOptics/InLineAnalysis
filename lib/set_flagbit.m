@@ -17,3 +17,6 @@ p = repmat(1:size(flag, 2), size(flag, 1), 1);
 flag_bit = zeros(size(flag));
 flag_bit(flag) = 2.^(p(flag)-1);
 flag_bit = sum(flag_bit, 2);
+if any(flag_bit > 18446744073709551615)
+  error('flag_bit larger than maximum number stored in uint64')
+end

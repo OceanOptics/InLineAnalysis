@@ -43,8 +43,10 @@ data.Properties.VariableNames = {
 };
 
 % add datetime variable
-data = addvars(data, datenum(data.Year, data.Month, data.Day, data.Hour, data.Minute, ...
+data = addvars(data, datetime(data.Year, data.Month, data.Day, data.Hour, data.Minute, ...
   data.Second), 'NewVariableNames', 'dt', 'Before', 'RingValues');
+% data = addvars(data, datenum(data.Year, data.Month, data.Day, data.Hour, data.Minute, ...
+%   data.Second), 'NewVariableNames', 'dt', 'Before', 'RingValues');
 f = fieldnames(param);
 c = struct2cell(param);
 data = addprop(data, f, repmat({'table'}, size(f)));

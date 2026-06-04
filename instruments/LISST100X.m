@@ -3,7 +3,7 @@ classdef LISST100X < Instrument
   %   Detailed explanation goes here
   
   properties
-    type = 'B';
+    type = '';
     % Calibration parameters
     zsc = NaN(1,32);
     dcal = NaN(1,32);
@@ -27,19 +27,51 @@ classdef LISST100X < Instrument
       % Change default processing method
       obj.bin_method = 'SB_IN_PRCTL';
       
-      % Post initialization
-      if isfield(cfg, 'zsc'); obj.zsc = cfg.zsc;
-      else; error('Missing field zsc.'); end
-      if isfield(cfg, 'zsc'); obj.zsc = cfg.zsc;
-      else; error('Missing field zsc.'); end
-      if isfield(cfg, 'dcal'); obj.dcal = cfg.dcal;
-      else; error('Missing field dcal.'); end
-      if isfield(cfg, 'type'); obj.type = cfg.type;
-      else; fprintf('WARNING: Set type to B (default).'); end
-      if isfield(cfg, 'vcc'); obj.vcc = cfg.vcc;
-      else; fprintf('WARNING: Set vcc to 13000 (default).'); end
+      % Load LISST calibration data
+      if isfield(cfg, 'zsc')
+        if isnumeric(cfg.zsc); obj.zsc = cfg.zsc; else; obj.zsc = importLISST100XDeviceFile(cfg.zsc); end
+      else
+        error('Missing field zsc.')
+      end
+      if isfield(cfg, 'dcal')
+        if isnumeric(cfg.dcal); obj.dcal = cfg.dcal; else; obj.dcal = importLISST100XDeviceFile(cfg.dcal); end
+      else
+        error('Missing field dcal.')
+      end
+      if isfield(cfg, 'vcc')
+        if isnumeric(cfg.vcc)
+          obj.vcc = cfg.vcc;
+        else
+          instrument_data = importLISST100XDeviceFile(cfg.vcc);
+          obj.vcc = instrument_data{4};
+          if ~strcmp(num2str(instrument_data{1}), cfg.sn)
+            error("Serial number in calibration file '%s' is different than the one entered in .cfg file", cfg.vcc)
+          end
+          if isfield(cfg, 'type')
+            if ~isempty(cfg.type)
+              if ~strcmpi(cfg.type, cell2mat(instrument_data{2}))
+                error("LISST100X type in calibration file: '%s', is different than the one entered in .cfg file: '%s'", ...
+                  lower(cfg.type), lower(cell2mat(instrument_data{2})))
+              end
+              obj.type = cfg.type;
+            else
+              obj.type = instrument_data{2};
+            end
+          end
+        end
+        if ~any(strcmpi(obj.type, {'b','c'}))
+          error("LISST100X type '%s' not supported: must be either 'b' or 'c'", lower(obj.type))
+        end
+      else
+        warning("LISST100X import: Missing field 'vcc', set vcc to 13000 (default).")
+        obj.vcc = 13000;
+        if isfield(cfg, 'type')
+          warning("LISST100X import: Missing field 'type', set 'type' to 'b' (default).")
+          obj.type = 'b';
+        end
+      end
       if isfield(cfg, 'inversion')
-        if strcmp(obj.inversion, 'spherical') || strcmp(obj.inversion, 'non-spherical')
+        if strcmpi(obj.inversion, 'spherical') || strcmpi(obj.inversion, 'non-spherical')
           obj.inversion = cfg.inversion;
         else
           error('Unknown inversion type.');
@@ -49,16 +81,42 @@ classdef LISST100X < Instrument
       end
       if isfield(cfg, 'ds')
         obj.ds = cfg.ds;
-      elseif strcmp(obj.inversion, 'spherical')
-        obj.ds = 1.25*1.18.^(0:1:32);
-        fprintf('WARNING: Set ds to default (spherical inversion, LISST100X Type B).');
-      elseif strcmp(obj.inversion, 'non-spherical')
-        obj.ds = 1*1.18.^(0:1:32);
-        fprintf('WARNING: Set ds to default (non-spherical inversion, LISST100X Type B).');
+      elseif strcmpi(obj.inversion, 'spherical')
+        if strcmpi(obj.type, 'b')
+          X = 1.25;
+          fprintf("'ds' set to default (spherical inversion, LISST100X Type B).\n");
+        elseif strcmpi(obj.type, 'c')
+          X = 2.5;
+          fprintf("'ds' set to default (spherical inversion, LISST100X Type C).\n");
+        end
+      elseif strcmpi(obj.inversion, 'non-spherical')
+        if strcmpi(obj.type, 'b')
+          X = 1;
+          fprintf("'ds' set to default (non-spherical inversion, LISST100X Type B).\n");
+        elseif strcmpi(obj.type, 'c')
+          X = 1.9;
+          fprintf("'ds' set to default (non-spherical inversion, LISST100X Type C).\n");
+        end
       end
-      if isfield(cfg, 'theta'); obj.theta = cfg.theta;
-      else; error('Missing field theta (VSF Angle).'); end
-      
+      if ~isfield(cfg, 'ds')
+        obj.ds = X*200^(1/32).^(0:1:32);
+      end
+
+      if isfield(cfg, 'theta')
+        obj.theta = cfg.theta;
+      elseif strcmpi(obj.type, 'b')
+        start_angle = 0.1;
+        fprintf("'theta' (VSF Angle) set to default (LISST100X Type B).\n");
+      elseif strcmpi(obj.type, 'c')
+        start_angle = 0.05;
+        fprintf("'theta' (VSF Angle) set to default (LISST100X Type C).\n");
+      end
+      if ~isfield(cfg, 'theta')
+        angles_foo = (logspace(0,log10(200),33)*start_angle)';
+        angles_O2(:,1) = angles_foo(1:32); % The lower limits are the first 32 (of 33)
+        angles_O2(:,2) = angles_foo(2:33); % The upper limits are the last 32 (of 33)
+        obj.theta = sqrt(angles_O2(:,1).*angles_O2(:,2)) ./ 1.33; % Midpoints / water refractive index to get angles in water
+      end
       % Compute diameters from initialized parameters
       %   avoid special method for writting and reading data
       obj.ComputeDiameters();
@@ -79,7 +137,7 @@ classdef LISST100X < Instrument
           error('LISST: Unknown logger.');
       end
     end
-    
+
     function ReadRawDI(obj, days2run, force_import, write)
       if isempty(obj.path.di)
         fprintf('WARNING: DI Path is same as raw.\n');
@@ -108,16 +166,8 @@ classdef LISST100X < Instrument
     function Calibrate(obj, days2run, compute_dissolved, SWT, di_method)
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
       param = struct('zsc', obj.zsc, 'dcal', obj.dcal, 'vcc', obj.vcc,...
-                     'non_spherical', NaN, 'ds', obj.ds,...
+                     'inversion', obj.inversion, 'ds', obj.ds,...
                      'diameters', obj.diameters, 'theta', obj.theta);
-      switch obj.inversion
-        case 'spherical'
-          param.non_spherical = 0;
-        case 'non-spherical'
-          param.non_spherical = 1;
-        otherwise
-          error('Unknown inversion type.');
-      end
       if compute_dissolved
         obj.prod.p = processLISST100X(param, obj.qc.tsw, obj.qc.fsw, [], ...
           SWT, SWT_constants, di_method, days2run);

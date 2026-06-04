@@ -44,9 +44,11 @@ while ~feof(fid)
     j = 1;
     % Check date format based on first caracter of date
     if ~isnan(str2double(l(2)))
-      dt(i) = datenum(l(2:20),'yyyy-mm-dd HH:MM:SS');
+      dt(i) = datetime(l(2:20),'yyyy-MM-dd HH:mm:ss');
+      % dt(i) = datenum(l(2:20),'yyyy-mm-dd HH:MM:SS');
     else
-      dt(i) = datenum([l(26:29) l(6:20)], 'yyyymmm dd HH:MM:SS');
+      dt(i) = datetime([l(26:29) l(6:20)], 'yyyymmm dd HH:mm:ss');
+      % dt(i) = datenum([l(26:29) l(6:20)], 'yyyymmm dd HH:MM:SS');
     end
     continue
   end

@@ -21,11 +21,12 @@ hd(strcmp(hd, 'time')) = {'dt'};
 % get units skipping empty lines (bug in Inlinino)
 unit = fgetl(fid);
 while isempty(unit)
-    unit = fgetl(fid);
+  unit = fgetl(fid);
 end
 % get counts angle
-cangle = strsplit(unit, {', counts	angle=', ','});
-counts_angle = str2double(strsplit(cangle{2}, ' '));
+cunit = strsplit(unit, {', counts	angle=', ','});
+counts_angle = str2double(strsplit(cunit{2}, ' '));
+cunit{strcmp(hd, 'beta')} = 'm^{-1}';
 
 % Read data
 t = textscan(fid, parser, 'delimiter',',');
@@ -37,16 +38,19 @@ t{2} = cell2mat(cellfun(@(c) str2double(c(2:end-1)), ...
 fclose(fid);
 
 % Build table
-data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), [t{2}], ...
+% data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{2}, ...
+%              t{3}, t{4}, t{5}, t{6}, t{7}, t{8}, t{9}, 'VariableNames', hd);
+data = table(datetime(t{1}, 'InputFormat', 'yyyy/MM/dd HH:mm:ss.SSS'), t{2}, ...
              t{3}, t{4}, t{5}, t{6}, t{7}, t{8}, t{9}, 'VariableNames', hd);
-data.Properties.VariableUnits = strip(strsplit(unit, ','));
+data.Properties.VariableUnits = cunit;
+data.Properties.UserData = counts_angle;
 
-% Remove last line if it's past midnight (Bug in Inlinino)
-if ~isempty(data)
-  if data.dt(end-1) > data.dt(end)
-    data(end,:) = [];
-  end
-end
+% % Remove last line if it's past midnight (Bug in Inlinino)
+% if ~isempty(data)
+%   if data.dt(end-1) > data.dt(end)
+%     data(end,:) = [];
+%   end
+% end
 
 if verbose; fprintf('Done\n'); end
 

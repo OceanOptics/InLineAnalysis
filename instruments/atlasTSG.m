@@ -7,6 +7,8 @@ classdef atlasTSG < Instrument
     coef = struct('t', struct('slope','','interc',''), ...
       'c', struct('slope','','interc',''));
 %       'c', struct('p1','','p2','','p3',''));
+    temperature_variable = '';
+    conductivity_variable = 'c';
   end
   
   methods
@@ -34,9 +36,13 @@ classdef atlasTSG < Instrument
       else; error('Missing field serial number "sn".'); end
       if isfield(cfg, 'coef'); obj.coef = cfg.coef;
       else; error('Missing field "coef": Strucutre containing calibration coefficients.'); end
+      if isfield(cfg, 'temperature_variable'); obj.temperature_variable = cfg.temperature_variable;
+      else; error('Missing field temperature variable.'); end
+      if isfield(cfg, 'conductivity_variable'); obj.conductivity_variable = cfg.conductivity_variable;
+      else; error('Missing field conductivity variable.'); end
       
-      % Change default Split method
-      obj.split.mode = 'None';
+      % % Change default Split method
+      % obj.split.mode = 'None'; % rmBuffer None
     end
     
     function ReadRaw(obj, days2run, force_import, write)
@@ -53,11 +59,27 @@ classdef atlasTSG < Instrument
             obj.data = iRead(@importInlinino_atlasTSG, obj.path.raw, obj.path.wk, obj.prefix,...
                            days2run, 'Inlinino_atlasTSG', force_import, ~write, true);
           end
+        case 'Inlinino_base'
+          if obj.TSseparated
+            obj.data = iRead(@importInlinino_base, obj.path.raw, obj.path.wk, [obj.prefix 'EC'],...
+                           days2run, 'Inlinino', force_import, ~write, true);
+            foo = iRead(@importInlinino_base, obj.path.raw, obj.path.wk, [obj.prefix 'RTD'],...
+                           days2run, 'Inlinino', force_import, ~write, true);
+            % interpolate C onto T table and merge
+            obj.data.C = interp1(foo.dt, foo.C, obj.data.dt, 'linear', 'extrap'); % extrap needed for first minute of data
+          else
+            obj.data = iRead(@importInlinino_base, obj.path.raw, obj.path.wk, obj.prefix,...
+                           days2run, 'Inlinino', force_import, ~write, true);
+          end
         otherwise
           error('atlasTSG: Unknown logger.');
       end
-      obj.data = renamevars(obj.data, 'T' , 't');
-      obj.data = renamevars(obj.data, 'C' , 'c');
+      if any(strcmp(obj.data.Properties.VariableNames, 'T'))
+        obj.data = renamevars(obj.data, 'T' , 't');
+      end
+      if any(strcmp(obj.data.Properties.VariableNames, 'C'))
+        obj.data = renamevars(obj.data, 'C' , 'c');
+      end
     end
     
     function Calibrate(obj)

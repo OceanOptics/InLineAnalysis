@@ -33,7 +33,8 @@ t = textscan(fid, parser, 'delimiter', ',');
 fclose(fid);
 
 % Build table
-data = table(datenum(t{1}), t{2}, 'VariableNames', {'dt', 'fdom'});
+data = table(datetime(t{1}, 'InputFormat', 'yyyy/MM/dd HH:mm:ss.SSS'), t{2}, 'VariableNames', {'dt', 'fdom'});
+% data = table(datenum(t{1}), t{2}, 'VariableNames', {'dt', 'fdom'});
 data(isnan(data.dt), :) = [];
 data.Properties.VariableUnits = unit;
 

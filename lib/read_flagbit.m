@@ -12,8 +12,6 @@ end
 FlagInfo = InlineFlagInfo(instrument);
 
 % convert bit to table of logical
-flag = logical(bitget(repmat(flag_bit, 1, size(FlagInfo,1)), ...
-  repmat((FlagInfo.bit+1)', size(flag_bit,1), 1)));
+flag = logical(bitget(repmat(flag_bit, 1, size(FlagInfo,1)), repmat((FlagInfo.bit+1)', size(flag_bit,1), 1)));
 flag = array2table(flag, 'VariableNames', FlagInfo.name);
 flag.Properties.VariableDescriptions = FlagInfo.description;
-

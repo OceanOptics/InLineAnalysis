@@ -78,7 +78,7 @@ catch
   if any(corrupted_row_a)
     for i = 1:size(t, 2)
       if size(corrupted_row_a, 1) == size(t{i}, 1)
-        t{i}(corrupted_row_a) = [];
+        t{i}(corrupted_row_a, :) = [];
       end
     end
     foo(corrupted_row_a) = [];
@@ -91,13 +91,18 @@ catch
   if any(corrupted_row_c)
     for i = 1:size(t, 2)
       if size(corrupted_row_c, 1) == size(t{i}, 1)
-        t{i}(corrupted_row_c) = [];
+        t{i}(corrupted_row_c, :) = [];
       end
     end
     foo(corrupted_row_c) = [];
   end
   t{4} = cell2mat(cellfun(@(c) str2double(c(2:end-1)), foo, 'un', 0));
-  fprintf('Success!! %i "a" line deleted and %i "c" line deleted', sum(corrupted_row_a), sum(corrupted_row_c))
+  if size(corrupted_row_a, 1) > size(corrupted_row_c, 1)
+    corrupted_row = ~ismember(1:size(corrupted_row_a,1), 1:size(corrupted_row_c, 1))';
+  elseif size(corrupted_row_c, 1) > size(corrupted_row_a, 1)
+    corrupted_row = ~ismember(1:size(corrupted_row_c,1), 1:size(corrupted_row_a, 1))';
+  end
+  fprintf('%i line deleted\n', sum(corrupted_row))
 end
 % Format flag into boolean
 t{end} = strcmp(t{end}, 'True');
@@ -106,8 +111,10 @@ t{end} = strcmp(t{end}, 'True');
 fclose(fid);
 
 % Build table
-data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{2}, [t{3}], [t{4}], ...
+data = table(datetime(t{1}, 'InputFormat', 'yyyy/MM/dd HH:mm:ss.SSS'), t{2}, [t{3}], [t{4}], ...
            t{5}, t{6}, t{7}, 'VariableNames', hd);
+% data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{2}, [t{3}], [t{4}], ...
+%            t{5}, t{6}, t{7}, 'VariableNames', hd);
 data.Properties.VariableUnits = strip(strsplit(unit, ','));
 
 % Remove last line if it's past midnight (bug in old Inlinino)

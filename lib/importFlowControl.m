@@ -46,7 +46,9 @@ end
 try
   t = textscan(fid, parser, 'delimiter','\t');
   fclose(fid);
-  dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{6}, t{7}, ...
+  % dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{6}, t{7}, ...
+  %          'VariableNames', {'dt', 'swt', 'spd1','spd2'}); % Build table
+  dat = table(datetime(t{1},'InputFormat','yyyy-MM-dd HH:mm:ss'' UTC'), logical(t{2}), t{6}, t{7}, ...
            'VariableNames', {'dt', 'swt', 'spd1','spd2'}); % Build table
 catch
   parser = '%s%d%d%s%s%s%s'; % french format decimal number with comma ',''
@@ -60,8 +62,10 @@ catch
   t{1,5} = str2double(strrep(t{1,5}, ',', '.'));
   t{1,6} = str2double(strrep(t{1,6}, ',', '.'));
   t{1,7} = str2double(strrep(t{1,7}, ',', '.'));
-  dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{6}, t{7}, ...
-           'VariableNames', {'dt', 'swt', 'spd1','spd2'}); % Build table
+  dat = table(datetime(strrep(t{1}, ' UTC', ''), 'InputFormat', 'yyyy-MM-dd HH:mm:ss'), ...
+    logical(t{2}), t{6}, t{7}, 'VariableNames', {'dt', 'swt', 'spd1','spd2'}); % Build table
+  % dat = table(datenum(t{1}, 'yyyy-mm-dd HH:MM:SS UTC'), logical(t{2}), t{6}, t{7}, ...
+  %          'VariableNames', {'dt', 'swt', 'spd1','spd2'}); % Build table
 end
 % remove duplicates (bug in FlowControl software)
 [~, L, ~] = unique(dat.dt,'first');

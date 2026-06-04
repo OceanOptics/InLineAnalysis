@@ -16,9 +16,9 @@ data.Properties.VariableNames = {'dt', 'Name','InstrTime','Seconds','RefNet','Re
     'InstrFirmware', 'CalTime','TrCal','TempCal','CorrFunCal'};
 
 data.Name = [];
-data.dt = datenum(data.dt);
+% data.dt = datenum(data.dt);
 data(isnan(data.dt), :) = [];
-data.InstrTime = datenum(data.InstrTime);
-data.CalTime = datenum(data.CalTime);
+% data.InstrTime = datenum(data.InstrTime);
+% data.CalTime = datenum(data.CalTime);
 
 if verbose; fprintf('Done\n'); end

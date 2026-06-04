@@ -54,7 +54,7 @@ switch savefmt
 %     else
 %       fig2svg([fig_name '.' savefmt])
 %     end
-    print(fig_name, '-dsvg', ['-r' num2str(res)]);
+    print([fig_name '.svg'], '-dsvg', ['-r' num2str(res)]);
 %     plot2svg([fig_name '.svg']);
   case 'fig'
     savefig(gcf, [fig_name '.' savefmt]);

@@ -53,9 +53,11 @@ dat = [];
 for i = 1:size(hd, 2)
   if strcmp(hd{i}, 'dt')
     if all(contains(t{1}, '/'))
-      dat = [dat datenum(t{i}, 'yyyy/mm/dd HH:MM:SS.FFF')];
+      dat = [dat datetime(t{i}, 'InputFormat', 'yyyy/MM/dd HH:mm:ss.SSS')];
+      % dat = [dat datenum(t{i}, 'yyyy/mm/dd HH:MM:SS.FFF')];
     else
-      dat = [dat datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF')];
+      dat = [dat datetime(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'InputFormat', 'yyyyMMddHH:mm:ss.SSS')];
+      % dat = [dat datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF')];
     end
   else
     dat = [dat t{i}];

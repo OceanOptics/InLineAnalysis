@@ -1,4 +1,4 @@
-function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replace_consecutive_nan)
+function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replace_consecutive_nan, spl_freq)
   data_wasdatenum = false;
   data_tomerge_wasdatenum = false;
   if ~isdatetime(data.dt)
@@ -9,16 +9,19 @@ function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replac
     data_tomerge_wasdatenum = true;
     data_tomerge.dt = datetime(data_tomerge.dt, 'ConvertFrom', 'datenum');
   end
-  
+  if nargin < 6
+    spl_freq = minutes(1);
+  end
+
   % order data
   data = sortrows(data, 'dt');
   data_tomerge = sortrows(data_tomerge, 'dt');
   % merge variable on timeseries
-  data = clean_dt(data);
-  data_tomerge = clean_dt(data_tomerge);
+  data = clean_dt(data, spl_freq);
+  data_tomerge = clean_dt(data_tomerge, spl_freq);
   % create table without gap in dt to remove correct number of consecutive NaNs
   merged_data = table();
-  merged_data.dt = (min(data.dt):minutes(1):max(data.dt))';
+  merged_data.dt = (min(data.dt):spl_freq:max(data.dt))';
   idex = ismember(merged_data.dt, data.dt);
   var_todo = data.Properties.VariableNames(~strcmp(data.Properties.VariableNames, 'dt'));
   for i = var_todo
@@ -45,7 +48,11 @@ function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replac
   end
 
   % flip variable to add to match the order input
-  vars = flip(vars);
+  if iscell(vars)
+    vars = flip(vars);
+  else
+    vars = cellstr(vars);
+  end
   % find id of data matching
   id = ismember(merged_data.dt, data_tomerge.dt);
   % merge variables
@@ -53,47 +60,58 @@ function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replac
     % create variable if not already in target table
     if ~any(strcmp(merged_data.Properties.VariableNames, [vars{j} suffix]))
       if iscell(data_tomerge.(vars{j}))
-        merged_data = addvars(merged_data, repmat({''}, size(merged_data.dt)), 'NewVariableNames', [vars{j} suffix], 'After', 'dt');
+        merged_data = addvars(merged_data, repmat({''}, size(merged_data, 1), size(data_tomerge.(vars{j}), 2)), 'NewVariableNames', [vars{j} suffix], 'After', 'dt');
       elseif isdatetime(data_tomerge.(vars{j}))
-        merged_data = addvars(merged_data, NaT(size(merged_data.dt)), 'NewVariableNames', [vars{j} suffix], 'After', 'dt');
+        merged_data = addvars(merged_data, NaT(size(merged_data, 1), size(data_tomerge.(vars{j}), 2)), 'NewVariableNames', [vars{j} suffix], 'After', 'dt');
       else
-        merged_data = addvars(merged_data, NaN(size(merged_data.dt)), 'NewVariableNames', [vars{j} suffix], 'After', 'dt');
+        merged_data = addvars(merged_data, NaN(size(merged_data, 1), size(data_tomerge.(vars{j}), 2)), 'NewVariableNames', [vars{j} suffix], 'After', 'dt');
       end
     end
+    % id merged variable location
+    idvar = strcmp(merged_data.Properties.VariableNames, [vars{j} suffix]);
+    idvar2merge = strcmp(vars{j}, data_tomerge.Properties.VariableNames);
+    merged_data.Properties.VariableUnits{idvar} = data_tomerge.Properties.VariableUnits{idvar2merge};
+    merged_data.Properties.VariableDescriptions{idvar} = data_tomerge.Properties.VariableDescriptions{idvar2merge};
     % find only id of variable with nan to replace
     if iscell(data_tomerge.(vars{j}))
       idnan = cellfun('isempty', merged_data.([vars{j} suffix]));
     else
       idnan = isnan(merged_data.([vars{j} suffix]));
     end
-    id_tomerge = ismember(data_tomerge.dt, merged_data.dt(idnan));
-    % merge data
-    merged_data.([vars{j} suffix])(id & idnan, :) = data_tomerge.(vars{j})(id_tomerge);
-    % id merged variable location
-    idvar = strcmp(merged_data.Properties.VariableNames, [vars{j} suffix]);
+    for k = 1:size(idnan, 2)
+      id_tomerge = ismember(data_tomerge.dt, merged_data.dt(idnan(:,k)));
+      % merge data
+      merged_data.([vars{j} suffix])(id & idnan(:,k), k) = data_tomerge.(vars{j})(id_tomerge, k);
+    end
     % merge variable unit
     if size(data_tomerge.Properties.VariableUnits, 2) == size(data_tomerge.Properties.VariableNames, 2)
       if isempty(merged_data.Properties.VariableUnits{idvar})
-        merged_data.Properties.VariableUnits(idvar) = data_tomerge.Properties.VariableUnits(strcmp(data_tomerge.Properties.VariableNames, vars{j}));
+        merged_data.Properties.VariableUnits(idvar) = data_tomerge.Properties.VariableUnits(idvar2merge);
       end
     end
     % merge variable description
     if size(data_tomerge.Properties.VariableDescriptions, 2) == size(data_tomerge.Properties.VariableNames, 2)
       if isempty(merged_data.Properties.VariableDescriptions{idvar})
-        merged_data.Properties.VariableDescriptions(idvar) = data_tomerge.Properties.VariableDescriptions(strcmp(data_tomerge.Properties.VariableNames, vars{j}));
+        merged_data.Properties.VariableDescriptions(idvar) = data_tomerge.Properties.VariableDescriptions(idvar2merge);
       end
     end
     % linearly interpolate missing lat/lon when consecutive missing data < replace_consecutive_nan
     if ~isempty(replace_consecutive_nan)
       missing_data = isnan(merged_data.([vars{j} suffix]));
-      t = [true; diff(missing_data) ~= 0];
-      k = diff(find([t; true])) .* missing_data(t);
-      long_nan = k(cumsum(t)) > replace_consecutive_nan;
-      if all(long_nan)
-        long_nan = false(size(long_nan));
+      for g = 1:size(idnan, 2)
+        t = [true; diff(missing_data(:,g), 1) ~= 0];
+        k = diff(find([t; true])) .* missing_data(t,g);
+        long_nan = k(cumsum(t)) > replace_consecutive_nan;
+        if all(long_nan)
+          long_nan = false(size(long_nan));
+        end
+        if any(contains(vars{j}, {'wind_dir','heading','cog','course_over_ground','wind_direction','longitude'})) | strcmp(vars{j}, 'lon')
+          merged_data.([vars{j} suffix])(:, g) = fillmissing_circular(merged_data.([vars{j} suffix])(:, g), 'linear', merged_data.dt);
+        else
+          merged_data.([vars{j} suffix])(:, g) = fillmissing(merged_data.([vars{j} suffix])(:, g), 'linear', 'SamplePoints', merged_data.dt);
+        end
+        merged_data.([vars{j} suffix])(long_nan, g) = NaN;
       end
-      merged_data.([vars{j} suffix]) = fillmissing(merged_data.([vars{j} suffix]), 'linear', 'SamplePoints', merged_data.dt);
-      merged_data.([vars{j} suffix])(long_nan) = NaN;
     end
   end
   merged_data = merged_data(idex, :);
@@ -102,7 +120,7 @@ function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replac
   end
 end
 
-function cleaned_tbl = clean_dt(data)
+function cleaned_tbl = clean_dt(data, spl_freq)
   if isempty(data.Properties.VariableUnits)
     data.Properties.VariableUnits = repmat({''}, size(data.Properties.VariableNames));
   end
@@ -112,7 +130,11 @@ function cleaned_tbl = clean_dt(data)
   data = sortrows(data, 'dt');
   cleaned_tbl = data;
   % round timestamp to minute start
-  cleaned_tbl.dt = dateshift(cleaned_tbl.dt, 'start', 'minute');
+  if spl_freq >= minutes(1)
+    cleaned_tbl.dt = dateshift(cleaned_tbl.dt, 'start', 'minute');
+  else
+    cleaned_tbl.dt = dateshift(cleaned_tbl.dt, 'start', 'seconds');
+  end
   % remove duplicates
   [~, L, ~] = unique(cleaned_tbl.dt,'first');
   indexToDump = not(ismember(1:numel(cleaned_tbl.dt), L));

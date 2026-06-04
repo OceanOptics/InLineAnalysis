@@ -33,8 +33,10 @@ t = textscan(fid, parser, 'delimiter',',');
 fclose(fid);
 
 % Build table
-data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
-             [t{2:4}], t{5}, 'VariableNames', {'dt', 'beta', 'fdom'});
+% data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
+%              [t{2:4}], t{5}, 'VariableNames', {'dt', 'beta', 'fdom'});
+data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'InputFormat', 'yyyyMMddHH:mm:ss.SSS'),...
+  [t{2:4}], t{5}, 'VariableNames', {'dt', 'beta', 'fdom'});
 
 % % Read file line by line (slow)
 % flag_header=0;

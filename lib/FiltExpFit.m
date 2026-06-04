@@ -25,94 +25,125 @@ filt = sortrows([filt_good; filt_bad], 'dt');
 
 filt_stat = table(filt_avg.dt, 'VariableNames', {'dt'});
 filt_stat.slope = NaN(nspect, size(filt.(var), 2));
+filt_stat.slope = NaN(nspect, size(filt.(var), 2));
 % compute exp fit at each wavelength and each filter event
 for i = progress(1:nspect)
 %   select filter event
   sel_filt = filt_st(i) <= filt.dt & filt.dt <= filt_end(i);
   sel_filt_good = filt_st(i) <= filt_good.dt & filt_good.dt <= filt_end(i);
   if sum(sel_filt) > 3
-    foo = filt(sel_filt,:);
-    if max(foo.dt) - min(foo.dt) > 0.0007 * 2
-      avg_var = median(foo.(var),2,'omitnan');
+    filt_subset = filt(sel_filt,:);
+    if max(filt_subset.dt) - min(filt_subset.dt) > minutes(2)
+      avg_var = median(filt_subset.(var),2,'omitnan');
 %       cut_tail = foo.dt > max(foo.dt(avg_var == min(avg_var)));
 %       foo(cut_tail,:) = [];
 %       avg_var(cut_tail,:) = [];
-      foo(foo.dt < max(foo.dt(avg_var == max(avg_var))),:) = [];
-      if max(foo.dt) - min(foo.dt) > 0.0007 * 2
+      filt_subset(filt_subset.dt < max(filt_subset.dt(avg_var == max(avg_var))),:) = [];
+      if max(filt_subset.dt) - min(filt_subset.dt) > minutes(2)
         % remove short peaks and smooth signal
         j = 1;
-        deriv = diff(foo.(var));
+        deriv = diff(filt_subset.(var));
         deriv_neg = deriv;
         deriv_neg(deriv > 0) = NaN;
         lim_neg = median(deriv_neg, 'omitnan') * 3;
-        foo.(var)([deriv; zeros(1, size(foo.(var), 2))] < lim_neg & ...
-          [zeros(1, size(foo.(var), 2)); deriv] > 0) = NaN;
+        filt_subset.(var)([deriv; zeros(1, size(filt_subset.(var), 2))] < lim_neg & ...
+          [zeros(1, size(filt_subset.(var), 2)); deriv] > 0) = NaN;
         % remove duplicates
-        [~, L, ~] = unique(foo.dt,'first');
-        indexToDump = not(ismember(1:numel(foo.dt), L));
-        foo(indexToDump, :) = [];
+        [~, L, ~] = unique(filt_subset.dt,'first');
+        indexToDump = not(ismember(1:numel(filt_subset.dt), L));
+        filt_subset(indexToDump, :) = [];
         % remove spikes
-        while j < 5 && any(isnan(foo.(var)(:)))
-          foo.(var) = fillmissing(foo.(var),'linear','SamplePoints', foo.dt);
-          deriv = diff(foo.(var));
+        while j < 5 && any(isnan(filt_subset.(var)(:)))
+          filt_subset.(var) = fillmissing(filt_subset.(var),'linear','SamplePoints', filt_subset.dt);
+          deriv = diff(filt_subset.(var));
           deriv_neg = deriv;
           deriv_neg(deriv > 0) = NaN;
           lim_neg = median(deriv_neg, 'omitnan') * 1.5;
-          foo.(var)([deriv; zeros(1, size(foo.(var), 2))] < lim_neg & ...
-            [zeros(1, size(foo.(var), 2)); deriv] > 0) = NaN;
+          filt_subset.(var)([deriv; zeros(1, size(filt_subset.(var), 2))] < lim_neg & ...
+            [zeros(1, size(filt_subset.(var), 2)); deriv] > 0) = NaN;
           j = j + 1;
         end
-        foo.(var) = fillmissing(foo.(var),'linear','SamplePoints', foo.dt);
-        var_temp = NaN(1, size(foo.(var), 2));
-        var_avg_sd_temp = NaN(1, size(foo.(var), 2));
-        slope_temp = NaN(1, size(foo.(var), 2));
-        fval_temp = NaN(1, size(foo.(var), 2));
-        exitflag_temp = false(1, size(foo.(var), 2));
+        filt_subset.(var) = fillmissing(filt_subset.(var),'linear','SamplePoints', filt_subset.dt);
+        filt_subset.dt = juliandate(filt_subset.dt);
+        var_temp = NaN(1, size(filt_subset.(var), 2));
+        var_avg_sd_temp = NaN(1, size(filt_subset.(var), 2));
+        slope_temp = NaN(1, size(filt_subset.(var), 2));
+        fval_temp = NaN(1, size(filt_subset.(var), 2));
+        exitflag_temp = false(1, size(filt_subset.(var), 2));
         parfor j = 1:nlamda
-          foo_wl = foo.(var)(:,j);
-          if all(isfinite(foo_wl)) && all(~isnan(foo_wl))
-            expfun = @(p, xd) p(1) * exp(p(2) * (xd - min(foo.dt))) + p(3); % define exponential function
-            x0 = [max(foo_wl) - min(foo_wl) -830 min(foo_wl)]; % define x0
-%             weig = 1 - 0.5 * (1:size(foo, 1))' / size(foo, 1); % define weight
-            weig = (1:size(foo, 1))' / size(foo, 1); % define weight
-            errfun = @(p) sum(abs(expfun(p, foo.dt) - foo_wl) .* weig); % define error function: sum_err/std
+          data2fit = filt_subset.(var)(:,j);
+          if all(isfinite(data2fit)) && all(~isnan(data2fit))
+            expfun = @(p, xd) p(1) * exp(p(2) * (xd - min(filt_subset.dt))) + p(3); % define exponential function
+            x0 = [max(data2fit) - min(data2fit) -830 min(data2fit)]; % define x0
+            % % weig = 1 - 0.5 * (1:size(foo, 1))' / size(foo, 1); % define weight
+            % weig = (1:size(filt_subset, 1))' / size(filt_subset, 1); % define weight
+            weig = ones(size(filt_subset, 1), 1); % define weight
+            errfun = @(p) sum(abs(expfun(p, filt_subset.dt) - data2fit) .* weig); % define error function: sum_err/std
             [pfit, FVAL, EXITFLAG] = fminsearch(errfun, x0, opts); % run the minimizer
 
-  %           f1 = figure(1);  hold on;
+  %           figure(1);  hold on;
   % %           plot(foo.dt, foo_wl)
-  %           sc = scatter(foo.dt, foo_wl, 10, 'filled');
+  %           sc = scatter(datetime(filt_subset.dt, 'ConvertFrom', 'juliandate'), data2fit, 10, 'filled');
   %           % vline(filt_st(i), '-g')
   %           % vline(filt_end(i), '-r')
-  %           plot(foo.dt, expfun(pfit, foo.dt), 'Color', sc.CData);
+  %           plot(datetime(filt_subset.dt, 'ConvertFrom', 'juliandate'), expfun(pfit, filt_subset.dt), 'Color', sc.CData);
+  %           visProd3D(430:10:700, filt_subset.dt, filt_subset.beta, false, 'Wavelength', false, 68);
+  %           pause (0.5)
+  %           clf
 
             % populate table and propagate error
             var_temp(j) = pfit(3);
-            var_avg_sd_temp(j) = sum(abs(expfun(pfit, foo.dt) - foo_wl) / ...
-              sum(~isnan(foo_wl)));
+            var_avg_sd_temp(j) = sum(abs(expfun(pfit, filt_subset.dt) - data2fit) / sum(~isnan(data2fit)));
             slope_temp(j) = pfit(2);
             fval_temp(j) = FVAL;
             exitflag_temp(j) = EXITFLAG;
           end
-        end          
-        % remove fit when constant > 25% percentile
+        end
+
+        % lambda = 430:10:700;
+        % f2 = figure(2);
+        % subplot(4,1,1); scatter(lambda(exitflag_temp), var_temp(exitflag_temp))
+        % hold on; scatter(lambda(~exitflag_temp), var_temp(~exitflag_temp))
+        % subplot(4,1,2); scatter(lambda(exitflag_temp), var_avg_sd_temp(exitflag_temp))
+        % hold on; scatter(lambda(~exitflag_temp), var_avg_sd_temp(~exitflag_temp))
+        % subplot(4,1,3); scatter(lambda(exitflag_temp), slope_temp(exitflag_temp))
+        % hold on; scatter(lambda(~exitflag_temp), slope_temp(~exitflag_temp))
+        % subplot(4,1,4); scatter(lambda(exitflag_temp), fval_temp(exitflag_temp))
+        % hold on; scatter(lambda(~exitflag_temp), fval_temp(~exitflag_temp))
+
+        % remove fit when fval > 25% percentile
         if sum(sel_filt_good) > 3
           foo_good = filt_good(sel_filt_good,:);
-          exitflag_temp(var_temp > prctile(foo_good.(var), 25)) = false;
+          exitflag_temp(var_temp > median(foo_good.(var))) = false;
         else
-          exitflag_temp(var_temp > prctile(foo.(var), 25)) = false;
+          exitflag_temp = false(size(exitflag_temp));
         end
-        % remove fit when constant < prctile(foo.(var), 25)/2
-        exitflag_temp(var_temp < prctile(foo.(var), 25)/2) = false;
+        % remove fit when variance < prctile(filt_subset.(var), 25)/2
+        exitflag_temp(var_temp < prctile(filt_subset.(var), 25)/2) = false;
         % eliminate bad fit when error > 20%
         exitflag_temp(var_avg_sd_temp./var_temp > 0.2) = false;
+        % eliminate bad fit when any slope > 0
+        exitflag_temp(slope_temp > 0) = false;
 %         clf(f1)
         
+        % f3 = figure(3);
+        % subplot(4,1,1); scatter(lambda(exitflag_temp), var_temp(exitflag_temp))
+        % hold on; scatter(lambda(~exitflag_temp), var_temp(~exitflag_temp))
+        % subplot(4,1,2); scatter(lambda(exitflag_temp), var_avg_sd_temp(exitflag_temp))
+        % hold on; scatter(lambda(~exitflag_temp), var_avg_sd_temp(~exitflag_temp))
+        % subplot(4,1,3); scatter(lambda(exitflag_temp), slope_temp(exitflag_temp))
+        % hold on; scatter(lambda(~exitflag_temp), slope_temp(~exitflag_temp))
+        % subplot(4,1,4); scatter(lambda(exitflag_temp), fval_temp(exitflag_temp))
+        % hold on; scatter(lambda(~exitflag_temp), fval_temp(~exitflag_temp))
+        % pause(1)
+        % clf(f2); clf(f3);
+
         filt_avg.(var)(i,:) = var_temp;
         filt_avg.([var '_avg_sd'])(i,:) = var_avg_sd_temp;
         filt_stat.slope(i,:) = slope_temp;
         filt_stat.fval(i,:) = fval_temp;
         filt_stat.exitflag(i,:) = exitflag_temp;
-        filt_avg.([var '_avg_n'])(i) = median(sum(~isnan(foo.(var))),2, 'omitnan');
+        filt_avg.([var '_avg_n'])(i) = median(sum(~isnan(filt_subset.(var))),2, 'omitnan');
       end
     end
   end

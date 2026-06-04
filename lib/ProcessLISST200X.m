@@ -61,7 +61,7 @@ function [p, pbin_size, g, gbin_size] = ProcessLISST200X(param, tot, filt, di, f
       % interpolate filtered event
   
       % Compute filtered period median
-      filt_avg = table(NaN(size(sel_start)), 'VariableNames', {'dt'});
+      filt_avg = table(NaT(size(sel_start)), 'VariableNames', {'dt'});
       filt_avg.RingValues = NaN(size(filt_avg,1), size(filt.RingValues, 2));
       filt_avg.RingValues_avg_sd = NaN(size(filt_avg,1), size(filt.RingValues_avg_sd, 2));
       filt_avg.RingValues_avg_n = NaN(size(filt_avg,1), size(filt.RingValues_avg_sd, 2));
@@ -77,6 +77,8 @@ function [p, pbin_size, g, gbin_size] = ProcessLISST200X(param, tot, filt, di, f
       for i=1:size(sel_start, 1)
         sel_filt = fth_interp.dt(sel_start(i)) <= filt.dt & filt.dt <= fth_interp.dt(sel_end(i));
         foo = filt(sel_filt,:);
+        %%%%%%%%%%%%%%%%%%%%%%%%%% CHECK HOW LASER REFERENCE IS USED TO COMPUTE FILTER EVENTS AVERAGES (SEE processLISST100X code)
+        % foo.LaserReference = repmat(foo.LaserReference, 1, size(filt.RingValues, 2));
         if sum(sel_filt) == 1
           filt_avg.dt(i) = foo.dt;
           filt_avg.RingValues(i,:) = foo.RingValues;
@@ -97,6 +99,8 @@ function [p, pbin_size, g, gbin_size] = ProcessLISST200X(param, tot, filt, di, f
           foo.RingValues(perc25) = NaN;
           foo.LaserReference(perc25) = NaN;
           foo.LaserReference_avg_sd(perc25) = NaN;
+          % foo.LaserReference(all(perc25, 2)) = NaN;
+          % foo.LaserReference_avg_sd(all(perc25, 2)) = NaN;
           foo.LaserTransmission_avg_sd(perc25) = NaN;
           foo.LaserTransmission(perc25) = NaN;
           foo.TotalVolumeConcentration_avg_sd(perc25) = NaN;
@@ -133,9 +137,9 @@ function [p, pbin_size, g, gbin_size] = ProcessLISST200X(param, tot, filt, di, f
     filt_interp.TotalVolumeConcentration_avg_sd = interp1(filt_avg.dt, filt_avg.TotalVolumeConcentration_avg_sd, filt_interp.dt);
   
     % id only day to run in all tables to plot
-    filt_interp_id = filt_interp.dt >= min(days2run) & filt_interp.dt < max(days2run)+1;
-    tot_id = tot.dt >= min(days2run) & tot.dt < max(days2run)+1;
-    filt_avg_id = filt_avg.dt >= min(days2run) & filt_avg.dt < max(days2run)+1;
+    filt_interp_id = filt_interp.dt >= min(days2run) & filt_interp.dt < max(days2run)+days(1);
+    tot_id = tot.dt >= min(days2run) & tot.dt < max(days2run)+days(1);
+    filt_avg_id = filt_avg.dt >= min(days2run) & filt_avg.dt < max(days2run)+days(1);
   
     % plot
     if exist('visFlag', 'file') && exist('fth', 'var')
@@ -232,9 +236,9 @@ function [prod, bin_size] = compute_product_LISST200X(tot, filt_interp, param)
   
   cscat(cscat < 0) = 0; % negative cscats are not possible, so set them to 0.
   
-  if any(strcmp(param.inversion, {'Spherical', 'spherical'}))
+  if strcmpi(param.inversion, 'spherical')
     InvType = 0;
-  elseif any(strcmp(param.inversion, {'Irregular', 'irregular'}))
+  elseif strcmpi(param.inversion, 'irregular')
     InvType = 1;
   else
     error('Unknown LISST-200X Inversion Type')

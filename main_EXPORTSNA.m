@@ -1,81 +1,130 @@
-% Main Particulate InLine Analysis Script
+% Main Particulate InLine Anal4sis Script
 % author: Guillaume Bourdin
 % created: Jun 27, 2023
 clear
-close all
+% close all
 
-% cd('/Volumes/Data/Apero/InLineAnalysis-master')
-tmp = matlab.desktop.editor.getActive;
-cd(fileparts(tmp.Filename));
+% cd('/Users/gui/Documents/MATLAB/InLineAnalysis/InLineAnalysis-master')
+cd('C:\All_Work\Ocean\EXPORTS\Data\EXPORTS_2021\Guillaume\InLineAnalysis\InLineAnalysis\')
 
 % Load InLineAnalysis and the configuration
-ila = InLineAnalysis('cfg/Apero_cfg.m');
+ila = InLineAnalysis(fullfile('cfg', 'EXPORTSNA_cfg.m'));
 
 % Quick cfg update
-%% set the date to process
-ila.cfg.days2run = datenum(2023,6,3):datenum(2023,7,11); %datenum(2023,5,5)
+%% %%%%%%%%%%%%%% PROCESSING CHRONOLOGY RECOMMENDATIONS: %%%%%%%%%%%%%%% %%
+% Instruments available: 'NMEA','FTH','SBE3845999','WSCD201','WS3S201','ACS298','HyperBB8005','LISST100X1183','LISST200X9999'
+%%% Run ReadRaw week by week without going further (reloading 'ila' structure between each run to clear memory)
+%ila.cfg.instruments2run = {'FLOW','NMEA','SUVF6244','SBE3845TN444','LISST100X1183','HyperBB8005','ACS111','ACS348'};
+ila.cfg.instruments2run = {'FTH','WSCD201','WS3S201','BB3651','BB201','SBE3845999','ACS298'};
 
-%% 'SBE459999','NMEA','FLOW','ACS412','HyperBB8002','BB3349','SUVF6253','WS3S1081','LISST1183'
-%ila.cfg.instruments2run = {'SBE45'};
-%ila.cfg.qcref.view = 'SBE45';
-ila.cfg.instruments2run = {'FLOW','SBE459999','SUVF6253','ACS348'};
-ila.cfg.qcref.view = 'ACS348';
-ila.cfg.parallel = Inf;
-%ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
+%%% Process to the end with my flow sbe
+% ila.cfg.instruments2run = {'FLOW','SBE384504970269'};
+
+% ila.cfg.instruments2run = {'FLOW','cdom'};
+%%% Process each of the following up to qc level (just before Calibrate and save temporay files raw/bin/qc)
+% ila.cfg.instruments2run = {'FLOW','ACS298'};
+% ila.cfg.instruments2run = {'FLOW','ACS348'};
+% ila.cfg.instruments2run = {'FLOW','HyperBB8005'};
+% ila.cfg.instruments2run = {'FLOW','LISST100X1183'};
+%%% (Optional if DIW runs available) Process ACS DIW up to DIW bin level (just before DIW Calibrate and save temporay files)
+% ila.cfg.instruments2run = {'FLOW','ACS111','SUVF6244','SBE384504970269'};
+% ila.cfg.instruments2run = {'FLOW','ACS348','SUVF6244','SBE384504970269'};
+
+%%% Once everything is ready to Calibrate, reload ila structure to clear memory
+%%% load entire cruise SUVF/TSG prods and ACS qc and run Calibrate on all at once, save particulate prods
+% ila.cfg.instruments2run =
+% {'SUVF6244','SBE384504970269','SBE384504970286'}; % merge two TSG into one to run calibrate on entire cruise at once
+% ila.Read('prod');
+% ila.cfg.instruments2run = {'FLOW','ACS111'};
+% ila.cfg.instruments2run = {'FLOW','ACS348'};
+% ila.Read('qc');
+%%% run ACS DIW Calibrate (see mainDI code), save dissolved prods
+%%% load HyperBB raw and qc and run Calibrate on all at once, save particulate prods
+% ila.cfg.instruments2run = {'FLOW','HyperBB8005'};
+%%% load LISST qc and run Calibrate on all at once, save particulate prods
+% ila.cfg.instruments2run = {'FLOW','LISST100X1183'};
+
+ila.cfg.qcref.view = 'ACS298';
+ila.cfg.parallel = 6; % Inf
+ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
+ila.cfg.qc.specific.run = {ila.cfg.qcref.view};
+
+%% set the date to process
+% entire cruise
+% ila.cfg.days2run = datetime(2021,5,2):datetime(2021,5,30);
+
+ila.cfg.days2run = datetime(2021,5,2):datetime(2021,5,8);
+%ila.cfg.days2run = datetime(2021,5,9):datetime(2021,5,15);
+%ila.cfg.days2run = datetime(2021,5,16):datetime(2021,5,22);
+%ila.cfg.days2run = datetime(2021,5,23):datetime(2021,5,30);
+
+
 
 %% 1. Import | Load raw data
-ila.cfg.force_import = false; %no need if first time
+ila.cfg.force_import = false;
 ila.ReadRaw();
 ila.CheckDataStatus();
+%one week at a time and then repeat for next week up to here
+%% Or Load data from already processed mat files if needed
+%after all weeks are done, work from here not above
+%first read raw. then process with 2 new lines to remove 00:15-00:45
+% ila.Read('raw'); %for cdom, tsg and acs one at a time.
+% add new linesthen process with 2 new lines to remove 00:15-00:45
 
-%% Or Load data from already processed mat files
-%ila.Read('raw');
-%ila.Read('bin');
-ila.Read('qc');
-%ila.Read('prod');
+% ila.Read('bin');
+% ila.Read('qc');
+% ila.Read('prod');
 % ila.CheckDataStatus();
 
-%% 2. Synchronise instruments
+%% Remove ACS data between 15 and 45 minutes
+idrm = minute(ila.instrument.ACS298.data.dt) > 15 & minute(ila.instrument.ACS298.data.dt) < 45;
+ila.instrument.ACS298.data(idrm, :) = [];
+
+%% (Optional) Required only when multiple TSG are used and need to be merge to run calibrate on all data of a cruise
+% ila.instrument.SBE384504970269.prod.a = [ila.instrument.SBE384504970269.prod.a; ila.instrument.SBE384504970286.prod.a];
+% ila.instrument.SBE384504970269.prod.a = sortrows(ila.instrument.SBE384504970269.prod.a, 'dt');
+% ila.instrument.SBE384504970286.prod.a = ila.instrument.SBE384504970269.prod.a;
+
+%% 2. (Optional) Synchronise instruments
 % % % Independent of flow rate (for now)
 % % % If flow rate varies use the Strech method
 % % % Play with delay of synchronisation
 % % % TSG is assumed to be set at zero
 % % % No noticeable difference was observed between the TSG of EXPORTS and the BB3
-% % % ila.instrument.FLOW.Sync(30);
-% ila.instrument.TSG.Sync(0);
-% ila.instrument.SUVF.Sync(0);
-% ila.instrument.ACS57.Sync(0);
-% ila.instrument.HBB.Sync(0);
-% ila.instrument.BB31502.Sync(0);
-% ila.instrument.LISST1183.Sync(0);
-% ila.instrument.WSCD859.Sync(0);
-% ila.instrument.ALFA.Sync(0); 
+% % % ila.instrument.FLOW.Sync(seconds(30));
+% ila.instrument.TSG.Sync(seconds(0));
+% ila.instrument.SUVF.Sync(seconds(0));
+% ila.instrument.ACS57.Sync(seconds(0));
+% ila.instrument.HBB.Sync(seconds(0));
+% ila.instrument.BB31502.Sync(seconds(0));
+% ila.instrument.LISST1183.Sync(seconds(0));
+% ila.instrument.WSCD859.Sync(seconds(0));
+% ila.instrument.ALFA.Sync(seconds(0)); 
 % % % Quick visualizzation to sync with TSG
 % % fig(30, 'sync TSG');
 % % yyaxis('left'); plot(ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t); ylabel('Temperature (^o C)');
 % % % yyaxis('right'); plot(ila.instrument.BB3.data.dt, ila.instrument.BB3.data.beta(:,2)); ylabel('\beta (m^{-1} sr^{-1})'); ylim([80 300]);
-% % % datetick2_doy();
 % % visSync(ila.instrument.BB3.data, ila.instrument.TSG.data.dt, ila.instrument.TSG.data.t, 'Temp (C)');
 % visSync(ila.instrument.FLOW.data, ila.instrument.SUVF.data.dt, ila.instrument.SUVF.data.fdom, 'FDOM (counts)');
 % visSync(ila.instrument.FLOW.data, ila.instrument.ACS57.data.dt, ila.instrument.ACS57.data.a(:,20), 'a (m^{-1})');
 % visSync(ila.instrument.FLOW.data, ila.instrument.ACS57.data.dt, ila.instrument.ACS57.data.c(:,40), 'c (m^{-1})');
 % visSync(ila.instrument.FLOW.data, ila.instrument.HBB.data.dt, ila.instrument.HBB.data.beta(:,14), '\beta (counts)');
-% visSync(ila.instrument.FLOW.data, ila.instrument.BB31052.data.dt, ila.instrument.BB31502.data.beta(:,1), '\beta (counts)');
+% visSync(ila.instrument.FLOW.data, ila.instrument.BB31502.data.dt, ila.instrument.BB31502.data.beta(:,1), '\beta (counts)');
 % visSync(ila.instrument.FLOW.data, ila.instrument.LISST1183.data.dt, ila.instrument.LISST1183.data.beta(:,10), '\beta (counts)');
 % visSync(ila.instrument.FLOW.data, ila.instrument.WSCD859.data.dt, ila.instrument.WSCD859.data.fdom, 'FDOM (counts)');
 % visSync(ila.instrument.FLOW.data, ila.instrument.ALFA.data.dt, ila.instrument.ALFA.data.Chlb, 'chlb');yyaxis('left'); ylim([0 2]);
 % % % 
-% % % % xlim([datenum(2018,08,14,9,55,0) datenum(2018,08,14,11,05,0)]);
+% % % % xlim([datetime(2018,08,14,9,55,0) datetime(2018,08,14,11,05,0)]);
 % % % % ylim([-0.1 0.2]);
 % % % % Once settings are good set them in the configuration file.
 % % % % The software is now doing the same with one line of code.
 % % ila.Sync()
-% % % % ila.instrument.BB31502.Sync(-90);
-% % % % ila.instrument.BB31502.Sync(-10);
+% % % % ila.instrument.BB31502.Sync(seconds(-90));
+% % % % ila.instrument.BB31502.Sync(seconds(-10));
 
-%% 2. Auto-synchronise: automatic detection of filter events for AC and BB sensors
-% ila.cfg.qcref.MinFiltPeriod = 60; % filter even period in minute % ACS: 55 % BB3: 60
-% ila.cfg.qcref.szFilt = 10; % filter even length in minute % default = 10
+%% 2. (Optional) Auto-synchronise: automatic detection of filter events for AC and BB sensors
+% ila.cfg.qcref.MinFiltPeriod = minutes(60); % filter even period in minute % ACS: 55 % BB3: 60
+% ila.cfg.qcref.szFilt = minutes(10); % filter even length in minute % default = 10
 % ila.SplitDetect(ila.cfg.qcref.MinFiltPeriod, ila.cfg.qcref.szFilt);
 
 %% 3. QC Reference: Check filter event position
@@ -86,7 +135,7 @@ ila.Read('qc');
 % time is kept in the json file
 ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
 ila.cfg.qcref.remove_old = false; % clear old selection of the same period
-%ila.QCRef();
+ila.QCRef();
 
 %% 4. Split fsw and tsw
 ila.Split();
@@ -96,22 +145,26 @@ ila.CheckDataStatus();
 % check raw spectrums AC | BB | LISST sensors
 ila.SpectralQC('AC',{'raw'});
 
-%% 5. Automatic QC of raw data for step in ACS spectrum, BB saturated and obvious bad PAR & ALFA values
-% fudge factor for auto QC ACS.
+%% 5. Automatic QC of raw data for step in ACS spectrum, spikes in BB and LISST, saturated data, and obvious bad PAR & ALFA values
+% Tolerance factor for auto QC ACS.
 % Varies between ACS: 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
-ila.cfg.qc.AutoQC_tolerance.filtered.a = 2; %
-ila.cfg.qc.AutoQC_tolerance.filtered.c = 2; %
-ila.cfg.qc.AutoQC_tolerance.total.a = 2; %
-ila.cfg.qc.AutoQC_tolerance.total.c = 3; %
+ila.cfg.qc.AutoQC_tolerance.filtered.a = 'auto'; %
+ila.cfg.qc.AutoQC_tolerance.filtered.c = 'auto'; %
+ila.cfg.qc.AutoQC_tolerance.total.a = 'auto'; %
+ila.cfg.qc.AutoQC_tolerance.total.c = 'auto'; %
 % define saturation threshold of a and c in uncalibrated m^-1
 ila.cfg.qc.AutoQC_Saturation_Threshold.a = 10; % remove any spectra > threshold m^-1 (uncalibrated)
 ila.cfg.qc.AutoQC_Saturation_Threshold.c = 40; % remove any spectra > threshold m^-1 (uncalibrated)
-% tolerance factor for auto QC BB
+% Tolerance factor for auto QC BB
 % 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
 ila.cfg.qc.AutoQC_tolerance.filtered.bb = 100; % 10
 ila.cfg.qc.AutoQC_tolerance.total.bb = 10; % 10
 % define saturation threshold of beta in counts
-ila.cfg.qc.AutoQC_Saturation_Threshold.bb = 4100; % saturate above 4000 counts
+ila.cfg.qc.AutoQC_Saturation_Threshold.bb = 4100; % saturate above 4100 counts
+% Tolerance factor for auto QC LISST
+% 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
+ila.cfg.qc.AutoQC_tolerance.filtered.lisst = 10; % 10
+ila.cfg.qc.AutoQC_tolerance.total.lisst = 10; % 10
 ila.AutoQC('raw');
 ila.CheckDataStatus();
 
@@ -130,10 +183,10 @@ ila.SpectralQC('AC',{'raw'}); % AC or BB
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.SpectralQC('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'g','ag'})
-ila.SpectralQC('AC',{'raw'}, false, {'fsw','qc'});
+ila.SpectralQC('AC',{'raw'}, false, {'fsw','c'});
 
-%% 5.3. Loading previous qc pick selection at raw level
-ila.cfg.qc.mode='load';  % load or ui
+%% 5.3. (Optional) Loading previous qc pick selection at raw level
+ila.cfg.qc.mode='ui';  % load or ui
 ila.cfg.qc.specific.run = {ila.cfg.qcref.view}; % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
 ila.QC();
 
@@ -155,16 +208,17 @@ ila.SpectralQC('AC',{'bin'});
 ila.Write('bin', 'part')
 ila.CheckDataStatus();
 
-%% 7. Flag
-ila.Flag() % Now deprecated will just copy data to next level
+%% 7. Pass2QC
+ila.Pass2QC('particulate') % copy data to next level
 ila.CheckDataStatus();
 
 %% 8. QC Interactive or Loading previous qc selection
 %%%%% Settings %%%%%
 ila.cfg.qc.mode='ui';  % load or ui
 ila.cfg.qc.remove_old = false;  % remove old selection of this period
-ila.cfg.qc.qc_once_for_all = true; % true = QC all variables | false = QC variables separately)
-% Global
+ila.cfg.qc.qc_once_for_all = false; % true = QC all variables | false = QC variables separately)
+ila.cfg.qc.remove_when_flow_below = 0; % true = remove data when flow <= 0.5 | false = no data removal data depending on flow | number = remove data when flow <= number)
+% Global QC
 ila.cfg.qc.global.view = {ila.cfg.qcref.view};
 ila.cfg.qc.global.active = false;
 % Specific
@@ -175,7 +229,7 @@ ila.cfg.qc.specific.run = {ila.cfg.qcref.view};
 ila.QC();
 ila.CheckDataStatus();
 
-%% 8.1. Auto QC at level 'qc': run until it stabilize to 0
+%% 8.1. (Optional) Auto QC at level 'qc': run until it stabilize to 0
 % ila.AutoQC('qc');
 
 %% 8.2. Spectral QC
@@ -205,18 +259,17 @@ ila.QCSwitchPosition()
 ila.Write('qc', 'part')
 
 %% 10. Calibrate
-% ila.cfg.calibrate.skip = {'FLOW', 'TSG', 'ALFA', 'NMEA'};
-% update filter method if needed
-ila.cfg.calibrate.(ila.cfg.qcref.view).filt_method = 'exponential_fit'; % exponential_fit 25percentil
-% update filter interpolation method if needed
-ila.cfg.calibrate.(ila.cfg.qcref.view).interpolation_method = 'CDOM'; % CDOM linear
-% update scattering correction method if needed
-ila.cfg.calibrate.(ila.cfg.qcref.view).scattering_correction = 'ZaneveldRottgers_blended'; % Kostakis2022 Zaneveld1994
+% update filter event calcualtion method if needed: exponential_fit 25percentil
+ila.cfg.calibrate.(ila.cfg.qcref.view).filt_method = 'exponential_fit'; 
+% update filter interpolation method if needed: CDOM linear
+ila.cfg.calibrate.(ila.cfg.qcref.view).interpolation_method = 'CDOM';
+% update scattering correction method if needed: Rottgers2013_semiempirical Zaneveld1994_proportional Semiempirical_blended1 Semiempirical_blended2 Semiempirical_blended3 
+ila.cfg.calibrate.(ila.cfg.qcref.view).scattering_correction = 'Semiempirical_blended1';
 ila.Calibrate();
 ila.CheckDataStatus();
 
 %% 10.1 Product visualisation plots with option to save
-save_figures = true;
+save_figures = false;
 
 %%% AC or BB 3D plots %%%
 ila.SpectralQC('AC', {'prod'}, save_figures); % AC or BB
@@ -224,7 +277,7 @@ ila.SpectralQC('AC', {'prod'}, save_figures); % AC or BB
 %%% ACS BB3 TSG PAR WSCD SUVF ALFA LISST final product visualisation %%%
 ila.visProd_timeseries()
 
-%% 11. Run QC directly on spectra at any level
+%% 11. (Optional) Run QC directly on spectra at any level
 % ila.SpectralQC inputs:
 % 1) 'AC' | 'BB' | 'LISST' sensors
 % 2) 'level':  'raw' | 'bin' | 'qc' | 'prod'
@@ -235,9 +288,9 @@ ila.visProd_timeseries()
 %     - to QC 'cp' of 'p' table of 'prod' level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'p','cp'})
 %     - to QC 'beta' of 'fsw' table of 'bin' level of HBB or BB3:  ila.SpectralQC('BB',{'bin'}, false, {'fsw','beta'})
 %     - to QC 'ag' of 'g' table of prod level of ACs:  ila.SpectralQC('AC',{'prod'}, false, {'g','ag'})
-ila.SpectralQC('AC',{'prod'}, false, {'p','ap'});
+ila.SpectralQC('AC',{'prod'}, false, {'p','cp'});
 
-%% 11.1. Load previous qc pick selection at prod level
+%% 11.1. (Optional) Load previous qc pick selection at prod level
 ila.cfg.qc.mode = 'load';  % load or ui
 ila.cfg.qc.specific.run = {ila.cfg.qcref.view}; % 'FLOW','ACS57','TSG', 'BB31502', 'WSCD859','PAR'
 ila.QC();

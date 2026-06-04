@@ -7,6 +7,9 @@ function fh = visProd2D(x, dt, data, smooth, figid)
 %
 % Require: colorval
 
+% if isdatetime(dt)
+%   dt = datenum(dt);
+% end
 % Unselec all NaN
 sel = any(~isnan(data),2);
 
@@ -41,7 +44,9 @@ if size(dt, 1) > 1
   colormap(parula);
   cb = colorbar();
   caxis([min(dt(sel)) max(dt(sel))]);
-  datetick(cb, 'y', 'HH:MM mmm dd', 'keepticks');
+  if ~isdatetime(dt)
+    datetick(cb, 'y', 'HH:MM mmm dd', 'keepticks');
+  end
   xlabel('Wavelength (nm)');
 end
 % ylabel('a_p (m^{-1})');

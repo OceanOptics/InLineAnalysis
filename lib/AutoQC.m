@@ -1,4 +1,4 @@
-function [data_out, bad, Nbad] = AutoQC (instrument, data_in, lambda, tolerance, bb_dark, saturation_threshold, DI)
+function [data_out, bad, Nbad] = AutoQC (instrument, data_in, lambda, tolerance, bb_dark, saturation_threshold, data_type)
 % author: Guillaume Bourdin
 % created: Nov 13, 2019
 %
@@ -6,7 +6,7 @@ function [data_out, bad, Nbad] = AutoQC (instrument, data_in, lambda, tolerance,
 %
 % INPUT:
 %   - data_in: raw data in <Nx3 Table> time series of data that must contains:
-%         - dt <Nx1 datenum> date and time precise to the second
+%         - dt <Nx1 datetime> date and time precise to the second
 %         for each other field the folowwing field must exist:
 %         - a spectra <NxM double> in column
 %         - c spectra <NxM double> in column
@@ -35,7 +35,7 @@ function [data_out, bad, Nbad] = AutoQC (instrument, data_in, lambda, tolerance,
 %
 % OUTPUT:
 %   - data_out: cleaned data out <Nx3 Table> time series of data that must contains:
-%         - dt <Nx1 datenum> date and time precise to the second
+%         - dt <Nx1 datetime> date and time precise to the second
 %         for each other field the folowwing field must exist:
 %         - a spectra <NxM double> in column
 %         - c spectra <NxM double> in column
@@ -60,7 +60,7 @@ if nargin < 4
   warning('tolerance missing, set to default (a|c: "auto", bb: 3)');
 end
 if nargin < 7
-  DI = false;
+  data_type = 'TSW';
 end
 
 if contains(instrument, 'AC')
@@ -96,12 +96,12 @@ if contains(instrument, 'AC')
   end
   if auto_a
     if tolerance.a < 3
-      warning('QC threshold a is low (< 3), data might be lost');
+      warning('QC threshold "a" is low (< 3), data might be lost');
     end
   end
   if auto_c
     if tolerance.c < 3
-      warning('QC threshold c is low (< 3), data might be lost');
+      warning('QC threshold "c" is low (< 3), data might be lost');
     end
   end
   if nargin < 6
@@ -147,10 +147,31 @@ if contains(instrument, 'AC')
     bad_c = max(abs(diff_c(:,wl_c >= 550 & wl_c < 600)),[],2)...
       > tolerance.c*median(abs(diff_c(:,wl_c > 450 & wl_c < 550)),2);
   end
+  
+  % additional autoQC for filter events to eliminate bubbled spectra not captured by the step autoQC
+  % based on derivative in time rather than over wavelengths
+  if strcmp(data_type, 'FSW')
+    % a tube
+    id_nonan = any(~isnan(datanorm.a), 2);
+    foo = datanorm.a(id_nonan,:);
+    deriv_a_threshold = prctile(diff(foo), 99.9);
+    foo_bad = [false; any(diff(foo) > deriv_a_threshold,2)];
+    foo_bad_rsz = false(size(bad_a));
+    foo_bad_rsz(id_nonan) = foo_bad;
+    bad_a(foo_bad_rsz) = true;
+    % c tube
+    id_nonan = any(~isnan(datanorm.c), 2);
+    foo = datanorm.c(id_nonan,:);
+    deriv_c_threshold = prctile(diff(foo), 99.9);
+    foo_bad = [false; any(diff(foo) > deriv_c_threshold,2)];
+    foo_bad_rsz = false(size(bad_c));
+    foo_bad_rsz(id_nonan) = foo_bad;
+    bad_c(foo_bad_rsz) = true;
+  end
 
-  if DI 
+  if strcmp(data_type, 'DI')
     % segment database per DI event
-    foo = find(diff(datetime(datanorm.dt, 'ConvertFrom', 'datenum')) > hours(0.5)) + 1;
+    foo = find(diff(datanorm.dt) > hours(0.5)) + 1;
     if isempty(foo)
       foo = [1 size(datanorm, 1)];
     else
@@ -206,7 +227,7 @@ elseif contains(instrument, 'BB3')
     data_out.beta(data_in.beta(:,ii) >= saturation_threshold.bb, ii) = NaN;
   end
 
-  if any(tolerance.bb < 3); warning('QC threshold might be too low, data might be lost'); end
+  if any(tolerance.bb < 3); warning('QC threshold "bb" might be too low, data might be lost'); end
   bad_bb = false(size(data_in,1), size(lambda.bb, 2));
   for ii = 1:size(lambda.bb, 2)
     other = 1:size(lambda.bb, 2); other(ii)=[];
@@ -215,9 +236,9 @@ elseif contains(instrument, 'BB3')
 %     Nbad.bb(ii) = Nbad.bb(ii) + sum(bad_bb(:,ii));
   end
   
-  if DI 
+  if strcmp(data_type, 'DI') 
     % segment database per DI event
-    foo = find(diff(datetime(data_in.dt, 'ConvertFrom', 'datenum')) > hours(0.5)) + 1;
+    foo = find(diff(data_in.dt) > hours(0.5)) + 1;
     if isempty(foo)
       foo = [1 size(data_in, 1)];
     else
@@ -288,7 +309,7 @@ elseif any(contains(instrument, {'HBB', 'HyperBB'}))
 %     false, 'Wavelength', false, 72); zlabel('beta (m^{-1})'); %, 'Wavelength', true
 
   if any(tolerance.bb < 3)
-    warning('QC threshold might be too low, data might be lost');
+    warning('QC threshold "bb" might be too low, data might be lost');
   end
 %   bad_bb = bad_bb_up + bad_bb_chl + bad_bb_down + bad_bb_time;
   bad_bb = bad_bb > 0;
@@ -298,6 +319,32 @@ elseif any(contains(instrument, {'HBB', 'HyperBB'}))
   % count only bad that were not already NaN (interpolation)
   bad_bb(isnan(data_in.beta)) = false;
   Nbad.bb = sum(bad_bb) / size(data_in.beta,1) * 100;
+
+elseif any(contains(instrument, 'LISST'))
+  % delete empty rows
+  data_in(all(isnan(data_in.beta),2), :) = [];
+  data_out = data_in;
+  dup = data_in;
+  dup.beta = dup.beta + median(dup.beta(:, end), 'omitnan');
+  dup.beta = fillmissing(dup.beta, 'movmedian', 30);
+  bad_lisst = false(size(dup.beta));
+  
+  % detecting spike
+  movdiff = movmedian(dup.beta, 50);
+  bad_lisst(dup.beta > movdiff + movdiff*tolerance.lisst / 100) = true;
+  
+  data_out.beta(bad_lisst) = NaN;
+  
+  if any(tolerance.bb < 3)
+    warning('QC threshold "lisst" might be too low, data might be lost');
+  end
+  bad_lisst = bad_lisst > 0;
+  bad = data_in(any(bad_lisst,2), :);
+  data_out.beta(bad_lisst) = NaN;
+  data_out(sum(isnan(data_out.beta), 2) > size(data_out.beta, 2) / 3, :) = [];
+  % count only bad that were not already NaN (interpolation)
+  bad_lisst(isnan(data_in.beta)) = false;
+  Nbad.lisst = sum(bad_lisst) / size(data_in.beta,1) * 100;
 end
 
 fnames = fieldnames(Nbad);
@@ -306,20 +353,3 @@ for i = 1:size(fnames,1)
     Nbad.(fnames{i}) = 0;
   end
 end
-
-% visProd3D(lambda.bb, datanorm.dt, datanorm.beta, ...
-%   false, 'Wavelength', false, 72); zlabel('beta (m^{-1})'); %, 'Wavelength', true
-% visProd3D(lambda.bb, datanorm.dt, diff_bb, ...
-%   false, 'Wavelength', false, 73); zlabel('beta (m^{-1})'); %, 'Wavelength', true
-% visProd2D(lambda.bb, datanorm.dt(1), median(diff_bb), ...
-%   false, 75); zlabel('beta (m^{-1})'); %, 'Wavelength', true
-
-
-% visProd3D(lambda.bb, datanorm.dt, bad_bb_time, ...
-%   false, 'Wavelength', false, 78); zlabel('beta (m^{-1})'); %, 'Wavelength', true
-
-
-% visProd3D(lambda_ref, dataini.dt(100000:101000,:), dataini.a(100000:101000,:), false, 'Wavelength', false, 72); zlabel('a_p (m^{-1})'); %, 'Wavelength', true
-% visProd3D(lambda_ref, dataini.dt(100000:101000,:), dataini.c(100000:101000,:), false, 'Wavelength', false, 73); zlabel('c_p (m^{-1})');
-% visProd3D(lambda_ref, data.dt(100000:121000,:), data.a(100000:121000,:), false, 'Wavelength', false, 74); zlabel('a_p (m^{-1})'); %, 'Wavelength', true
-% visProd3D(lambda_ref, data.dt(100000:121000,:), data.c(100000:121000,:), false, 'Wavelength', false, 75); zlabel('c_p (m^{-1})');

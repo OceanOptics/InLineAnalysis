@@ -29,14 +29,14 @@ classdef (Abstract) Instrument < handle
     % Bin
     bin = struct('tsw', table(), 'fsw', table(), 'diw', table());
     % QC
-    qc = struct('tsw', table(), 'fsw', table(), 'diw', table());
+    qc = struct('tsw', table(), 'fsw', table(), 'diw', table(), 'bad', table());
     suspect = struct('tsw', table(), 'fsw', table(), 'diw', table());
     bad = struct('tsw', table(), 'fsw', table(), 'diw', table());
     % Calibrated
     prod = struct();
   end
   properties (SetAccess = private, GetAccess = public)
-    % Processing parameters modiwfied by instrument methods only
+    % Processing parameters modified by instrument methods only
     sync_delay = 0; % days
     stretch_delta = 0; % days (can also be array of size of dt)
   end
@@ -84,18 +84,22 @@ classdef (Abstract) Instrument < handle
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%% PRE-PROCESSING METHODS %%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    function Sync(obj, delay_in_seconds)
+    function Sync(obj, delay) % (obj, delay_in_days)
       % SYNC synchronize time of instrument with other insrtruments
       %   Note: if function is run several time the delay applied is the
       %         always in reference to the original data (not the one
       %         already synchronized).
       
-      % Convert in delay in day
-      delay_in_days = delay_in_seconds / 3600 / 24;
+      % % Convert in delay in day
+      % delay_in_days = delay / 3600 / 24;
+      % % Apply synchronisation
+      % obj.data.dt = obj.data.dt + obj.sync_delay - delay_in_days;
+      % % Update delay stored in instrument properties
+      % obj.sync_delay = delay_in_days;
       % Apply synchronisation
-      obj.data.dt = obj.data.dt + obj.sync_delay - delay_in_days;
+      obj.data.dt = obj.data.dt + delay;
       % Update delay stored in instrument properties
-      obj.sync_delay = delay_in_days;
+      obj.sync_delay = delay;
     end
     
     function Stretch(obj, delta_in_seconds)
@@ -117,9 +121,10 @@ classdef (Abstract) Instrument < handle
     
     function Split(obj, ref, buffer)
       reference_data = ref.data;
+      reference_var = ref.view.swt_variable;
       reference_constants = struct('SWITCH_FILTERED', ref.SWITCH_FILTERED, 'SWITCH_TOTAL', ref.SWITCH_TOTAL);
       [obj.raw.tsw, obj.raw.fsw, obj.raw.bad] = splitTable(reference_data,...
-        obj.data, buffer, obj.split.mode, reference_constants, false);
+        obj.data, buffer, obj.split.mode, reference_constants, reference_var, false);
     end
     
 %     function Bin(obj, bin_size_minutes, method, prctile_detection, prctile_average, parallel)
@@ -138,25 +143,32 @@ classdef (Abstract) Instrument < handle
 %       end
 %     end
     
-    function Bin(obj, bin_size_minutes, prctile_detection, prctile_average, parallel, mode)
-      bin_size_days = bin_size_minutes / 60 / 24;
+    function Bin(obj, bin_size, prctile_detection, prctile_average, parallel, mode) % bin_size_minutes
+      % bin_size_days = bin_size_minutes / 60 / 24;
+      if isnumeric(bin_size)
+        bin_size = minutes(bin_size);
+      end
       if isempty(obj.raw.tsw)
         fprintf('WARNING: No raw.tsw data to bin\n');
       else
         fprintf('\tTSW\n');
         switch mode
           case 'OneShot'
-            obj.bin.tsw = binTable(obj.raw.tsw, bin_size_days, obj.bin_method, ...
+            obj.bin.tsw = binTable(obj.raw.tsw, bin_size, obj.bin_method, ...
               prctile_detection, prctile_average, false, parallel, false);
           case 'ByDay'
-            for d = floor(min(obj.raw.tsw.dt)):floor(max(obj.raw.tsw.dt))
-              fprintf('\t\t%s', datestr(d)); tic;
-              sel = d <= obj.raw.tsw.dt & obj.raw.tsw.dt < d + 1;
+            % for d = floor(min(obj.raw.tsw.dt)):floor(max(obj.raw.tsw.dt))
+            for d = dateshift(min(obj.raw.tsw.dt), 'Start', 'Day'):dateshift(max(obj.raw.tsw.dt), 'Start', 'Day')
+              % fprintf('\t\t%s', datestr(d)); tic;
+              dtstr = d;
+              fprintf('\t\t%s', char(datetime(dtstr, 'Format', 'dd-MMM-uuuu'))); tic;
+              % sel = d <= obj.raw.tsw.dt & obj.raw.tsw.dt < d + 1;
+              sel = d <= obj.raw.tsw.dt & obj.raw.tsw.dt < d + days(1);
               if sum(sel) == 0
                 fprintf('  No total data to bin\n');
                 continue
               end
-              obj.bin.tsw = [obj.bin.tsw; binTable(obj.raw.tsw(sel,:), bin_size_days, ...
+              obj.bin.tsw = [obj.bin.tsw; binTable(obj.raw.tsw(sel,:), bin_size, ...
                 obj.bin_method, prctile_detection, prctile_average, false, parallel, false)];
               t = toc; fprintf('  %1.3f s\n', t);
             end
@@ -172,17 +184,21 @@ classdef (Abstract) Instrument < handle
         fprintf('\tFSW\n');
         switch mode
           case 'OneShot'
-            obj.bin.fsw = binTable(obj.raw.fsw, bin_size_days/3, obj.bin_method, ...
+            obj.bin.fsw = binTable(obj.raw.fsw, bin_size/3, obj.bin_method, ...
               prctile_detection, prctile_average, false, parallel, false);
           case 'ByDay'
-            for d = floor(min(obj.raw.tsw.dt)):floor(max(obj.raw.tsw.dt))
-              fprintf('\t\t%s', datestr(d)); tic;
-              sel = d <= obj.raw.fsw.dt & obj.raw.fsw.dt < d + 1;
+            % for d = floor(min(obj.raw.fsw.dt)):floor(max(obj.raw.fsw.dt))
+            for d = dateshift(min(obj.raw.fsw.dt), 'Start', 'Day'):dateshift(max(obj.raw.fsw.dt), 'Start', 'Day')
+              % fprintf('\t\t%s', datestr(d)); tic;
+              dtstr = d;
+              fprintf('\t\t%s', char(datetime(dtstr, 'Format', 'dd-MMM-uuuu'))); tic;
+              % sel = d <= obj.raw.fsw.dt & obj.raw.fsw.dt < d + 1;
+              sel = d <= obj.raw.fsw.dt & obj.raw.fsw.dt < d + days(1);
               if sum(sel) == 0
                 fprintf('  No filtered data to bin\n');
                 continue
               end
-              obj.bin.fsw = [obj.bin.fsw; binTable(obj.raw.fsw(sel,:), bin_size_days/3, ...
+              obj.bin.fsw = [obj.bin.fsw; binTable(obj.raw.fsw(sel,:), bin_size/3, ...
                 obj.bin_method, prctile_detection, prctile_average, false, parallel, false)];
               t = toc; fprintf('  %1.3f s\n', t);
             end
@@ -192,15 +208,17 @@ classdef (Abstract) Instrument < handle
       end
     end
     
-    function BinDI(obj, bin_size_minutes, prctile_detection, prctile_average, parallel)
+    function BinDI(obj, bin_size, prctile_detection, prctile_average, parallel) % bin_size_minutes
       %%% NOTE: For DIW QC is done before the Binning %%%
-%       bin_size_minutes = 60;
       % BinDI is only in mode OneShot, no mode day by day (as in a typical setup they won't many samples
-      bin_size_days = bin_size_minutes / 60 / 24;
+      % bin_size_days = bin_size_minutes / 60 / 24;
+      if isnumeric(bin_size)
+        bin_size = minutes(bin_size);
+      end
       if isempty(obj.qc.diw)
         fprintf('WARNING: No qc.diw data to bin\n');
       else
-        obj.bin.diw = binTable(obj.qc.diw, bin_size_days, obj.bin_method, prctile_detection, ....
+        obj.bin.diw = binTable(obj.qc.diw, bin_size, obj.bin_method, prctile_detection, ....
           prctile_average, true, parallel, false);
       end
     end
@@ -234,14 +252,25 @@ classdef (Abstract) Instrument < handle
       if size(chan, 2) < 2 || any(cellfun('isempty', chan))
         chan = {'all'};
       end
+      fieldn = fieldnames(obj.(level))';
+      for j = fieldn%; j = j{1};
+        if ~isempty(obj.(level).(j{:}))
+          if ~isdatetime(obj.(level).(j{:}).dt)
+            obj.(level).(j{:}).dt = datetime(obj.(level).(j{:}).dt, 'ConvertFrom', 'datenum','Format','yyyy-MM-dd HH:mm:ss.SSS');
+          end
+        end
+      end
+      if ~isdatetime(user_selection)
+        user_selection = datetime(user_selection, 'ConvertFrom', 'datenum','Format','yyyy-MM-dd HH:mm:ss.SSS');
+      end
       if size(user_selection, 2) == 2
         if any(strcmp(chan{1}, 'all'))
-          fieldn = fieldnames(obj.(level))';
-          for j = fieldn; j = j{1};
-            if ~isempty(obj.(level).(j))
+          % fieldn = fieldnames(obj.(level))';
+          for j = fieldn%; j = j{1};
+            if ~isempty(obj.(level).(j{:}))
               for i=1:size(user_selection, 1)
-                obj.(level).(j)(user_selection(i,1) <= obj.(level).(j).dt & ...
-                  obj.(level).(j).dt <= user_selection(i,2), :) = []; 
+                obj.(level).(j{:})(user_selection(i,1) <= obj.(level).(j{:}).dt & ...
+                  obj.(level).(j{:}).dt <= user_selection(i,2), :) = []; 
               end
             end
           end
@@ -262,25 +291,24 @@ classdef (Abstract) Instrument < handle
         end
       elseif size(user_selection, 2) == 1
         if any(strcmp(chan{1}, 'all'))
-          fieldn = fieldnames(obj.(level))';
-          for j = fieldn; j = j{1};
-            if ~isempty(obj.(level).(j))
-              obj.(level).(j)(ismember(round(obj.(level).(j).dt, 9), ...
-                round(user_selection, 9)), :) = [];
+          for j = fieldn%; j = j{1};
+            if ~isempty(obj.(level).(j{:}))
+              obj.(level).(j{:}).dt = dateshift(obj.(level).(j{:}).dt,'start','minute') + seconds(round(second(obj.(level).(j{:}).dt),3));
+              obj.(level).(j{:})(ismember(obj.(level).(j{:}).dt, user_selection), :) = [];
             end
           end
         elseif any(strcmp(chan{2}, 'all'))
           if isfield(obj.(level), chan{1})
             if ~isempty(obj.(level).(chan{1}))
-              obj.(level).(chan{1})(ismember(round(obj.(level).(chan{1}).dt, 9), ...
-                round(user_selection, 9)), :) = [];
+              obj.(level).(chan{1}).dt = dateshift(obj.(level).(chan{1}).dt,'start','minute') + seconds(round(second(obj.(level).(chan{1}).dt),3));
+              obj.(level).(chan{1})(ismember(obj.(level).(chan{1}).dt, user_selection), :) = [];
             end
           end
         else
           if isfield(obj.(level), chan{1})
             if ~isempty(obj.(level).(chan{1}))
-              obj.(level).(chan{1}).(chan{2})(ismember(round(obj.(level).(chan{1}).dt, 9), ...
-                round(user_selection, 9)), :) = NaN;
+              obj.(level).(chan{1}).dt = dateshift(obj.(level).(chan{1}).dt,'start','minute') + seconds(round(second(obj.(level).(chan{1}).dt),3));
+              obj.(level).(chan{1}).(chan{2})(ismember(obj.(level).(chan{1}).dt, user_selection), :) = NaN;
             end
           end
         end
@@ -306,13 +334,21 @@ classdef (Abstract) Instrument < handle
       end
 %       if isstruct(obj.(level))
         % For each product type (particulate, dissoved...)
-        for f = fieldna; f = f{1};
-          filename = [filename_prefix '_' level '_' f '.mat'];
-          if isempty(obj.(level).(f)); continue; end
-          days2write = floor(days2write); % force days2write to entire day
-          sel = min(days2write) <= obj.(level).(f).dt & obj.(level).(f).dt < max(days2write) + 1;
-          if ~any(sel); fprintf('WRITE: %s_%s_%s No data.\n', filename_prefix, level, f); continue; end
-          data = obj.(level).(f)(sel,:);
+        for f = fieldna%; f = f{1};
+          filename = [filename_prefix '_' level '_' f{:} '.mat'];
+          if isempty(obj.(level).(f{:})); continue; end
+          if ~isdatetime(days2write)
+            days2write = datetime(days2write, 'ConvertFrom', 'datenum');
+          end
+          if ~isdatetime(obj.(level).(f{:}).dt)
+            obj.(level).(f{:}).dt = datetime(obj.(level).(f{:}).dt, 'ConvertFrom', 'datenum');
+          end
+          % days2write = floor(days2write); % force days2write to entire day
+          days2write = dateshift(days2write, 'Start', 'day'); % force days2write to entire day
+          % sel = min(days2write) <= obj.(level).(f).dt & obj.(level).(f).dt < max(days2write) + 1;
+          sel = min(days2write) <= obj.(level).(f{:}).dt & obj.(level).(f{:}).dt < max(days2write) + days(1);
+          if ~any(sel); fprintf('WRITE: %s_%s_%s No data.\n', filename_prefix, level, f{:}); continue; end
+          data = obj.(level).(f{:})(sel,:);
           if ~isfolder(obj.path.wk); mkdir(obj.path.(level)); end
           tic
           save(fullfile(obj.path.wk, filename), 'data');
@@ -337,21 +373,31 @@ classdef (Abstract) Instrument < handle
       % This will simply add data at the end of the current table
       %   (if data was already in memory it could duplicate timestamps)
       if contains(obj.model, 'AC')
-        obj.ReadDeviceFile()
+        obj.ReadDeviceFile() %#ok<MCNPN>
       end
       if nargin < 4; level = 'prod'; end
+      if ~isdatetime(days2read)
+        days2read = datetime(days2read, 'ConvertFrom', 'datenum');
+      end
       if strcmp(level, 'data')
         l = dir(fullfile(obj.path.wk, [filename_prefix '.mat']));
       else
         l = dir(fullfile(obj.path.wk, [filename_prefix '_' level '*.mat']));
       end
       if isempty(l)
-        fprintf('%s: %s_%s No data.\n', datestr(days2read), filename_prefix, level);
+        % fprintf('%s: %s_%s No data.\n', datestr(days2read), filename_prefix, level);
+        fprintf('%s: %s_%s No data.\n', char(days2read), filename_prefix, level);
       else
-        for f = {l.name}; f = f{1};
-          fprintf('\t\t%s', f); tic;
-          load(fullfile(obj.path.wk, f), 'data'); % data variable is created
-          data_temp = sortrows(data, 1);
+        for f = {l.name}%; f = f{1};
+          fprintf('\t\t%s', f{:}); tic;
+          load(fullfile(obj.path.wk, f{:}), 'data'); % data variable is created
+          if ~exist('data','var')
+            error('File %s empty', fullfile(obj.path.wk, f{:}))
+          end
+          data_temp = sortrows(data, 'dt');
+          if ~isdatetime(data_temp.dt)
+            data_temp.dt = datetime(data_temp.dt, 'ConvertFrom', 'datenum');
+          end
           % add column of spd to make sure all files have equal number of colums
           if strcmp(obj.model, 'FTH')
             foospd = {'spd1', 'spd2'};
@@ -380,21 +426,22 @@ classdef (Abstract) Instrument < handle
             end
           end
           if isempty(data_temp)
-            warning('%s is empty, the file was deleted', f)
-            delete(fullfile(obj.path.wk, f))
+            warning('%s is empty, the file was deleted', f{:})
+            delete(fullfile(obj.path.wk, f{:}))
           else
-            sel = min(days2read) <= data_temp.dt & data_temp.dt < max(days2read) + 1;
-            fn = strsplit(f, {'_','.'}); fn = fn{end-1};%(1:end-4);
+            % sel = min(days2read) <= data_temp.dt & data_temp.dt < max(days2read) + 1;
+            sel = min(days2read) <= data_temp.dt & data_temp.dt < max(days2read) + days(1);
+            fn = strsplit(f{:}, {'_','.'}); fn = fn{end-1};%(1:end-4);
             if strcmp(fn, level)
               if ~isempty(obj.(level))
-                [obj.(level), data_temp] = check_nb_variables(obj.(level), data_temp(sel,:), f);
+                [obj.(level), data_temp] = check_nb_variables(obj.(level), data_temp(sel,:), f{:});
               end
               obj.(level)(end+1:end+sum(sel),:) = data_temp(sel,:);
               obj.(level).Properties.CustomProperties = data_temp.Properties.CustomProperties;
             else
               if isfield(obj.(level), fn)
                 if ~isempty(obj.(level).(fn))
-                  [obj.(level).(fn), data_temp] = check_nb_variables(obj.(level).(fn), data_temp(sel,:), f);
+                  [obj.(level).(fn), data_temp] = check_nb_variables(obj.(level).(fn), data_temp(sel,:), f{:});
                 end
                 obj.(level).(fn)(end+1:end+sum(sel),:) = data_temp(sel,:);
                 obj.(level).(fn).Properties.CustomProperties = data_temp.Properties.CustomProperties;
@@ -404,7 +451,7 @@ classdef (Abstract) Instrument < handle
                   obj.(level).(fn).Properties.CustomProperties = data_temp.Properties.CustomProperties;
                 else
                   if ~isempty(obj.(level))
-                    [obj.(level), data_temp] = check_nb_variables(obj.(level), data_temp(sel,:), f);
+                    [obj.(level), data_temp] = check_nb_variables(obj.(level), data_temp(sel,:), f{:});
                   end
                   obj.(level)(end+1:end+sum(sel),:) = data_temp(sel,:);
                   obj.(level).Properties.CustomProperties = data_temp.Properties.CustomProperties;
@@ -469,17 +516,22 @@ function [gdata, data] = check_nb_variables(gdata, data, dt)
   if all(size(gdata, 2) ~= size(data, 2) & ~isempty(gdata) & ~isempty(data))
     if all(ismember(gdata.Properties.VariableNames, data.Properties.VariableNames)) && ...
         ~all(ismember(data.Properties.VariableNames, gdata.Properties.VariableNames))
-      missing_var = data.Properties.VariableNames(~ismember(data.Properties.VariableNames, gdata.Properties.VariableNames));
+      missing_var = gdata.Properties.VariableNames(~ismember(gdata.Properties.VariableNames, data.Properties.VariableNames));
       data = data(:, ismember(data.Properties.VariableNames, gdata.Properties.VariableNames));
-      before_or_after = 'before';
+      warning('Consolidating files with different number of variables. %s missing in files before %s: variable ignored', ...
+        ['"' cell2mat(join(missing_var, '", "')) '"'], dt)
     elseif ~all(ismember(gdata.Properties.VariableNames, data.Properties.VariableNames)) && ...
         all(ismember(data.Properties.VariableNames, gdata.Properties.VariableNames))
-      missing_var = data.Properties.VariableNames(~ismember(gdata.Properties.VariableNames, data.Properties.VariableNames));
+      missing_var = data.Properties.VariableNames(~ismember(data.Properties.VariableNames, gdata.Properties.VariableNames));
       gdata = gdata(:, ismember(gdata.Properties.VariableNames, data.Properties.VariableNames));
-      before_or_after = 'after';
+      warning('Consolidating files with different number of variables. %s missing in files after %s: variable ignored', ...
+        ['"' cell2mat(join(missing_var, '", "')) '"'], dt)
+    else
+      missing_var_before = gdata.Properties.VariableNames(~ismember(gdata.Properties.VariableNames, data.Properties.VariableNames));
+      missing_var_after = data.Properties.VariableNames(~ismember(data.Properties.VariableNames, gdata.Properties.VariableNames));
+      error('Consolidating files with different number of variables. %s missing in files before %s and %s missing in files after %s: operation aborted', ...
+        ['"' cell2mat(join(missing_var_before, '", "')) '"'], dt, ['"' cell2mat(join(missing_var_after, '", "')) '"'], dt)
     end
-    warning('Consolidating files with different number of variables. %s missing in files %s %s: variable ignored', ...
-      ['"' cell2mat(join(missing_var, '", "')) '"'], before_or_after, dt)
   end
 end
 

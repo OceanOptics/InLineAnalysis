@@ -66,7 +66,8 @@ hd = hd(~strcmp(hd, 'datetime'));
 dat = [];
 for i = 1:size(hd, 2)
   if strcmp(hd{i}, 'dt')
-    dat = [dat datenum(t{i}, 'yyyy/mm/dd HH:MM:SS.FFF')];
+    % dat = [dat datenum(t{i}, 'yyyy/mm/dd HH:MM:SS.FFF')];
+    dat = [dat datetime(t{i}, 'InputFormat', 'yyyy/MM/dd HH:mm:ss.SSS')];
   elseif contains(hd{i}, 'swt')
     foo2 = t{i};
     foo2(contains(foo2, 'True')) = {'1'};

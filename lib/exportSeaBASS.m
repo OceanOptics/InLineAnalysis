@@ -14,13 +14,32 @@ fid = fopen([file_path filesep file_name file_ext], 'W+', 'n', 'US-ASCII');
 i_dt = strcmp(data.Properties.VariableNames, 'dt');
 i_lat = strcmp(data.Properties.VariableNames, 'lat');
 i_lon = strcmp(data.Properties.VariableNames, 'lon');
-i_t = strcmp(data.Properties.VariableNames, 't');
-i_s = strcmp(data.Properties.VariableNames, 's');
-if sum(i_dt) ~= 1 || sum(i_lat) ~= 1 || sum(i_lon) ~= 1 || sum(i_t) ~= 1 || sum(i_s) ~= 1
-  error('Missing one or more required field(s) is missing');
+if size(data.Properties.VariableNames,2) == 6 && ...
+    sum(sum(categorical(data.Properties.VariableNames) == categorical({'par', 'par_sd', 'bincount'})'),2) == 3
+  par_alone = true;
+else
+  par_alone = false;
 end
-% Find fields to export
-i_specific_fields = find(~(i_dt | i_lat | i_lon | i_t | i_s));
+if par_alone
+  if sum(i_dt) ~= 1 || sum(i_lat) ~= 1 || sum(i_lon) ~= 1
+    error('Missing one or more required field(s) is missing');
+  end
+  % Find fields to export
+  i_specific_fields = find(~(i_dt | i_lat | i_lon));
+else
+  i_t = strcmpi(data.Properties.VariableNames, 't') | strcmpi(data.Properties.VariableNames, 'sst') | strcmpi(data.Properties.VariableNames, 'wt');
+  if strcmpi(data.Properties.VariableNames(i_t), 'sst')
+    tvar = 'SST';
+  else
+    tvar = 'Wt';
+  end
+  i_s = strcmp(data.Properties.VariableNames, 's') | strcmpi(data.Properties.VariableNames, 'sss') | strcmpi(data.Properties.VariableNames, 'sal');
+  if sum(i_dt) ~= 1 || sum(i_lat) ~= 1 || sum(i_lon) ~= 1 || sum(i_t) ~= 1 || sum(i_s) ~= 1
+    error('Missing one or more required field(s) is missing');
+  end
+  % Find fields to export
+  i_specific_fields = find(~(i_dt | i_lat | i_lon | i_t | i_s));
+end
 % Check subfileds (field with multiple columns)
 if nargin < 4
 %   subfields = {[]};
@@ -96,19 +115,39 @@ fprintf(fid,'/measurement_depth=%.1f\n', meta.measurement_depth); % not allowed 
 fprintf(fid,'/missing=-9999\n');
 % fprintf(fid,'/below_detection_limit=-8888\n');
 fprintf(fid,'/delimiter=comma\n'); % tab, space, or comma
+if isfield(meta, 'comment')
+  cmt = strsplit(meta.comment, '!');
+  cmt = cmt(~cellfun('isempty', cmt));
+  fprintf(fid,'!COMMENTS\n');
+  for i = 1:size(cmt,2)
+    fprintf(fid,'!%s\n', cmt{i});
+  end
+end
 % Fields
-core_fields_sb = {'date', 'time', 'lat', 'lon', 'Wt', 'sal'};
-core_units_sb = {'yyyymmdd', 'hh:mm:ss', 'degrees', 'degrees', 'degreesC', 'PSU'};
+if par_alone
+  core_fields_sb = {'date', 'time', 'lat', 'lon'};
+  core_units_sb = {'yyyymmdd', 'hh:mm:ss', 'degrees', 'degrees'};
+else
+  core_fields_sb = {'date', 'time', 'lat', 'lon', tvar, 'sal'};
+  core_units_sb = {'yyyymmdd', 'hh:mm:ss', 'degrees', 'degrees', 'degreesC', 'PSU'};
+end
 fields = [core_fields_sb(:)' specific_fields(:)'];
 units = [core_units_sb(:)' specific_units(:)'];
 foo = sprintf('%s,', fields{:}); fprintf(fid,'/fields=%s\n', foo(1:end-1));
 foo = sprintf('%s,', units{:});fprintf(fid,'/units=%s\n', foo(1:end-1));
+if isfield(meta, 'id_fields_definitions')
+  fprintf(fid,'/id_fields_definitions=%s\n', meta.id_fields_definitions);
+end
 fprintf(fid,'/end_header\n');
 fclose(fid);
 
-dat = table(datetime(data.dt, 'Format', 'yyyyMMdd'), datetime(data.dt, 'Format', 'HH:mm:SS'), round(data.lat, 4), ...
-  round(data.lon, 4), round(data.t, 4), round(data.s, 4), 'VariableNames', {'Date', 'Time', ...
-  'lat', 'lon', 't', 's'});
+if par_alone
+  dat = table(datetime(data.dt, 'Format', 'yyyyMMdd'), datetime(data.dt, 'Format', 'HH:mm:SS'), round(data.lat, 4), ...
+    round(data.lon, 4), 'VariableNames', {'Date', 'Time', 'lat', 'lon'});
+else
+  dat = table(datetime(data.dt, 'Format', 'yyyyMMdd'), datetime(data.dt, 'Format', 'HH:mm:SS'), round(data.lat, 4), ...
+    round(data.lon, 4), round(data.(data.Properties.VariableNames{i_t}), 4), round(data.(data.Properties.VariableNames{i_s}), 4), 'VariableNames', {'Date', 'Time', 'lat', 'lon', tvar, 'sal'});
+end
 var_precision = data.Properties.VariableDescriptions(i_specific_fields);
 int = find(contains(var_precision, {'%d','%i'}));
 if any(int)
@@ -117,11 +156,14 @@ if any(int)
   end
 end
 % var_precision = str2num(cell2mat(regexprep(var_precision','\D','')));
-var_precision = str2double(regexprep(var_precision,'\D',''))';
+% var_precision = str2double(regexprep(var_precision,'\D',''))';
 for j=progress(1:size(i_specific_fields,2))
   var = data.Properties.VariableNames{i_specific_fields(j)};
-  dat = [dat array2table(round(data.(var), var_precision(j)), 'VariableNames', ...
+  dat = [dat array2table(compose('%e',data.(var)), 'VariableNames', ...
     cellfun(@(x) [var '_' x], cellstr(num2str((1:size(data.(var), 2))')), 'un', 0))];
+  % old formating
+  % dat = [dat array2table(round(data.(var), var_precision(j)), 'VariableNames', ...
+  %   cellfun(@(x) [var '_' x], cellstr(num2str((1:size(data.(var), 2))')), 'un', 0))];
 end
 writetable(dat, fullfile(file_path, [file_name file_ext]), 'Encoding','US-ASCII', ...
   'Filetype', 'text','WriteMode','Append', 'WriteVariableNames',false,'WriteRowNames',false)

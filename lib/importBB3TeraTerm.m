@@ -28,7 +28,9 @@ fclose(fid);
 
 % Build table
 n = min([size(t{4}, 1), size(t{6}, 1), size(t{8}, 1)]);
-data = table(datenum(strcat(t{1}(1:n), t{2}(1:n)), 'mm/dd/yyHH:MM:SS'),...
+% data = table(datenum(strcat(t{1}(1:n), t{2}(1:n)), 'mm/dd/yyHH:MM:SS'),...
+%              [t{4}(1:n), t{6}(1:n), t{8}(1:n)], 'VariableNames', {'dt', 'beta'});
+data = table(datetime(strcat(t{1}(1:n), t{2}(1:n)), 'InputFormat', 'MM/dd/yyHH:mm:ss'),...
              [t{4}(1:n), t{6}(1:n), t{8}(1:n)], 'VariableNames', {'dt', 'beta'});
 
 % Remove last line if it's past midnight (Bug in Inlinino)

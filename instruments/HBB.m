@@ -5,7 +5,9 @@ classdef HBB < Instrument
   properties
     PlaqueCal = '';
     TemperatureCal = '';
+    fdom_ag_parameters = '';
     lambda = [];
+    k_exp = [];
     theta = [];
 %     muFactors = [];
   end
@@ -39,9 +41,33 @@ classdef HBB < Instrument
       else
         error('Missing field TemperatureCal.');
       end
+
+      if isfield(cfg, 'fdom_ag_correlation')
+        [~, ~, ext] = fileparts(cfg.fdom_ag_correlation);
+        if any(strcmp(ext, {'.csv', 'xlsx', 'xls'}))
+          obj.fdom_ag_parameters = readtable(cfg.fdom_ag_correlation);
+        elseif strcmp(ext, '.mat')
+          foo = load(cfg.fdom_ag_correlation);
+          fname = fieldnames(foo);
+          obj.fdom_ag_parameters = foo.(fname{1});
+        else
+          error('File extension not supported: %s', cfg.fdom_ag_correlation)
+        end
+        % check variable names
+        if ~all(any(strcmpi(obj.fdom_ag_parameters.Properties.VariableNames, 'wl')) & ...
+            any(strcmpi(obj.fdom_ag_parameters.Properties.VariableNames, 'slope')) & ...
+            any(strcmpi(obj.fdom_ag_parameters.Properties.VariableNames, 'intercept')))
+          error("Cannot find all necessary variables, fdom_ag parameters table must contain variable: 'wl', 'slope', and 'intercept'")
+        end
+      else
+        obj.fdom_ag_parameters = [];
+        warning('Missing field fdom_ag_correlation for attenuation correction.');
+      end
     
       if isfield(cfg, 'theta'); obj.theta = cfg.theta;
       else; error('Missing field theta.'); end
+      if isfield(cfg, 'k_exp'); obj.k_exp = cfg.k_exp; % HBB pathlength 
+      else; obj.k_exp = 0.1058; fprintf("Missing field pathlength 'k_exp' in *.cfg, using HyperBB's default k_exp = 0.1058.\n"); end
 %       if isfield(cfg, 'muFactors'); obj.muFactors = cfg.muFactors;
 %       else; error('Missing field muFactors.'); end
       if isempty(obj.logger)
@@ -57,9 +83,8 @@ classdef HBB < Instrument
       % Read raw data
       switch obj.logger
         case 'InlininoHBB'
-          obj.data = iRead(@importInlininoHBB, obj.path.raw, obj.path.wk, ['HyperBB' obj.sn '_'],...
-                         days2run, 'Inlinino', force_import, ~write, true, true, '', Inf, ...
-                         obj.PlaqueCal, obj.TemperatureCal);
+          obj.data = iRead(@importInlininoHBB, obj.path.raw, obj.path.wk, ['HyperBB' obj.sn '_'], days2run, ...
+            'Inlinino', force_import, ~write, true, true, '', Inf, obj.PlaqueCal, obj.TemperatureCal);
         otherwise
           error('HBB: Unknown logger.');
       end
@@ -92,29 +117,30 @@ classdef HBB < Instrument
       end
     end
     
-    function Calibrate(obj, days2run, compute_dissolved, TSG, SWT, di_method, filt_method)
+    function Calibrate(obj, days2run, compute_dissolved, TSG, SWT, AC, CDOM, di_method, filt_method)
       SWT_constants = struct('SWITCH_FILTERED', SWT.SWITCH_FILTERED, 'SWITCH_TOTAL', SWT.SWITCH_TOTAL);
-      param = struct('lambda', obj.lambda, 'theta', obj.theta);
+      param = struct('lambda', obj.lambda, 'theta', obj.theta, 'k_exp', ...
+        obj.k_exp, 'fdom_ag_parameters', obj.fdom_ag_parameters);
 %       param = struct('lambda', obj.lambda, 'theta', obj.theta, 'muFactors', obj.muFactors);
-      % linear interpolation only, CDOM interpolation is not yet available
+      % ProcessHBB
       if compute_dissolved
         switch filt_method
           case '25percentil'
             [obj.prod.p, obj.prod.g] = processHBB(param, obj.qc.tsw, obj.qc.fsw, [], [], ...
-              obj.bin.diw, TSG, di_method, filt_method, SWT, SWT_constants, days2run);
+              obj.bin.diw, TSG, di_method, filt_method, SWT, SWT_constants, AC, CDOM, days2run);
           case 'exponential_fit'
             [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processHBB(param, obj.qc.tsw, ...
               obj.qc.fsw, obj.raw.fsw, obj.raw.bad, obj.bin.diw, TSG, ...
-              di_method, filt_method, SWT, SWT_constants, days2run);
+              di_method, filt_method, SWT, SWT_constants, AC, CDOM, days2run);
         end
       else
         switch filt_method
           case '25percentil'
-            obj.prod.p = processHBB(param, obj.qc.tsw, obj.qc.fsw, [], [], [], [], [], ...
-              filt_method, SWT, SWT_constants, days2run);
+            obj.prod.p = processHBB(param, obj.qc.tsw, obj.qc.fsw, [], [], [], TSG, [], ...
+              filt_method, SWT, SWT_constants, AC, CDOM, days2run);
           case 'exponential_fit'
             [obj.prod.p, obj.prod.g, obj.prod.FiltStat] = processHBB(param, obj.qc.tsw, obj.qc.fsw, ...
-              obj.raw.fsw, obj.raw.bad, [], [], [], filt_method, SWT, SWT_constants, days2run);
+              obj.raw.fsw, obj.raw.bad, [], TSG, [], filt_method, SWT, SWT_constants, AC, CDOM, days2run);
         end
       end
     end

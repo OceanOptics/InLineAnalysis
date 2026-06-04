@@ -23,8 +23,10 @@ while ~feof(fid) && flag_header && foo < 3
   s = regexp(l,'\t','split'); % keep empty cell
   % Get start time
     if contains(s{1}, 'WetView')
-    dt_st = datenum(s{2},'mm-dd-yyyy') +...
-        datenum(0,0,0,str2double(s{3}(1:2)),str2double(s{3}(4:5)),str2double(s{3}(7:8)));
+    dt_st = datetime(s{2},'InputFormat', 'MM-dd-yyyy') + hours(str2double(s{3}(1:2)) + ...
+      minutes(str2double(s{3}(4:5))) + str2double(s{3}(7:8);
+    % dt_st = datenum(s{2},'mm-dd-yyyy') +...
+    %     datenum(0,0,0,str2double(s{3}(1:2)),str2double(s{3}(4:5)),str2double(s{3}(7:8)));
     end
     if foo == 2
         foo = foo +1;
@@ -77,6 +79,7 @@ end
 
 % Update date & time
 data.dt = dt_st + datenum(0,0,0,0,0,(data.dt - data.dt(1))/1000);
+% data.dt = dt_st + datenum(0,0,0,0,0,(data.dt - data.dt(1))/1000);
 
 if verbose; fprintf('Done\n'); end
 end

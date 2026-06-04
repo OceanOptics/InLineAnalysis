@@ -66,7 +66,7 @@ switch instrument
       else
         nb_subplot = 2;
       end
-      fig(11);
+      fig(14);
       clf
       subplot(1,nb_subplot,1)
       binscatter(data.(varchl), data.(varHchl), 250);
@@ -101,7 +101,7 @@ switch instrument
         {'chl_ap676lh', 'Chl_lineheight'})};
       varPOC = data.Properties.VariableNames{contains(data.Properties.VariableNames, ...
         {'poc','POC','POC_cp'})};
-      fig(12);
+      fig(15);
       clf
       subplot(2,1,1)
       hold on
@@ -120,7 +120,7 @@ switch instrument
       xlim([min(data.dt) max(data.dt)]);
     end
     if any(contains(data.Properties.VariableNames, 'base_fit_ag'))
-      fig(15);
+      fig(16);
       clf
       hold on
       yyaxis('left')
@@ -163,11 +163,13 @@ switch instrument
     if any(contains(data.Properties.VariableNames, 'betap'))
       toplot = {'poc', 'bbp'};
       unit = '(mg.m^{-3})';
-      fignum = [20 21];
+      fignum = [23 24];
     elseif any(contains(data.Properties.VariableNames, 'betag'))
       toplot = {'betag'};
       unit = 'm^{-1}';
       fignum = 25;
+    else
+      error('Neither betap nor betag variables found')
     end
     for i = 1:size(toplot, 2)
       if contains(instrument, 'HBB')
@@ -202,21 +204,36 @@ switch instrument
     end
     if any(contains(data.Properties.VariableNames, 'gamma_bbp'))
       wl550 = abs(lambda - 550) == min(abs(lambda - 550));
-      fig(11);
+      fig(26);
+      tiledlayout("TileSpacing","compact","Padding","compact")
       clf
+      nexttile(1) % bbp550 vs gamma_bbp
       binscatter(data.bbp(:, wl550), data.gamma_bbp, 250);
       colormap('parula')
       set(gca, 'ColorScale', 'log')
-      % scatter(data.bbp(:, wl550), data.gamma_bbp, 7, 'filled')
       set(gca, 'XScale', 'log', 'YScale', 'linear')
       xlabel('b_{bp} 550 nm')
       ylabel('gamma b_{bp} (unitless)')
+      if any(strcmp(data.Properties.VariableNames, 'chl_ap676lh'))
+        nexttile(2) % Chl/cp550 vs bbp550/bp550
+        binscatter(data.chl_ap676lh ./ data.cp660, data.bbp(:, wl550) ./ data.bp550, 250);
+        colormap('parula')
+        set(gca, 'ColorScale', 'log')
+        set(gca, 'XScale', 'log', 'YScale', 'linear')
+        xlabel('[Chla] / c_{p} 550 nm')
+        ylabel('b_{bp}550 / b_{p}550')
+      end
+      if any(strcmp(data.Properties.VariableNames, 'bp550'))
+        nexttile([1 2]) % bbr550 timeseries
+        scatter(data.dt, data.bbp(:, wl550) ./ data.bp550, 10, 'filled')
+        ylabel('b_{bp}550 / b_{p}550')
+      end
     end
-  case {'TSG','SBE','atlasTSG'}
+  case {'TSG','SBE','atlasTSG','SBEKM','SBETN'}
     idvar = strcmpi(data.Properties.VariableNames, 't') | ...
       strcmpi(data.Properties.VariableNames, 't2') | ...
       strcmpi(data.Properties.VariableNames, 'sst');
-    if ~any(idvar)
+    if ~any(idvar) || all(isnan(data.(data.Properties.VariableNames{idvar})))
       idvar = strcmpi(data.Properties.VariableNames, 't1');
     end
     varT = data.Properties.VariableNames{idvar};
@@ -230,11 +247,17 @@ switch instrument
     yyaxis('right')
     scatter(data.dt, data.(varS), 6, 'filled'); ylabel('TSG S (PSU)');
     xlim([min(data.dt) max(data.dt)]);
-  case 'PAR'
+  case {'PAR','QSP','QCR','QSPA','QCRA'}
     fig(40);
     clf
     scatter(data.dt, data.par, 6, 'filled');
-    ylabel('PAR (\muE.m^{-2}.s^{-1})');
+    if prctile(data.par, 97.5) < 0.01
+      ylabel('PAR (E.m^{-2}.s^{-1})');
+    elseif prctile(data.par, 97.5) < 1
+      ylabel('PAR (\muE.cm^{-2}.s^{-1})');
+    else
+      ylabel('PAR (\muE.m^{-2}.s^{-1})');
+    end
     xlim([min(data.dt) max(data.dt)]);
   case {'WSCD','WSCDP','SUVF'}
     fig(50);
@@ -291,21 +314,35 @@ switch instrument
     ylabel('FvFm [??]');
     xlim([min(data.dt) max(data.dt)]);
     legend('FvFm', 'FvFmC', 'FvFmG', 'FvFmCG')
-  case 'LISST'
+  case {'LISST','LISSTX'}
     fig(80);
     clf
     scatter(data.dt, data.cp, 6, 'filled');
-    ylabel('cp m^{-1}');
+    ylabel('cp_{670} (m^{-1})');
     xlim([min(data.dt) max(data.dt)]);
-    visProd3D(data.Properties.UserData.diameters, data.dt, data.PSD, false, 'Intensity', false, 101);
+    if ishandle(11)
+      close figure 11
+    end
+    visProd3D(data.Properties.CustomProperties.theta, data.dt, data.betap, false, 'Intensity', false, 101);
+    set(gca, 'ZScale', 'log', 'XScale', 'linear');
+    zlabel(['VSF (' data.Properties.VariableUnits{strcmp(data.Properties.VariableNames, 'betap')} ')']);
+    xlabel('Angle [degrees]');
+    ylabel('Time');
+    if ishandle(21)
+      close figure 21
+    end
+    visProd3D(data.Properties.CustomProperties.diameters, data.dt, data.PSD, false, 'Intensity', false, 102);
     set(gca, 'ZScale', 'log', 'XScale', 'log');
     zlabel(['PSD (' data.Properties.VariableUnits{strcmp(data.Properties.VariableNames, 'PSD')} ')']);
     xlabel('Diameters \mum');
     ylabel('Time');
-    visProd3D(data.Properties.UserData.diameters, data.dt, data.betap, false, 'Intensity', false, 102);
+    if ishandle(31)
+      close figure 31
+    end
+    visProd3D(data.Properties.CustomProperties.diameters, data.dt, data.VSD, false, 'Intensity', false, 103);
     set(gca, 'ZScale', 'log', 'XScale', 'log');
-    zlabel(['VSF (' data.Properties.VariableUnits{strcmp(data.Properties.VariableNames, 'betap')} ')']);
-    xlabel('Angle [degree]');
+    zlabel(['VSD (' data.Properties.VariableUnits{strcmp(data.Properties.VariableNames, 'VSD')} ')']);
+    xlabel('Diameters \mum');
     ylabel('Time');
   case {'LISSTTau', 'LISSTTAU', 'TAU'}
     fig(90);

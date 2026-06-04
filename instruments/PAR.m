@@ -28,8 +28,11 @@ classdef PAR < Instrument
     
     function ReadRaw(obj, days2run, force_import, write)
       switch obj.logger
-        case 'Inlinino'
-          obj.data = iRead(@importInlininoPAR, obj.path.raw, obj.path.wk, 'Inlinino_',...
+        % case {'Inlinino','Inlinino_base'}
+        %   obj.data = iRead(@importInlininoPAR, obj.path.raw, obj.path.wk, obj.prefix,...
+        %                  days2run, 'Inlinino', force_import, ~write, true);
+        case 'Inlinino_base'
+          obj.data = iRead(@importInlinino_base, obj.path.raw, obj.path.wk, obj.prefix,...
                          days2run, 'Inlinino', force_import, ~write, true);
         otherwise
           error('PAR: Unknown logger.');

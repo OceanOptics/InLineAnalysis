@@ -5,6 +5,7 @@ classdef TSG < Instrument
   properties
     boat = '';
     temperature_variable = '';
+    salinity_variable = '';
   end
   
   methods
@@ -19,6 +20,8 @@ classdef TSG < Instrument
       else; error('Missing field boat.'); end
       if isfield(cfg, 'temperature_variable'); obj.temperature_variable = cfg.temperature_variable;
       else; error('Missing field temperature variable.'); end
+      if isfield(cfg, 'salinity_variable'); obj.salinity_variable = cfg.salinity_variable;
+      else; error('Missing field salinity variable.'); end
       
       % Change default Split method
       obj.split.mode = 'None';
@@ -87,7 +90,6 @@ classdef TSG < Instrument
             days2run, 'Inlinino', force_import, ~write, true);
       end
     end
-    
   end
 end
 

@@ -2,7 +2,7 @@ function fh = visProd3D(x, dt, data, smooth, color, autorotate, figid)
 %
 % INPUT:
 %   x <1xM double> wavelength (lambda) or scattering angle (theta)
-%   dt <Nx1 datenum> date & time
+%   dt <Nx1 datenum> or <Nx1 datetime> date & time
 %   data <NxM double> attenuation or absorption spectrum
 %   smooth <boolean> smooth data
 %   color <'Wavelength'|'Intensity'> Color data
@@ -11,9 +11,6 @@ function fh = visProd3D(x, dt, data, smooth, color, autorotate, figid)
 % EXAMPLE:
 %   visProd3D(lambda.ref, ACS.p.dt, ACS.p.ap, false); zlabel('a_p (m^{-1})');
 
-if isdatetime(dt)
-  dt = datenum(dt);
-end
 % Unselect NaN
 sel = any(~isnan(data),2);
 % Smooth
@@ -50,20 +47,22 @@ fh = fig(figid);
 %   waterfall(x, dt, Z, C);
 try
   s = surface(x, dt(sel), Z, C);
-  set(s, 'FaceColor', 'w', 'EdgeColor', 'flat', 'FaceAlpha', 0.7, 'EdgeAlpha', 0.8', ...
+  set(s, 'FaceColor', 'w', 'EdgeColor', 'flat', 'FaceAlpha', 0.7, 'EdgeAlpha', 0.8, ...
     'EdgeLighting', 'flat', 'LineWidth', 1, 'MeshStyle', 'both');
 catch
   mesh(x, dt(sel), Z, C);
-  set(s, 'FaceColor', 'w', 'EdgeColor', 'flat', 'FaceAlpha', 0.7, 'EdgeAlpha', 0.8', ...
+  set(s, 'FaceColor', 'w', 'EdgeColor', 'flat', 'FaceAlpha', 0.7, 'EdgeAlpha', 0.8, ...
     'EdgeLighting', 'flat', 'LineWidth', 1, 'MeshStyle', 'both');
   % Add light and shaddow on graph (looks nicer)
   light
 end
 
-datetick('y');
-view(20,20);
 
-set(datacursormode(fh),'UpdateFcn',@data_cursor_display_date_y);
+view(20,20);
+if ~isdatetime(dt)
+  datetick('y');
+  set(datacursormode(fh),'UpdateFcn',@data_cursor_display_date_y);
+end
 
 % xlabel('Wavelength (nm)');
 % zlabel('a_p (m^{-1})');

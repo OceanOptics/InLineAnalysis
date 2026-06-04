@@ -30,7 +30,8 @@ t = textscan(fid, parser, 'delimiter',',');
 fclose(fid);
 
 % Build table
-data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{2}, 'VariableNames', hd);
+data = table(datetime(t{1}, 'InputFormat', 'yyyy/MM/dd HH:mm:ss.SSS'), t{2}, 'VariableNames', hd);
+% data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{2}, 'VariableNames', hd);
 data.Properties.VariableUnits = strip(strsplit(unit, ','));
 
 if verbose; fprintf('Done\n'); end

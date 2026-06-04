@@ -41,11 +41,11 @@ hp.Motion = 'horizontal';
 all_ax = findobj(figure_handler, 'type', 'axes');
 all_obj = arrayfun(@(A) findobj(A, '-property', 'XData','YData','ZData'), all_ax, 'uniform', 0);
 while iscell(all_obj); all_obj= all_obj{1}; end
-if isempty(all_obj)
-  set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
-else
-  set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date_y);
-end
+% if isempty(all_obj)
+%   % set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date);
+% else
+%   set(datacursormode(figure_handler),'UpdateFcn',@data_cursor_display_date_y);
+% end
 
 hc = datacursormode();
 % Set Select (user select a chunk of data)
@@ -64,6 +64,8 @@ fprintf('\t [-] zoom out\n');
 fprintf('\t [h] horizontal zoom\n');
 fprintf('\t [v] vertical zoom\n');
 fprintf('\t [p] pan\n');
+fprintf('\t [←] or [→] horizontal pan\n');
+fprintf('\t [↑] or [↓] vertical pan\n');
 fprintf('\t [c] cursor\n');
 fprintf('\t [t] select red (total/trash)\n');
 fprintf('\t [f] select green (filtered)\n');
@@ -81,44 +83,90 @@ while ~strcmp(k, 'q')
     switch k
       case '+'
         hz.Direction = 'in';
-        if strcmp(hz.Enable, 'on')
-          hz.Enable = 'off';
+        if matlabRelease.Date >= datetime(2025,3,28) % datetime(2025,4,16)
+          zoom(figure_handler, 'on')
         else
-          hz.Enable = 'on';
+          if strcmp(hz.Enable, 'on')
+            hz.Enable = 'off';
+          else
+            hz.Enable = 'on';
+          end
         end
       case '-'
         hz.Direction = 'out';
-        if strcmp(hz.Enable, 'on')
-          hz.Enable = 'off';
+        if matlabRelease.Date >= datetime(2025,3,28)
+          zoom(figure_handler, 'on')
         else
-          hz.Enable = 'on';
+          if strcmp(hz.Enable, 'on')
+            hz.Enable = 'off';
+          else
+            hz.Enable = 'on';
+          end
         end
       case 'z'
         hz.Motion = 'both';
-        if strcmp(hz.Enable, 'on')
-          hz.Enable = 'off';
+        if matlabRelease.Date >= datetime(2025,3,28)
+          zoom(figure_handler, 'on')
         else
-          hz.Enable = 'on';
+          if strcmp(hz.Enable, 'on')
+            hz.Enable = 'off';
+          else
+            hz.Enable = 'on';
+          end
         end
       case 'h'
-        hz.Motion = 'horizontal';
-        if strcmp(hz.Enable, 'on')
-          hz.Enable = 'off';
+        if matlabRelease.Date >= datetime(2025,3,28)
+          zoom(figure_handler, 'xon')
         else
-          hz.Enable = 'on';
+          hz.Motion = 'horizontal';
+          if strcmp(hz.Enable, 'on')
+            hz.Enable = 'off';
+          else
+            hz.Enable = 'on';
+          end
         end
       case 'v'
-        hz.Motion = 'vertical';
-        if strcmp(hz.Enable, 'on')
-          hz.Enable = 'off';
+        if matlabRelease.Date >= datetime(2025,3,28)
+          zoom(figure_handler, 'yon')
         else
-          hz.Enable = 'on';
+          hz.Motion = 'vertical';
+          if strcmp(hz.Enable, 'on')
+            hz.Enable = 'off';
+          else
+            hz.Enable = 'on';
+          end
         end
       case 'p'
-        if strcmp(hp.Enable, 'on')
-          hp.Enable = 'off';
+        if matlabRelease.Date >= datetime(2025,3,28)
+          pan(figure_handler, 'toggle')
         else
-          hp.Enable = 'on';
+          if strcmp(hp.Enable, 'on')
+            hp.Enable = 'off';
+          else
+            hp.Enable = 'on';
+          end
+        end
+      case {'↑','↓'}
+        hp.Motion = 'vertical';
+        if matlabRelease.Date >= datetime(2025,3,28)
+          pan(figure_handler, 'yon')
+        else
+          if strcmp(hp.Enable, 'on')
+            hp.Enable = 'off';
+          else
+            hp.Enable = 'on';
+          end
+        end
+      case {'←','→'}
+        hp.Motion = 'horizontal';
+        if matlabRelease.Date >= datetime(2025,3,28)
+          pan(figure_handler, 'xon')
+        else
+          if strcmp(hp.Enable, 'on')
+            hp.Enable = 'off';
+          else
+            hp.Enable = 'on';
+          end
         end
       case 'c'
         if strcmp(hc.Enable, 'on')
@@ -130,12 +178,12 @@ while ~strcmp(k, 'q')
         foo = ginput(2);
         x_lim = xlim(); y_lim = ylim();
         if ~isdatetime(x_lim)
-            dt_sel_t = foo(:,1)';
+          dt_sel_t = foo(:,1)';
         else
-            ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_t = xdate(:,1)';
+          ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_t = xdate(:,1)';
         end
-        user_selection_t = [user_selection_t; dt_sel_t];
-        fprintf('%s - %s\n', datestr(dt_sel_t(1)), datestr(dt_sel_t(2)));
+        user_selection_t = [user_selection_t; dt_sel_t]; %#ok<*AGROW>
+        fprintf('%s - %s\n', char(dt_sel_t(1)), char(dt_sel_t(2)));
         % Plot selected area
         area(dt_sel_t,[y_lim(2), y_lim(2)], y_lim(1), 'FaceColor', [1 0.3 0.3], 'FaceAlpha', 0.3, 'EdgeColor', 'none');
 
@@ -143,12 +191,12 @@ while ~strcmp(k, 'q')
         foo = ginput(2);
         x_lim = xlim(); y_lim = ylim();
         if ~isdatetime(x_lim)
-            dt_sel_f = foo(:,1)';
+          dt_sel_f = foo(:,1)';
         else
-            ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_f = xdate(:,1)';
+          ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_f = xdate(:,1)';
         end
         user_selection_f = [user_selection_f; dt_sel_f];
-        fprintf('%s - %s\n', datestr(dt_sel_f(1)), datestr(dt_sel_f(2)));
+        fprintf('%s - %s\n', char(dt_sel_f(1)), char(dt_sel_f(2)));
         % Plot selected area
         area(dt_sel_f,[y_lim(2), y_lim(2)], y_lim(1), 'FaceColor', [0.3 1 0.3], 'FaceAlpha', 0.3, 'EdgeColor', 'none');
 
@@ -156,12 +204,12 @@ while ~strcmp(k, 'q')
         foo = ginput(2);
         x_lim = xlim(); y_lim = ylim();
         if ~isdatetime(x_lim)
-            dt_sel_x = foo(:,1)';
+          dt_sel_x = foo(:,1)';
         else
-            ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_x = xdate(:,1)';
+          ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_x = xdate(:,1)';
         end
         user_selection_x = [user_selection_x; dt_sel_x];
-        fprintf('%s - %s\n', datestr(dt_sel_x(1)), datestr(dt_sel_x(2)));
+        fprintf('%s - %s\n', char(dt_sel_x(1)), char(dt_sel_x(2)));
         % Plot selected area
         area(dt_sel_x,[y_lim(2), y_lim(2)], y_lim(1), 'FaceColor', [0.3 0.3 0.3], 'FaceAlpha', 0.3, 'EdgeColor', 'none');
 
@@ -169,32 +217,61 @@ while ~strcmp(k, 'q')
         foo = ginput(1);
         x_lim = xlim(); y_lim = ylim();
         if ~isdatetime(x_lim)
-            dt_sel_s = foo(:,1)';
+          dt_sel_s = foo(:,1)';
         else
-            ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_s = xdate(:,1)';
+          ax = gca; xdate = num2ruler(foo, ax.XAxis); dt_sel_s = xdate(:,1)';
         end
         user_selection_s = [user_selection_s; dt_sel_s];
-        fprintf('%s\n', datestr(dt_sel_s));
+        fprintf('%s\n', char(dt_sel_s));
         % Plot selected area
         plot([dt_sel_s dt_sel_s], [y_lim(1), y_lim(2)], '-', 'Color', [1 0.2 0.2]);
 
       case 'd'
-        % delete from plot directly
-        datatip = struct2table(getCursorInfo(hc));
-        if isempty(all_obj(end).ZData)
-          user_selection_d = [user_selection_d; datatip.Position(:,1)];
-          fprintf('%s\n', strjoin(cellstr(datestr(datatip.Position(:,1))), ' | '));
-          for todel = 1:size(datatip.Position(:,1), 1)
-            all_obj(end).YData(all_obj(end).XData == datatip.Position(todel,1)) = NaN;
+        if ~isempty(all_obj)
+          % delete from plot directly
+          dth = findall(figure_handler, 'Type', 'DataTip');
+          if isempty(all_obj(end).ZData)
+            try
+              datatip = datetime(strrep(cellfun(@(x) x{2},{dth.Content}','un',0),'Y ',''),'Format','yyyy-MM-dd HH:mm:ss.SSS');
+            catch
+              datatip = datetime(strrep(cellfun(@(x) x{2},{dth.Content}','un',0),'Y ',''),'InputFormat', 'MMM dd, yyyy, HH:mm','Format','yyyy-MM-dd HH:mm:ss.SSS');
+            end
+            datatip = unique(datatip);
+            datatip = dateshift(datatip,'start','minute') + seconds(round(second(datatip),3));
+            user_selection_d = [user_selection_d; datatip];
+            fprintf('%s\n', strjoin(cellstr(datatip), ' | '));
+            dtround = dateshift(all_obj(end).XData,'start','minute') + seconds(round(second(all_obj(end).XData),3));
+            all_obj(end).YData(ismember(dtround, datatip), :) = NaN;
+          else
+            try
+              datatip = datetime(strrep(cellfun(@(x) x{2},{dth.Content}','un',0),'Y ',''),'Format','yyyy-MM-dd HH:mm:ss.SSS');
+            catch
+              datatip = datetime(strrep(cellfun(@(x) x{2},{dth.Content}','un',0),'Y ',''),'InputFormat', 'MMM dd, yyyy, HH:mm','Format','yyyy-MM-dd HH:mm:ss.SSS');
+            end
+            datatip = unique(datatip);
+            datatip = dateshift(datatip,'start','minute') + seconds(round(second(datatip),3));
+            user_selection_d = [user_selection_d; datatip];
+            fprintf('%s\n', strjoin(cellstr(datatip), ' | '));
+            dtround = dateshift(all_obj(end).YData,'start','minute') + seconds(round(second(all_obj(end).YData),3));
+            all_obj(end).ZData(ismember(dtround, datatip), :) = NaN;
           end
-        else
-          user_selection_d = [user_selection_d; datatip.Position(:,2)];
-          fprintf('%s\n', strjoin(cellstr(datestr(datatip.Position(:,2))), ' | '));
-          for todel = 1:size(datatip.Position(:,2), 1)
-            all_obj(end).ZData(all_obj(end).YData == datatip.Position(todel,2), :) = NaN;
-          end
+          % OLD CODE WORKING WITH DATENUM: DEPRECATED
+          % datatip = struct2table(getCursorInfo(hc));
+          % if isempty(all_obj(end).ZData)
+          %   user_selection_d = [user_selection_d; datatip.Position(:,1)];
+          %   fprintf('%s\n', strjoin(cellstr(datestr(datatip.Position(:,1))), ' | '));
+          %   for todel = 1:size(datatip.Position(:,1), 1)
+          %     all_obj(end).YData(all_obj(end).XData == datatip.Position(todel,1)) = NaN;
+          %   end
+          % else
+          %   user_selection_d = [user_selection_d; datatip.Position(:,2)];
+          %   fprintf('%s\n', strjoin(cellstr(datestr(datatip.Position(:,2))), ' | '));
+          %   for todel = 1:size(datatip.Position(:,2), 1)
+          %     all_obj(end).ZData(all_obj(end).YData == datatip.Position(todel,2), :) = NaN;
+          %   end
+          % end
+          refresh(figure_handler)
         end
-        refresh(figure_handler)
       otherwise
         if ~strcmp(k,'q')
           fprintf('?\n');
@@ -205,3 +282,13 @@ end
 fprintf('Saved selection\n');
 end
 
+
+% function txt = myupdatefcn(~,event_obj,myarray)
+%   pos = get(event_obj,'Position');
+%   ind = find(myarray(:,pos(1))== pos(2));
+%   txt = {['X: ',num2str(pos(1))],...
+%          ['Y: ',num2str(pos(2))],...
+%          ['Index: ',num2str(ind')]};
+% end
+% dcm_obj = datacursormode(fig);
+% set(dcm_obj,'UpdateFcn',{@myupdatefcn,myarray})

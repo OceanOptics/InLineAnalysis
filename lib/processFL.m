@@ -63,7 +63,7 @@ if exist('fth', 'var')
   if size(sel_start,1) ~= size(sel_end,1); error('Inconsistent fth data'); end
 
   % Compute filtered period median
-  filt_avg = table(NaN(size(sel_start)), 'VariableNames', {'dt'});
+  filt_avg = table(NaT(size(sel_start)), 'VariableNames', {'dt'});
   filt_avg.fchl = NaN(size(filt_avg,1), 1);
   filt_avg.fchl_avg_sd = NaN(size(filt_avg,1), 1);
   filt_avg.fchl_avg_n = NaN(size(filt_avg,1), 1);
@@ -137,9 +137,9 @@ filt_interp.fchl = interp1(filt_avg.dt, filt_avg.fchl, filt_interp.dt);%, 'linea
 filt_interp.fchl_avg_sd = interp1(filt_avg.dt, filt_avg.fchl_avg_sd, filt_interp.dt);%, 'linear', 'extrap');
 
 % id only day to run in all tables to plot
-filt_interp_id = filt_interp.dt >= min(days2run) & filt_interp.dt < max(days2run)+1;
-tot_id = tot.dt >= min(days2run) & tot.dt < max(days2run)+1;
-filt_avg_id = filt_avg.dt >= min(days2run) & filt_avg.dt < max(days2run)+1;
+filt_interp_id = filt_interp.dt >= min(days2run) & filt_interp.dt < max(days2run)+days(1);
+tot_id = tot.dt >= min(days2run) & tot.dt < max(days2run)+days(1);
+filt_avg_id = filt_avg.dt >= min(days2run) & filt_avg.dt < max(days2run)+days(1);
 % plot
 if exist('visFlag', 'file') && exist('fth', 'var')
   fh = visFlag([], filt_interp(filt_interp_id, :), tot(tot_id, :), [], filt_avg(filt_avg_id, :), [], 'fchl', round(size(tot.fchl, 2)/2), ...
@@ -182,13 +182,12 @@ if ~isempty(di)
   if strcmp(di_method, 'best_di')
     % select DIW with lowest a or c values between 550-650nm
     di_orig = di;
-    di_dt = datetime(di_orig.dt, 'ConvertFrom', 'datenum');
     best_di = NaN(size(di_orig,1), 1);
     for i = 1:size(di_orig,1)
       if i == 1 || i == size(di_orig,1)
-        iddi = abs(di_dt(i) - di_dt) < hours(72);
+        iddi = abs(di_orig.dt(i) - di_orig.dt) < hours(72);
       else
-        iddi = abs(di_dt(i) - di_dt) < hours(36);
+        iddi = abs(di_orig.dt(i) - di_orig.dt) < hours(36);
       end
       lowest_di = di_orig.fchl == min(di_orig.fchl(iddi, :), [], 1);
       foo = find(sum(lowest_di, 2) == max(sum(lowest_di, 2)));

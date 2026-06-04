@@ -19,7 +19,8 @@ parser = repmat('%f',1,n_column);
 
 % Get date from filename
 [~, yymmdd] = fileparts(filename);
-dt_ref = datenum(['20' yymmdd], 'yyyymmdd');
+dt_ref = datetime(['20' yymmdd], 'InputFormat','yyyyMMdd');
+% dt_ref = datenum(['20' yymmdd], 'yyyymmdd');
 
 % Open file
 fid=fopen(filename);
@@ -50,10 +51,14 @@ SS = (t{1} - HH * 10000 - MM * 100);
 % 54 LO Longitude (decimal degree)
 % 58 ZD GPS DateTime GMT Secs Since 00:00:00 01/01/1970
 % 55 GT GPS Time of Day GMT Secs 0-86400
-data = table(dt_ref + datenum(0, 0, 0, HH, MM, SS),...
+data = table(datetime(year(dt_ref), month(dt_ref), day(dt_ref), HH, MM, SS),...
              t{53}, t{54}, t{31}, t{33}, t{39}, t{40}, t{41}, t{14},...
              'VariableNames',...
              {'dt', 'lat', 'lon', 't', 's', 'o2', 'o2_sat', 'fchl', 'par'});
+% data = table(dt_ref + datenum(0, 0, 0, HH, MM, SS),...
+%              t{53}, t{54}, t{31}, t{33}, t{39}, t{40}, t{41}, t{14},...
+%              'VariableNames',...
+%              {'dt', 'lat', 'lon', 't', 's', 'o2', 'o2_sat', 'fchl', 'par'});
            
 % Replace -99 by NaN
 for v = data.Properties.VariableNames; v = v{1};

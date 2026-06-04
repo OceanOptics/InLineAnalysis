@@ -37,7 +37,7 @@ fclose(fid);
 
 % Build table
 data = table();
-data.dt = datenum(t{1}, format{1});
+% data.dt = datenum(t{1}, format{1});
 % data.dt = datetime(t{1}, 'InputFormat', ...
 %   strrep(strrep(strrep(strrep(format{1}, ':SS.', ':ss.'), 'fff', 'SSS'), '/mm/', '/MM/'), ':MM:', ':mm:'));
 data = [data array2table(horzcat(t{2:end}), 'VariableNames', hd(2:end))];

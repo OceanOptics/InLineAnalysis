@@ -25,8 +25,10 @@ t = textscan(fid, parser);
 fclose(fid);
 
 % convert the dates to matlab datenum
-dt = datenum(str2num(strcat('20', t{12}(:,5:6))), str2num(t{12}(:,3:4)), str2num(t{12}(:,1:2)), ...
+dt = datetime(str2num(strcat('20', t{12}(:,5:6))), str2num(t{12}(:,3:4)), str2num(t{12}(:,1:2)), ...
         str2num(t{11}(:,1:2)), str2num(t{11}(:,3:4)), str2num(t{11}(:,5:6)));
+% dt = datenum(str2num(strcat('20', t{12}(:,5:6))), str2num(t{12}(:,3:4)), str2num(t{12}(:,1:2)), ...
+%         str2num(t{11}(:,1:2)), str2num(t{11}(:,3:4)), str2num(t{11}(:,5:6)));
 
 % reformat data
 lat = double(t{5})+ t{6}/60;

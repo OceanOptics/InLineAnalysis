@@ -27,8 +27,10 @@ t = textscan(fid, parser, 'delimiter',',');
 fclose(fid);
 
 % Build table
-data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
+data = table(datetime(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'InputFormat', 'yyyyMMddHH:mm:ss.SSS'),...
              t{2}, t{3}, t{4}, 'VariableNames', {'dt', 'fchl', 'beta', 'fdom'});
+% data = table(datenum(cellfun(@(x) [dt_ref x], t{1}, 'UniformOutput', false), 'yyyymmddHH:MM:SS.FFF'),...
+%              t{2}, t{3}, t{4}, 'VariableNames', {'dt', 'fchl', 'beta', 'fdom'});
 
 % Remove last line if it's past midnight (Bug in Inlinino)
 if data.dt(end-1) > data.dt(end)

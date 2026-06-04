@@ -1,5 +1,5 @@
 % function SimpleMap(data, station_info, colorbarlabel, varargin)
-function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, bubble_data, bubble_label, print_station_name, text_col, biogeography)
+function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, colorscale, bubble_data, bubble_label, print_station_name, text_col, biogeography)
   % author: Guillaume Bourdin
   % created: August 13, 2020
   %
@@ -23,7 +23,21 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, bubble_
   %         - biogeography: <boolean> map onto biogeochemical provinces background
   %         - cmap_limit: <1x2 double> colormap limit
   % OUTPUT: opens a figure
-  %
+
+
+  % %% select number of colors
+  % if 
+  % datav = data(:);
+  % udata = size(unique(datav(~isnan(datav))),1);
+  % if size(udata,1) > 256
+  %   ncolo = 256;
+  % elseif size(udata,1) > 0
+  %   ncolo = size(udata,1);
+  % else
+  %   warning('No data')
+  %   ncolo = 1;
+  % end
+
   %%
   if isempty(data)
     error('Data to map empty')
@@ -38,18 +52,26 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, bubble_
       error('not enough input arguments, provide data label for colorbar (e.g. "Copepod abundance (#ind.m^{-3})"')
     case 3
       cmap_limit = [];
+      colorscale = 'auto';
       bubble_data = [];
       bubble_label = [];
       print_station_name = false;
       text_col = [];
       biogeography = false;
     case 4
+      colorscale = 'auto';
       bubble_data = [];
       bubble_label = [];
       print_station_name = false;
       text_col = [];
       biogeography = false;
     case 5
+      bubble_data = [];
+      bubble_label = [];
+      print_station_name = false;
+      text_col = [];
+      biogeography = false;
+    case 6
       print_station_name = false;
       text_col = [];
       biogeography = false;
@@ -57,64 +79,104 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, bubble_
         bubble_label = 'You forgot to add the 6th variable label and unit';
         warning('variable 6 label and unit missing, add your bubble plot legend title')
       end
-    case 6
+    case 7
       print_station_name = false;
       text_col = [];
       biogeography = false;
-    case 7
+    case 8
       biogeography = false;
       if print_station_name == true
         text_col = zeros(size(station_info,1), 3);
         warning('Print station name was true but no color provided, color set to black')
       end
-    case 8
-      biogeography = false;
     case 9
+      biogeography = false;
+    case 10
     otherwise
     error('Too many input arguments')
   end
-  
-  if print_station_name && size(station_info, 1) > 1000
+
+  if print_station_name && size(station_info, 1) > 2000
 	  print_station_name = false;
-    warning('Print station name was true but you are trying to plot > 1000 stations, "print_station_name" was set to false. Your computer thanks you')
+    warning('Print station name was true but you are trying to plot > 2000 stations, "print_station_name" was set to false. Your computer thanks you')
   end
-  
+
   if ~any(strcmp(station_info.Properties.VariableNames , 'station')) && ...
       any(strcmp(station_info.Properties.VariableNames, 'dt'))
     station_info = addvars(station_info, station_info.dt, 'NewVariableNames', 'station');
     % station_info = renamevars(station_info, 'dt', 'station');
   end
-  
+
   if print_station_name && ~iscellstr(station_info.station)
+    if isnumeric(station_info.station)
+      station_info.station = num2str(station_info.station);
+    end
 	  station_info.station = cellstr(station_info.station);
   end
-  
+
   if print_station_name && size(text_col, 1) == 1
     text_col = repmat(text_col, size(station_info, 1), 1);
   end
-  
+
   % if large data make edge transparent
   if size(data, 1) > 300
     edgcol = 'none';
   else
     edgcol = 'k';
   end
-  
-  % figure(); hold on
-  figh = figure('WindowState', 'maximize'); hold on
+
+  % if nargin < 11
+  %   figh = figure('units','normalized', 'outerposition',[0 0.025 0.5 0.5]); hold on
+  % else
+  %   switch get(figh,'type')
+  %     case 'figure'
+  %       figure(figh); hold on
+  %     case 'axes'
+  %       axes(figh); hold on
+  %     otherwise
+  %       error("Handle type '%s' not supported", get(figh,'type'))
+  %   end
+  % end
+
+  % get screen size to scale the figure
+  screen_sz = get(0,'screensize');
+  if screen_sz(3) == 2048 || screen_sz(3) == 2056
+    plot_w = 0.4;
+  elseif screen_sz(3) == 2560
+    plot_w = 0.38;
+  elseif screen_sz(3) == 3440
+    plot_w = 0.34;
+  end
+  plot_h = plot_w*0.5*screen_sz(3)/screen_sz(4);
+  figh = figure('units','normalized', 'outerposition',[0 0.025 plot_w plot_h]);
+  % figh = figure('units','normalized', 'outerposition',[0 0.025 0.4 0.4]); hold on
   set(gca, 'Visible', 'off')
-  
+
   % wrap longitude over 360°
   if all(any(station_info.lon(:) < 0) & any(station_info.lon(:) >= 0) & ...
-      sum(station_info.lon(:) < -90 | station_info.lon(:) > 90) > sum(station_info.lon(:) > -90 & station_info.lon(:) < 90))
+      sum(station_info.lon(:) < -120 | station_info.lon(:) > 120) > sum(station_info.lon(:) > -60 & station_info.lon(:) < 60))
     station_info.lon(station_info.lon < 0) = station_info.lon(station_info.lon < 0) + 360;
   end
-  
+  % station_info.lon(station_info.lon < 0) = station_info.lon(station_info.lon < 0) + 360;
+  % station_info.lon = station_info.lon + 80;
+
+
   % get lat/lon limits
   latlim = [min(station_info.lat) - (0.05 * (max(station_info.lat) - min(station_info.lat))) ...
     max(station_info.lat) + (0.05 * (max(station_info.lat) - min(station_info.lat)))];
   lonlim = [min(station_info.lon) - (0.05 * (max(station_info.lon) - min(station_info.lon))) ...
     max(station_info.lon) + (0.05 * (max(station_info.lon) - min(station_info.lon)))];
+  if lonlim(1) < -180 && lonlim(2) > 180
+    lonlim(1) = -180;
+    lonlim(2) = 180;
+  end
+
+  % lonlim(1) = 110;
+  % lonlim(2) = 70;
+
+  % if all(station_info.lon > lonlim(1) & station_info.lon < lonlim(2))
+  %   lonlim = flip(lonlim);
+  % end
   % check if mapping toolbox is installed
   if license('test', 'MAP_Toolbox')
     % if biogeochemical provinces option == true
@@ -165,10 +227,14 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, bubble_
       ax1 = axesm('robinson', 'MapLatLimit', latlim, 'MapLonLimit', lonlim,...
         'Frame', 'on', 'Grid', 'on', 'MLabelRound', 1, 'PLabelRound', 1,...
         'MeridianLabel', 'on', 'ParallelLabel', 'on',...
-        'MLineLocation', round((max(lonlim)-min(lonlim))/5, round(-log10((max(lonlim)-min(lonlim))/5))),...
-        'PLineLocation', round((max(latlim)-min(latlim))/5, round(-log10((max(latlim)-min(latlim))/5))),...
-        'MLabelLocation', round((max(lonlim)-min(lonlim))/5, round(-log10((max(lonlim)-min(lonlim))/5))),...
-        'PLabelLocation', round((max(latlim)-min(latlim))/5, round(-log10((max(latlim)-min(latlim))/5))));
+        'MLineLocation', -280:30:520,...
+        'PLineLocation', -280:30:520,...
+        'MLabelLocation', -280:30:520,...
+        'PLabelLocation', -280:30:520);
+        % 'MLineLocation', round((max(lonlim)-min(lonlim))/5, round(-log10((max(lonlim)-min(lonlim))/5))),...
+        % 'PLineLocation', round((max(latlim)-min(latlim))/5, round(-log10((max(latlim)-min(latlim))/5))),...
+        % 'MLabelLocation', round((max(lonlim)-min(lonlim))/5, round(-log10((max(lonlim)-min(lonlim))/5))),...
+        % 'PLabelLocation', round((max(latlim)-min(latlim))/5, round(-log10((max(latlim)-min(latlim))/5))));
     end
     % plot coastline
     land = shaperead('landareas.shp', 'UseGeoCoords', true);
@@ -214,7 +280,7 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, bubble_
             'MarkerEdgeColor', edgcol, 'Marker', 'o');
           scm(2).Children.MarkerFaceAlpha = .75; %.75 .3 .5
           scm(2).Children.MarkerEdgeAlpha = .15; %.15 .05 .8
-          scm(2).Children.LineWidth = 0.001;
+          scm(2).Children.LineWidth = 0.1; % 0.001
         else
           scm(2) = scatterm(ax1, station_info.lat(~all(isnan(data),2)), ...
             station_info.lon(~all(isnan(data),2)), 150, ...
@@ -223,7 +289,7 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, bubble_
             'MarkerEdgeColor', edgcol, 'Marker', 'o');
           scm(2).Children.MarkerFaceAlpha = .75; %.75 .3 .5
           scm(2).Children.MarkerEdgeAlpha = .15; %.15 .05 .8
-          scm(2).Children.LineWidth = 0.001;
+          scm(2).Children.LineWidth = 0.1;
         end
       end
     end
@@ -231,14 +297,14 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, bubble_
     if print_station_name
       distex_lat = (latlim(2)-latlim(1))*0.01;
       distex_lon = (lonlim(2)-lonlim(1))*0.005;
-      for i = 1:size(station_info)
+      for i = 1:size(station_info,1)
         textm(station_info.lat(i) + distex_lat, ...
           station_info.lon(i) + distex_lon, ...
           station_info.station(i), ...
           'Color', text_col(i,:), 'FontWeight', 'bold', 'FontSize', 14);
       end
     end
-      
+
     % % scale
     % scaleruler('on');
     % setm(handlem('scaleruler1'), 'XLoc',0.5,'YLoc',-0.5, ... % 'MajorTick', [0,250], 'MinorTick', NaN,
@@ -250,10 +316,24 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, bubble_
   else
     error('Neither mapping toolbox, nor m_map were found')
   end
-  
+
   if ~(~isempty(bubble_data) && size(data,2) == 3 && all(~isnan(data),'all') && max(data(:)) <= 1) && ...
       size(unique(data(~all(isnan(data),2))), 1) > 1
-    h = colorbar(ax1, 'eastoutside');
+    colorbar_location = 'eastoutside';
+    h = colorbar(ax1, colorbar_location);
+    ax1p = ax1.Position;
+    hp =  h.Position;
+    if strcmp(colorbar_location, 'eastoutside')
+      % set(h,'Position',[ax1p(1)+ax1p(3)*0.92 hp(2)*1.3 hp(3) hp(4)*0.85])
+      % set(h,'Position',[hp(1)*0.98 hp(2)*1.3 hp(3) hp(4)*0.89])
+      set(h,'Position',[ax1p(1)+ax1p(3) ax1p(2) hp(3) ax1p(4)])
+    elseif strcmp(colorbar_location, 'southoutside')
+      set(h,'Position',[hp(1) hp(2)*1.05 hp(3)*0.9 hp(4)])
+    elseif strcmp(colorbar_location, 'westoutside')
+      set(h,'Position',[hp(1)*0.95 hp(2) hp(3)*0.9 hp(4)])
+    elseif strcmp(colorbar_location, 'northoutside')
+      set(h,'Position',[hp(1)*1.05 hp(2) hp(3)*0.9 hp(4)])
+    end
     if exist('data_orig', 'var')
       try 
         cmap = colormap(ax1, distinguishable_colors(size(unique(data(~isnan(data))), 1)));
@@ -263,24 +343,47 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, bubble_
       dTk = diff(h.Limits) / (2*length(cmap));
       set(h,'Ticks',h.Limits(1)+dTk:2*dTk:h.Limits(2)-dTk)
       set(h,'TickLabels', unique(data_orig))
+    % elseif any(ncolo == size(colorbarlabel))
+    %   try 
+    %     cmap = colormap(ax1, distinguishable_colors(size(unique(data(~isnan(data))), 1)));
+    %   catch
+    %     warning('Distinguishable_colors function not found')
+    %   end
+    %   dTk = diff(h.Limits) / (2*length(cmap));
+    %   set(h,'Ticks',h.Limits(1)+dTk:2*dTk:h.Limits(2)-dTk)
+    %   set(h,'TickLabels', colorbarlabel)
     else
-      colormap(ax1, brewermap(128, '*Spectral'));
+      if exist('viridis','file') == 2
+        colormap(ax1, 'viridis');
+      elseif exist('morgenstemning','file') == 2
+        colormap(ax1, 'morgenstemning');
+      elseif exist('brewermap','file') == 2
+        colormap(ax1, brewermap(256, '*YlGnBu'));
+        % colormap(ax1, brewermap(256, '*Spectral'));
+      end
+      % colormap(ax1, 'morgenstemning');
+      % colormap(ax1, brewermap(256, 'BrBG'));
+      colormap(ax1, brewermap(256, '*Spectral'));
       if ~isempty(cmap_limit)
         clim(ax1, cmap_limit)
       end
     end
 %     set(h, 'ylim', [min(data(:)) max(data(:))]);
     ylabel(h, colorbarlabel)
-    if min(data(data>0)) / max(data(:)) < 0.01 % set logscale if data spans over 2 orders of magnitude
+    % set to log scale if colorscale = 'auto' and data spans more than 3 orders of magnitude 
+    if min(data(data>0)) / max(data(:)) < 0.001 && (strcmp(colorscale, 'auto') || isempty(colorscale) || ~strcmp(colorscale, 'linear'))
+      colorscale = 'log';
+    end
+    if strcmp(colorscale, 'log')
       extick = get(h, 'YTick');
       set(gca, 'ColorScale', 'log')
       if h.Ruler.Exponent > -4
         h.Ticks = extick;
       end
     end
-    set(gca,'FontSize',20)
+    set(gca,'FontSize',14)
   elseif size(unique(data(~all(isnan(data),2))), 1) == 1
-    textm(max(latlim)+range(latlim)/18, min(lonlim), colorbarlabel, 'FontSize',18)
+    textm(max(latlim)+range(latlim)/18, min(lonlim), colorbarlabel, 'FontSize',12)
   end
   % Legend bubble size map
   if ~isempty(bubble_data)% build logrithmic size scale
