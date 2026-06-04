@@ -1561,7 +1561,7 @@ function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrSemiempir
   if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
   
   % Define empirical function of scattering correction at lambda reference
-  ap715 = @(ap) 0.0831 * ap;
+  ap715 = @(ap) 0.0823 * ap;
 
   % correct for residual temperature signal
   [ap_Tcorr, cp_Tcorr, flag_Tresidual] = ResidualTemperatureCorrection(wl, ap_approx, cp_approx, psi, iNIR, iref, dt, ap715(ap_approx(:,iref)), 'Semiempirical_blended1');
@@ -1734,7 +1734,7 @@ function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrSemiempir
   if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
   
   % Define empirical function of scattering correction at lambda reference (From Bourdin et al. 2025)
-  ap715 = @(ap) 0.0831 * ap;
+  ap715 = @(ap) 0.0823 * ap;
 
   % correct for residual temperature signal
   [ap_Tcorr, cp_Tcorr, flag_Tresidual] = ResidualTemperatureCorrection(wl, ap_approx, cp_approx, psi, iNIR, iref, dt, ap715(ap_approx(:,iref)), 'Semiempirical_blended2');
@@ -1765,7 +1765,7 @@ function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrSemiempir
   if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
   
   % Define empirical function of scattering correction at lambda reference (From Bourdin et al. 2025)
-  ap715 = @(ap) 0.0831 * ap;
+  ap715 = @(ap) 0.0823 * ap;
 
   % correct for residual temperature signal
   [ap_Tcorr, cp_Tcorr, flag_Tresidual] = ResidualTemperatureCorrection(wl, ap_approx, cp_approx, psi, iNIR, iref, dt, ap715(ap_approx(:,iref)), 'Semiempirical_blended3');
