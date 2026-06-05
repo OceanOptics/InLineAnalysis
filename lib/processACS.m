@@ -557,35 +557,35 @@ function [p, g, bad, DIW_biofouling_correction] = processACS(lambda, tot, filt, 
       case 'Rottgers2013_semiempirical'
         [p.ap, ~, filt_interp.flag_Tresidual] = ResidualTempScatterCorrRottgers_semiempirical(p.ap, cp_for_apresiduals_corr, lambda.a, psi, p.dt);
         fprintf(' Done\n')
-        fprintf('cp %s residual temperature and scattering correction ', strrep(scattering_correction, '_', ' '))
+        fprintf('cp %s residual temperature correction ', strrep(scattering_correction, '_', ' '))
         [~, p.cp, ~] = ResidualTempScatterCorrRottgers_semiempirical(ap_for_cpresiduals_corr, p.cp, lambda.c, psi, p.dt);
         nap_offset = true;
         fprintf(' Done\n')
       case 'Zaneveld1994_proportional'
         [p.ap, ~, filt_interp.flag_Tresidual] = ResidualTempScatterCorrZaneveld_proportional(p.ap, cp_for_apresiduals_corr, lambda.a, psi, p.dt);
         fprintf(' Done\n')
-        fprintf('cp %s residual temperature and scattering correction ', strrep(scattering_correction, '_', ' '))
+        fprintf('cp %s residual temperature correction ', strrep(scattering_correction, '_', ' '))
         [~, p.cp, ~] = ResidualTempScatterCorrZaneveld_proportional(ap_for_cpresiduals_corr, p.cp, lambda.c, psi, p.dt);
         nap_offset = false;
         fprintf(' Done\n')
       case 'Semiempirical_blended1'
         [p.ap, ~, filt_interp.flag_Tresidual] = ResidualTempScatterCorrSemiempirical_blended1(p.ap, cp_for_apresiduals_corr, lambda.a, psi, p.dt);
         fprintf(' Done\n')
-        fprintf('cp %s residual temperature and scattering correction ', strrep(scattering_correction, '_', ' '))
+        fprintf('cp %s residual temperature correction ', strrep(scattering_correction, '_', ' '))
         [~, p.cp, ~] = ResidualTempScatterCorrSemiempirical_blended1(ap_for_cpresiduals_corr, p.cp, lambda.c, psi, p.dt);
         nap_offset = true;
         fprintf(' Done\n')
       case 'Semiempirical_blended2'
         [p.ap, ~, filt_interp.flag_Tresidual] = ResidualTempScatterCorrSemiempirical_blended2(p.ap, cp_for_apresiduals_corr, lambda.a, psi, p.dt);
         fprintf(' Done\n')
-        fprintf('cp %s residual temperature and scattering correction ', strrep(scattering_correction, '_', ' '))
+        fprintf('cp %s residual temperature correction ', strrep(scattering_correction, '_', ' '))
         [~, p.cp, ~] = ResidualTempScatterCorrSemiempirical_blended2(ap_for_cpresiduals_corr, p.cp, lambda.c, psi, p.dt);
         nap_offset = true;
         fprintf(' Done\n')
       case 'Semiempirical_blended3'
         [p.ap, ~, filt_interp.flag_Tresidual] = ResidualTempScatterCorrSemiempirical_blended3(p.ap, cp_for_apresiduals_corr, lambda.a, psi, p.dt);
         fprintf(' Done\n')
-        fprintf('cp %s residual temperature and scattering correction ', strrep(scattering_correction, '_', ' '))
+        fprintf('cp %s residual temperature correction ', strrep(scattering_correction, '_', ' '))
         [~, p.cp, ~] = ResidualTempScatterCorrSemiempirical_blended3(ap_for_cpresiduals_corr, p.cp, lambda.c, psi, p.dt);
         nap_offset = true;
         fprintf(' Done\n')
