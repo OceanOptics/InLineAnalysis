@@ -36,7 +36,7 @@ if exist('fth', 'var')
   
   % sort filt_qc data
   filt_qc = sortrows(filt_qc, 'dt');
-  fth_temp.swt(fth_temp.swt > 0) = 1;
+  fth_temp.(fth.view.swt_variable)(fth_temp.(fth.view.swt_variable) > 0) = 1;
   % delete duplicats
   [~, L, ~] = unique(fth_temp.dt,'first');
   indexToDump = not(ismember(1:numel(fth_temp.dt),L));
@@ -51,7 +51,7 @@ if exist('fth', 'var')
   % sort dates
   [~,b] = sort(fth_interp.dt);
   fth_interp.dt = fth_interp.dt(b,:);
-  fth_interp.swt = interp1(fth_temp.dt, fth_temp.swt, fth_interp.dt, 'previous');
+  fth_interp.swt = interp1(fth_temp.dt, fth_temp.(fth.view.swt_variable), fth_interp.dt, 'previous');
   fth_interp.swt = fth_interp.swt > 0;
   % Find switch events from total to filtered
   sel_start = find(fth_interp.swt(1:end-1) == SWITCH_TOTAL & fth_interp.swt(2:end) == SWITCH_FILTERED);
@@ -96,7 +96,7 @@ if exist('fth', 'var')
       %       to optical backscattering in the open ocean. Biogeosciences Discuss 6, 291–340. 
       %       https://doi.org/10.5194/bgd-6-291-2009
       fprintf('Fitting exponential to filter events ... \n')
-      filt_avg.dt = (fth_interp.dt(sel_start) + fth_interp.dt(sel_end)) ./ 2;
+      filt_avg.dt = mean([fth_interp.dt(sel_start) fth_interp.dt(sel_end)], 2);
       [filt_avg, FiltStat] = FiltExpFit('fchl', filt_avg, filt_raw, filt_bad, fth_interp.dt(sel_start), fth_interp.dt(sel_end));
       fprintf('Done\n')
       % run 25 percentile method on failed exponential fits
@@ -109,7 +109,7 @@ if exist('fth', 'var')
               filt_avg.dt(i) = foo.dt;
               filt_avg.fchl(i,~FiltStat.exitflag(i,:)) = foo.fchl(:, ~FiltStat.exitflag(i,:));
             else
-              perc25 = foo.beta > prctile(foo.beta, 25, 1);
+              perc25 = foo.fchl > prctile(foo.fchl, 25, 1);
               foo.fchl_avg_sd(perc25) = NaN;
               foo.fchl(perc25) = NaN;
               % compute average of all values smaller than 25th percentile for each filter event
@@ -158,66 +158,65 @@ end
 
 % Compute fchl particulate
 p = table(tot.dt, 'VariableNames', {'dt'});
-p.fchlp = tot.fchl - filt_interp.fchl;
-p.fchlp_avg_sd = tot.fchl_avg_sd;
+p.fchlp_v = tot.fchl - filt_interp.fchl;
 
-% Calibrate beta_p (counts to scientific units)
-p.chl = param.slope .* p.fchlp; % Dark independent
+% Calibrate fchlp (counts to scientific units)
+p.fchl = param.slope .* p.fchlp_v; % Dark independent
 
 % Propagate error
 %   Note: Error is not propagated through Scattering & Residual temperature
 %         correction as required by SeaBASS
-p.chl_sd = param.slope .* sqrt(tot.fchl_avg_sd.^2 + filt_interp.fchl_avg_sd.^2);
-p.chl_n = tot.chl_avg_n;
+p.fchl_sd = param.slope .* sqrt(tot.fchl_avg_sd.^2 + filt_interp.fchl_avg_sd.^2);
+p.fchl_n = tot.fchl_avg_n;
 
 % remove empty lines
-p(isnan(p.chl), :)=[];
+p(isnan(p.fchl), :)=[];
 
 % remove negative values
-p(any(p.chl < 0, 2),:) = [];
+p(any(p.fchl < 0, 2),:) = [];
 
 
-%% ag & cg
-if ~isempty(di)
-  if strcmp(di_method, 'best_di')
-    % select DIW with lowest a or c values between 550-650nm
-    di_orig = di;
-    best_di = NaN(size(di_orig,1), 1);
-    for i = 1:size(di_orig,1)
-      if i == 1 || i == size(di_orig,1)
-        iddi = abs(di_orig.dt(i) - di_orig.dt) < hours(72);
-      else
-        iddi = abs(di_orig.dt(i) - di_orig.dt) < hours(36);
-      end
-      lowest_di = di_orig.fchl == min(di_orig.fchl(iddi, :), [], 1);
-      foo = find(sum(lowest_di, 2) == max(sum(lowest_di, 2)));
-      di.fchl(i, :) = di_orig.fchl(foo, :);
-      di.fchl_avg_sd(i, :) = di_orig.fchl_avg_sd(foo, :);
-      
-      best_di(i) = foo(1);
-    end
-  end
-  
-  % remove when a and c are full of NaNs
-  filt_avg(all(isnan(filt_avg.fchl), 2) & all(isnan(filt_avg.fchl), 2),:) = [];
-  
-  % Interpolate filtered on Total
-  di_interp = table(filt_avg.dt, 'VariableNames', {'dt'});
-  di_interp.fchl = interp1(di.dt, di.fchl, di_interp.dt, 'linear', 'extrap');
-  di_interp.fchl_avg_sd = interp1(di.dt, di.fchl_avg_sd, di_interp.dt, 'linear', 'extrap');
-
-  % Dissolved = Filtered - DI
-  g = table(filt_avg.dt, 'VariableNames', {'dt'});
-  g.ag = filt_avg.fchl - di_interp.fchl;
-  fprintf('Done\n')
-
-  % Propagate error
-  %   Note: Error is not propagated through Scattering & Residual temperature
-  %         correction as required by SeaBASS
-  g.fchlg_sd = sqrt(filt_avg.fchl_avg_sd.^2 + di_interp.fchl_avg_sd.^2);
-  g.fchlg_n = filt_avg.fchl_avg_n;
-  fprintf('Done\n')
-  
-else
-  g = table();
-end
+% %% ag & cg
+% if ~isempty(di)
+%   if strcmp(di_method, 'best_di')
+%     % select DIW with lowest a or c values between 550-650nm
+%     di_orig = di;
+%     best_di = NaN(size(di_orig,1), 1);
+%     for i = 1:size(di_orig,1)
+%       if i == 1 || i == size(di_orig,1)
+%         iddi = abs(di_orig.dt(i) - di_orig.dt) < hours(72);
+%       else
+%         iddi = abs(di_orig.dt(i) - di_orig.dt) < hours(36);
+%       end
+%       lowest_di = di_orig.fchl == min(di_orig.fchl(iddi, :), [], 1);
+%       foo = find(sum(lowest_di, 2) == max(sum(lowest_di, 2)));
+%       di.fchl(i, :) = di_orig.fchl(foo, :);
+%       di.fchl_avg_sd(i, :) = di_orig.fchl_avg_sd(foo, :);
+% 
+%       best_di(i) = foo(1);
+%     end
+%   end
+% 
+%   % remove when a and c are full of NaNs
+%   filt_avg(all(isnan(filt_avg.fchl), 2) & all(isnan(filt_avg.fchl), 2),:) = [];
+% 
+%   % Interpolate filtered on Total
+%   di_interp = table(filt_avg.dt, 'VariableNames', {'dt'});
+%   di_interp.fchl = interp1(di.dt, di.fchl, di_interp.dt, 'linear', 'extrap');
+%   di_interp.fchl_avg_sd = interp1(di.dt, di.fchl_avg_sd, di_interp.dt, 'linear', 'extrap');
+% 
+%   % Dissolved = Filtered - DI
+%   g = table(filt_avg.dt, 'VariableNames', {'dt'});
+%   g.ag = filt_avg.fchl - di_interp.fchl;
+%   fprintf('Done\n')
+% 
+%   % Propagate error
+%   %   Note: Error is not propagated through Scattering & Residual temperature
+%   %         correction as required by SeaBASS
+%   g.fchlg_sd = sqrt(filt_avg.fchl_avg_sd.^2 + di_interp.fchl_avg_sd.^2);
+%   g.fchlg_n = filt_avg.fchl_avg_n;
+%   fprintf('Done\n')
+% 
+% else
+%   g = table();
+% end

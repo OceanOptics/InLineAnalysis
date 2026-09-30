@@ -189,7 +189,7 @@ cfg.instruments.(['WS3S' SN]).dark = 0.076;
 cfg.instruments.(['WS3S' SN]).logger = 'Inlinino_base';
 cfg.instruments.(['WS3S' SN]).analog_channel = ['C1_WS3S' SN];
 if contains(interface, 'ADU100') || contains(interface, 'DataQ')
-  cfg.instruments.(['WS3S' SN]).ila_prefix = [interface '_'];
+  cfg.instruments.(['WS3S' SN]).ila_prefix = interface;
   raw_path = fullfile(PATH_ROOT, 'raw', interface);
 else
   cfg.instruments.(['WS3S' SN]).ila_prefix = ['WS3S' SN];
@@ -203,7 +203,19 @@ cfg.instruments.(['WS3S' SN]).path = struct('raw',  raw_path,...
                                   'wk', fullfile(PATH_ROOT, 'wk', ['WS3S' SN]),...
                                   'prod', fullfile(PATH_ROOT, 'prod'),...
                                   'ui', fullfile(PATH_ROOT, 'ui', ['WS3S' SN]));
-cfg.instruments.(['WS3S' SN]).view = struct('varname', 'fdom', 'varcol', 1);
+cfg.instruments.(['WS3S' SN]).view = struct('varname', 'fchl', 'varcol', 1);
+
+%%% ALFA %%%
+SN = '011';
+cfg.instruments.(['ALFA' SN]) = struct();
+cfg.instruments.(['ALFA' SN]).model = 'ALFA';
+cfg.instruments.(['ALFA' SN]).sn = SN;
+cfg.instruments.(['ALFA' SN]).logger = 'ALFA_LabView_m';
+cfg.instruments.(['ALFA' SN]).path = struct('raw', fullfile(PATH_ROOT, 'raw', ['ALFA' SN]),...
+                                  'wk', fullfile(PATH_ROOT, 'wk', ['ALFA' SN]),...
+                                  'prod', fullfile(PATH_ROOT, 'prod'),...
+                                  'ui', fullfile(PATH_ROOT, 'ui', ['ALFA' SN]));
+cfg.instruments.(['ALFA' SN]).view = struct('varname', 'Chlb');
 
 %%% LISST100X %%%
 model = 'LISST100X'; % 100X 200X
@@ -294,7 +306,7 @@ cfg.process.split = struct();
 cfg.process.split.reference = 'FLOW';
 cfg.process.split.buffer = struct();
 cfg.process.split.skip = cfg.process.instruments2run(contains(lower(cfg.process.instruments2run), ...
-  {'flow','tsg','sbe45','sbe3845','nmea','par', 'alfa'}));
+  {'flow','tsg','sbe45','sbe3845','nmea','par'})); % 'alfa'
 % Set buffer length depending on instrument type (default).
 % To customize buffer length, uncomment section below
 for i = 1:length(cfg.process.instruments2run)
@@ -316,6 +328,8 @@ for i = 1:length(cfg.process.instruments2run)
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = seconds([180, 60]); % [540, 360] for LISST
   elseif any(contains(lower(cfg.process.instruments2run{i}), {'lissttau','lisst-tau'}))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = seconds([180, 60]); % [180, 60] for LISST-Tau
+  elseif any(contains(lower(cfg.process.instruments2run{i}), 'alfa'))
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = seconds([180, 180]); % [180, 180] for ALFA
   else
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = seconds([180, 60]);
   end
@@ -367,7 +381,7 @@ for i = 1:length(cfg.process.instruments2run)
   elseif any(contains(lower(cfg.process.instruments2run{i}), {'lissttau','lisst-tau'}))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = minutes(1); % 1 min for LISST-Tau
   elseif any(contains(lower(cfg.process.instruments2run{i}), 'alfa'))
-    cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = minutes(10); % 10 min for ALFA
+    cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = minutes(5); % 5 min for ALFA
   else
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = minutes(1);
   end
@@ -484,8 +498,8 @@ for i = 1:length(cfg.process.instruments2run)
                                       'CDOM_source', cfg.process.CDOM_source, ... 
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'best_di', ... % best_di normal
-                                      'scattering_correction', 'Semiempirical_blended2', ... % Rottgers2013_semiempirical Zaneveld1994_proportional Semiempirical_blended1 Semiempirical_blended2 Semiempirical_blended3 
-                                      'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
+                                      'scattering_correction', 'Semiempirical_blended2', ... % Zaneveld1994_proportional Rottgers2013_flat Rottgers2013_proportional Semiempirical_blended1 Semiempirical_blended2 Semiempirical_blended3 
+                                      'compute_ad_aphi', true); % partition ap into ad and aphi from Zheng and Stramski 2013
   % ECO-BB options
   elseif any(contains(lower(cfg.process.instruments2run{i}), 'bb') & ~contains(lower(cfg.process.instruments2run{i}), {'hyperbb', 'hbb'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', true, ...

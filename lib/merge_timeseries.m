@@ -1,4 +1,7 @@
 function merged_data = merge_timeseries(data, data_tomerge, vars, suffix, replace_consecutive_nan, spl_freq)
+  % Clean merge of data between two timeseries
+  % author: Guillaume Bourdin
+  %%
   data_wasdatenum = false;
   data_tomerge_wasdatenum = false;
   if ~isdatetime(data.dt)

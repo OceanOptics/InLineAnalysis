@@ -125,8 +125,8 @@ cfg.instruments.(['HyperBB' SN]).k_exp = 0.1058;
 cfg.instruments.(['HyperBB' SN]).ila_prefix = ['HyperBB' SN];
 cfg.instruments.(['HyperBB' SN]).logger = 'InlininoHBB';
 cfg.instruments.(['HyperBB' SN]).theta = 135;
-cfg.instruments.(['HyperBB' SN]).PlaqueCal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Plaque_20241010_142447.mat');
-cfg.instruments.(['HyperBB' SN]).TemperatureCal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Temp_20241008_130132.mat');
+cfg.instruments.(['HyperBB' SN]).hbb_cal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Plaque_SN8005.hbb_cal'); % Hbb_Cal_Plaque_SN8005.hbb_cal Hbb_Cal_Plaque_20241010_142447.mat
+cfg.instruments.(['HyperBB' SN]).hbb_tcal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Temp_SN8005.hbb_tcal'); % Hbb_Cal_Temp_SN8005.hbb_tcal Hbb_Cal_Temp_20241008_130132.mat
 cfg.instruments.(['HyperBB' SN]).path = struct('raw', fullfile(PATH_ROOT, 'raw', ['HyperBB' SN]),...
                                   'di', fullfile(PATH_ROOT, 'raw', ['HyperBB' SN], 'DI'),...
                                   'wk', fullfile(PATH_ROOT, 'wk', ['HyperBB' SN]),...
@@ -456,8 +456,8 @@ for i = 1:length(cfg.process.instruments2run)
                                       'CDOM_source', cfg.process.CDOM_source, ...
                                       'FLOW_source', 'FLOW', ...
                                       'di_method', 'best_di', ... % best_di normal
-                                      'scattering_correction', 'Semiempirical_blended2', ... % Zaneveld1994_proportional Rottgers2013_semiempirical Semiempirical_blended1 Semiempirical_blended2 Semiempirical_blended3
-                                      'compute_ad_aphi', false); % VERY SLOW: compute ad and aphi from Zheng and Stramski 2013
+                                      'scattering_correction', 'Semiempirical_blended2', ... % Zaneveld1994_proportional Rottgers2013_flat Rottgers2013_proportional Semiempirical_blended1 Semiempirical_blended2 Semiempirical_blended3
+                                      'compute_ad_aphi', true); % partition ap into ad and aphi from Zheng and Stramski 2013
   % ECO-BB options
   elseif any(contains(lower(cfg.process.instruments2run{i}), 'bb') & ~contains(lower(cfg.process.instruments2run{i}), {'hyperbb', 'hbb'}))
     cfg.process.calibrate.(cfg.process.instruments2run{i}) = struct('compute_dissolved', true, ...

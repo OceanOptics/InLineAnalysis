@@ -25,6 +25,22 @@ if fid==-1
   error('Unable to open file: %s', filename);
 end
 
+% Get file size.
+fseek(fid, 0, 'eof');
+fileSize = ftell(fid);
+frewind(fid);
+% Read the whole file.
+data = fread(fid, fileSize, 'uint8');
+% Count number of line-feeds and increase by one.
+numLines = sum(data == 10);
+fclose(fid);
+
+% Open file again to extract data
+fid=fopen(filename);
+if fid==-1
+  error('Unable to open file: %s', filename);
+end
+
 try
   % Get header
   hd = strip(strsplit(fgetl(fid), ','));
@@ -46,6 +62,7 @@ try
       cellfun(@(x) strsplit(x, {'[', ' ', ']'}), t{3}, 'un', 0), 'un', 0));
   t{4} = cell2mat(cellfun(@(c) str2double(c(2:end-1)), ...
       cellfun(@(x) strsplit(x, {'[', ' ', ']'}), t{4}, 'un', 0), 'un', 0));
+
 catch
   % Close file
   fclose(fid);
@@ -62,7 +79,7 @@ catch
   % get units skipping empty lines (bug in old Inlinino)
   unit = fgetl(fid);
   while isempty(unit)
-      unit = fgetl(fid);
+    unit = fgetl(fid);
   end
   % get lambda
   lambda = strsplit(unit, {', 1/m\tlambda=', ','});
@@ -77,6 +94,9 @@ catch
   corrupted_row_a = sz_ln ~= size(lambda_a, 2)+2;
   if any(corrupted_row_a)
     for i = 1:size(t, 2)
+      if size(t{i}, 1) > size(corrupted_row_a, 1)
+        t{i}(size(corrupted_row_a, 1)+1:end) = [];
+      end
       if size(corrupted_row_a, 1) == size(t{i}, 1)
         t{i}(corrupted_row_a, :) = [];
       end
@@ -90,6 +110,9 @@ catch
   corrupted_row_c = sz_ln ~= size(lambda_c, 2)+2;
   if any(corrupted_row_c)
     for i = 1:size(t, 2)
+      if size(t{i}, 1) > size(corrupted_row_c, 1)
+        t{i}(size(corrupted_row_c, 1)+1:end) = [];
+      end
       if size(corrupted_row_c, 1) == size(t{i}, 1)
         t{i}(corrupted_row_c, :) = [];
       end
@@ -116,6 +139,12 @@ data = table(datetime(t{1}, 'InputFormat', 'yyyy/MM/dd HH:mm:ss.SSS'), t{2}, [t{
 % data = table(datenum(t{1}, 'yyyy/mm/dd HH:MM:SS.FFF'), t{2}, [t{3}], [t{4}], ...
 %            t{5}, t{6}, t{7}, 'VariableNames', hd);
 data.Properties.VariableUnits = strip(strsplit(unit, ','));
+
+if exist('corrupted_row_a','var') || exist('corrupted_row_c','var')
+  if size(data,1) ~= numLines-sum(corrupted_row)
+    error('Unable to recover non-corrupted data from file %s, import aborted', filename);
+  end
+end
 
 % Remove last line if it's past midnight (bug in old Inlinino)
 if ~isempty(data)

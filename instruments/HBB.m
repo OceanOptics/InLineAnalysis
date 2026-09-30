@@ -3,8 +3,8 @@ classdef HBB < Instrument
   %   Detailed explanation goes here
   
   properties
-    PlaqueCal = '';
-    TemperatureCal = '';
+    hbb_cal = '';
+    hbb_tcal = '';
     fdom_ag_parameters = '';
     lambda = [];
     k_exp = [];
@@ -25,21 +25,67 @@ classdef HBB < Instrument
       % Post initialization
       if isempty(obj.view.varname); obj.view.varname = 'beta'; end
 
-      % Load HBB calibration files and lambda
-      if isfield(cfg, 'PlaqueCal')
-        % obj.PlaqueCal = cfg.PlaqueCal;
-        load(cfg.PlaqueCal, 'cal');
-        obj.PlaqueCal = cal;
-      else
-        error('Missing field PlaqueCal.')
+      % Load HBB plaque calibration file
+      load_legacy_cal = false;
+      if isfield(cfg,'PlaqueCal') && ~isfield(cfg,'hbb_cal')
+        cfg.hbb_cal = cfg.PlaqueCal;
+        cfg = rmfield(cfg,'PlaqueCal');     
       end
-
-      if isfield(cfg, 'TemperatureCal')
-        load(cfg.TemperatureCal, 'cal_temp');
-        obj.TemperatureCal = cal_temp;
-        obj.lambda = cal_temp.wl;
+      if isfield(cfg, 'hbb_cal')
+        if ~isempty(cfg.hbb_cal) & isfile(cfg.hbb_cal)
+          [calfolder, calfname, ext] = fileparts(cfg.hbb_cal);
+          if strcmp(ext, '.hbb_cal')
+            obj.hbb_cal = Hbb_ReadBinaryCalFile(cfg.hbb_cal);
+          elseif isfile(fullfile(calfolder, ['Hbb_Cal_Plaque_SN' cfg.sn '.hbb_cal'])) || isfile(fullfile(calfolder, [calfname '.hbb_cal']))
+            error('The Cal Plaque file extension in cfg is ".mat" but a newer format ".hbb_cal" was found. Make sure to use the correct Cal Plaque file.')
+          else
+            load_legacy_cal = true;
+          end
+        else
+          error('Cal Plaque file not found: %s', cfg.hbb_cal)
+        end
       else
-        error('Missing field TemperatureCal.');
+        error('Filedname "hbb_cal" not found in HyperBB cfg.')
+      end
+      % Load HBB temperature calibration file
+      load_legacy_tcal = false;
+      if isfield(cfg,'TemperatureCal') && ~isfield(cfg,'hbb_tcal')
+        cfg.hbb_cal = cfg.TemperatureCal;
+        cfg = rmfield(cfg,'TemperatureCal');     
+      end
+      if isfield(cfg, 'hbb_tcal')
+        if ~isempty(cfg.hbb_tcal) & isfile(cfg.hbb_tcal)
+          [calfolder, calfname, ext] = fileparts(cfg.hbb_tcal);
+          if strcmp(ext, '.hbb_tcal')
+            obj.hbb_tcal = Hbb_ReadBinaryTempCalFile(cfg.hbb_tcal);
+          elseif isfile(fullfile(calfolder, ['Hbb_Cal_Temp_SN' cfg.sn '.hbb_tcal'])) || isfile(fullfile(calfolder, [calfname '.hbb_tcal']))
+            error('The Cal Temp file extension in cfg is ".mat" but a newer format ".hbb_tcal" was found. Make sure to use the correct Cal Temp file.')
+          else
+            load_legacy_tcal = true;
+          end
+        else
+          error('Cal Temp file not found: %s', cfg.hbb_cal)
+        end
+      else
+        error('Filedname "hbb_tcal" not found in HyperBB cfg.')
+      end
+      % Convert cal files into new format
+      if load_legacy_cal || load_legacy_tcal
+        Hbb_ConvertCalibrations(cfg.hbb_cal, cfg.hbb_tcal)
+        if load_legacy_cal
+          movefile(strrep(cfg.hbb_cal,'.mat','.hbb_cal'), fullfile(calfolder, ['Hbb_Cal_Plaque_SN' cfg.sn '.hbb_cal']))
+          cfg.hbb_cal = fullfile(calfolder, ['Hbb_Cal_Plaque_SN' cfg.sn '.hbb_cal']);
+          obj.hbb_cal = Hbb_ReadBinaryCalFile(cfg.hbb_cal);
+        else
+          delete(strrep(cfg.hbb_cal,'.mat','.hbb_cal'))
+        end
+        if load_legacy_tcal
+          movefile(strrep(cfg.hbb_tcal,'.mat','.hbb_tcal'), fullfile(calfolder, ['Hbb_Cal_Temp_SN' cfg.sn '.hbb_tcal']))
+          cfg.hbb_tcal = fullfile(calfolder, ['Hbb_Cal_Temp_SN' cfg.sn '.hbb_tcal']);
+          obj.hbb_tcal = Hbb_ReadBinaryTempCalFile(cfg.hbb_tcal);
+        else
+          delete(strrep(cfg.hbb_tcal,'.mat','.hbb_tcal'))
+        end
       end
 
       if isfield(cfg, 'fdom_ag_correlation')
@@ -80,14 +126,18 @@ classdef HBB < Instrument
       % Get wavelengths from calibration file
       % create wk directory if doesn't exist
       if ~isfolder(obj.path.wk); mkdir(obj.path.wk); end
+      % display calibrations
+      DisplayCalibration(obj, days2run)
       % Read raw data
       switch obj.logger
         case 'InlininoHBB'
           obj.data = iRead(@importInlininoHBB, obj.path.raw, obj.path.wk, ['HyperBB' obj.sn '_'], days2run, ...
-            'Inlinino', force_import, ~write, true, true, '', Inf, obj.PlaqueCal, obj.TemperatureCal);
+            'Inlinino', force_import, ~write, true, true, '', Inf, obj.hbb_cal, obj.hbb_tcal);
         otherwise
           error('HBB: Unknown logger.');
       end
+      % get lambda from data imported directly in case calibration wasn't recorded with same lambda
+      obj.lambda = obj.data.Properties.CustomProperties.lambda;
     end
     
     function ReadRawDI(obj, days2run, force_import, write)
@@ -107,14 +157,56 @@ classdef HBB < Instrument
 %         obj.di_cfg.postfix = '_DI'; DEPRECATED with Inlinino
       end
       if isempty(obj.di_cfg.prefix); obj.di_cfg.prefix = ['HyperBB' obj.sn '_']; end
+      % display calibrations
+      DisplayCalibration(obj, days2run)
       switch obj.di_cfg.logger
         case 'InlininoHBB'
           obj.raw.diw = iRead(@importInlininoHBB, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
                          days2run, 'Inlinino', force_import, ~write, true, true, ...
-                         obj.di_cfg.postfix, Inf, obj.PlaqueCal, obj.TemperatureCal);
+                         obj.di_cfg.postfix, Inf, obj.hbb_cal, obj.hbb_tcal);
         otherwise
           error('HBB: Unknown logger.');
       end
+    end
+
+    function DisplayCalibration(obj, days2run)
+      % Display selected calibration based on days2run datetime
+      idhbb_cal = find(min(days2run) > cell2mat({obj.hbb_cal.date})',1,'last'):find(max(days2run) > cell2mat({obj.hbb_cal.date})',1,'last');
+      % plot calibration mufactors
+      figure(600); clf; hold on
+      title(sprintf('HyperBB%s calibration history (selected calibration(s) in bold)', obj.sn))
+      % convert dates to numeric
+      numeric_dates = posixtime(cell2mat({obj.hbb_cal.date})');
+      % normalize dates between 0 and 1
+      norm_dates = (numeric_dates - min(numeric_dates)) / (max(numeric_dates) - min(numeric_dates));
+      % select a base colormap and extract colors at exact normalized date positions
+      base_colormap = colormap(jet(256));
+      % linearly interpolate colors matching date spacing
+      col = interp1(linspace(0, 1, 256), base_colormap, norm_dates);
+      for c = 1:size(obj.hbb_cal,2)
+        if any(c == idhbb_cal)
+          plot(obj.hbb_cal(c).muFactorWl,obj.hbb_cal(c).muFactors,'Color',col(c,:),'LineWidth',3)
+        else
+          plot(obj.hbb_cal(c).muFactorWl,obj.hbb_cal(c).muFactors,'Color',col(c,:))
+        end
+      end
+      cb = colorbar;
+      clim([min(numeric_dates), max(numeric_dates)]); % lock color limits to timestamps
+      % place ticks based on calibration dates
+      cb.Ticks = numeric_dates;
+      cb.TickLabels = string(datetime(cell2mat({obj.hbb_cal.date})','Format','yyyy-MM-dd'));
+      % write selected calibration in bold and larger font
+      ax = cb.Ruler;
+      for i = 1:length(ax.TickLabels)
+        if any(i == idhbb_cal)
+          ax.TickLabels{i} = ['\bf\fontsize{12}' ax.TickLabels{i}]; 
+        end
+      end
+      cb.Label.String = 'Calibration dates (selected calibration(s) in bold)';
+      cb.Label.FontSize = 12;
+      xlabel('\lambda')
+      ylabel('\mu factor')
+      drawnow
     end
     
     function Calibrate(obj, days2run, compute_dissolved, TSG, SWT, AC, CDOM, di_method, filt_method)

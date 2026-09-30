@@ -24,13 +24,9 @@ ila = InLineAnalysis('cfg/TaraEuropa_cfg.m');
 % ila.cfg.days2run = datetime(2023,4,3):datetime(2024,8,22);
 
 %%% by ACS
-% ila.cfg.days2run = datetime(2023,4,3):datetime(2023,11,16);
+ila.cfg.days2run = datetime(2023,4,3):datetime(2023,11,16);
 ila.cfg.days2run = datetime(2024,2,19):datetime(2024,8,22);
 
-
-
-
-% ila.cfg.days2run = datetime(2023,5,1):datetime(2023,5,5);
 
 %% %%%%%%%%%%%%%% PROCESSING CHRONOLOGY RECOMMENDATIONS: %%%%%%%%%%%%%%% %%
 % Instruments available: 'NMEA','FLOW','SBE384504970269','SBE384504970286','SUVF6244','ACS3','ACS348','HyperBB8005','LISST100X1183','LISST200X9999','QCR2150A50351'

@@ -236,6 +236,136 @@ end
 %     cruise '_InLine_PAR_prod.csv']);
 % fprintf('Done\n');
 
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ALFA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ila = InLineAnalysis(['cfg/' cruise '_cfg.m']);
+ila.cfg.instruments2run = {'ALFA011'}; % {'FLOW', 'TSG', 'BB3','PAR', 'WSCD1082P'}
+ila.cfg.days2run = datetime(2024,10,23):datetime(2024,12,16);
+
+% populate ila.instrument
+ila.Read('prod');
+
+% interpolate SST / SSS / LatLon
+alfa_temp = ila.instrument.(cell2mat(ila.cfg.instruments2run)).prod.a;
+% merge lat, lon, sst, sss
+replace_consecutive_nan = 3*60; % 72h
+alfa = merge_timeseries(alfa_temp, tsg, {'lat', 'lon', 'sst', 'sss'});
+alfa = merge_timeseries(alfa, latlon, {'lat', 'lon'}, '', replace_consecutive_nan);
+
+% Remove NaN
+alfa(any(isnan([alfa.lat alfa.lon]),2), :) = [];
+if any(isnan([alfa.lat alfa.lon]),2)
+  alfa(any(isnan([alfa.lat alfa.lon]),2), :) = [];
+  warning('%i row with missing lat/lon (longer than %ih consecutive): deleted', ...
+    sum(any(isnan([alfa.lat alfa.lon]),2)), replace_consecutive_nan/60)
+end
+
+% add units and precision
+% alfa = renamevars(alfa, {'sst','sss','par_n'}, {'t','s','bincount'});
+alfa.Properties.VariableUnits = repmat({''}, 1, size(alfa, 2));
+alfa.Properties.VariableDescriptions = repmat({''}, 1, size(alfa, 2));
+
+% sort by date
+alfa = sortrows(alfa, 'dt');
+
+ila.visProd_timeseries()
+saveGraph(fullfile(ila.instrument.(cell2mat(ila.cfg.instruments2run)).path.prod, ...
+  'plots', [cruise '_ALFA_timeseries']), 'jpg')
+close figure 70
+
+filename = sprintf('%s_InLine_%s_%s_%s_Product_v%s.sb', cruise, ila.cfg.instruments2run{:}, ...
+  datetime(min(alfa.dt), 'Format', 'yyyyMMdd'), datetime(max(alfa.dt), 'Format', 'yyyyMMdd'), ...
+  datetime('today', 'Format', 'yyyyMMdd'));
+
+% % export product to SeaBASS format
+% ila.meta.documents = [cruise '_' ila.cfg.instruments2run{:} '_ProcessingReport_V2.pdf'];
+% ila.meta.calibration_files = [ila.cfg.instruments2run{:} '_CalSheet.pdf'];
+% exportSeaBASS(fullfile(ila.instrument.FLOW.path.prod, filename),...
+%     ila.meta,...
+%     alfa,...
+%     {'', '', ''});
+% sprintf('%s_InLine_%s_Product.sb saved', cruise, cell2mat(ila.cfg.instruments2run))
+
+% alfa = renamevars(alfa, {'t','s','bincount'}, {'sst','sss','par_n'});
+
+% % convert to uE/m^2/s for mat file
+% alfa.par = alfa.par.*10000;
+% alfa.par_sd = alfa.par_sd.*10000;
+% alfa.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'uE/m^2/s', 'uE/m^2/s', 'none'};
+
+% save ALFA prod
+fprintf('Export to mat and csv... ');
+filename = strrep(filename, '.sb', '');
+save(fullfile(ila.instrument.FLOW.path.prod, filename), 'alfa');
+writetable(alfa, fullfile(ila.instrument.FLOW.path.prod, [filename '.csv']));
+fprintf('Done\n');
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% WS3S1081P %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if ~isfile(fullfile(ila.instrument.FLOW.path.prod, 'KM24SOPACE_InLine_WS3S1081P_20241024_20241216_Product_v20260505.mat'))
+  ila.cfg.instruments2run = {'WS3S1081P'};
+  ila.cfg.days2run = datetime(2024,10,23):datetime(2024,12,16);
+  
+  % populate ila.instrument
+  ila.Read('prod');
+  
+  % extract SUVF data from obj
+  ws3s_temp = ila.instrument.(ila.cfg.instruments2run{:}).prod.p;
+  ws3s_temp = round_timestamp(ws3s_temp);
+  
+  % build ws3s table: merge lat, lon, sst, sss
+  replace_consecutive_nan = 3*60; % 3h
+  ws3s = merge_timeseries(ws3s_temp, tsg, {'lat', 'lon', 'sst', 'sss'});
+  ws3s = merge_timeseries(ws3s, latlon, {'lat', 'lon'}, '', replace_consecutive_nan);
+  
+  % Remove NaN
+  if any(isnan([ws3s.lat ws3s.lon]),2)
+    ws3s(any(isnan([ws3s.lat ws3s.lon]),2), :) = [];
+    warning('%i row with missing lat/lon (longer than %ih consecutive): deleted', ...
+      sum(any(isnan([ws3s.lat ws3s.lon]),2)), replace_consecutive_nan/60)
+  end
+  
+  % add units and precision
+  ws3s.fchlp_v = [];
+  ws3s = renamevars(ws3s, {'sst','sss','fchl_n'}, {'t','s','bincount'});
+  ws3s.Properties.VariableUnits = {'', 'degrees', 'degrees', 'degreesC', 'PSU', 'v_uncalibrated', 'v_uncalibrated', 'none'};
+  % ws3s.Properties.VariableDescriptions = {'', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.4f', '%.2f'};
+  ws3s.Properties.VariableDescriptions = {'', '%e', '%e', '%e', '%e', '%e', '%e', '%e'};
+  
+  % sort by date
+  ws3s = sortrows(ws3s, 'dt');
+  
+  ila.visProd_timeseries()
+  saveGraph(fullfile(ila.instrument.FLOW.path.prod, 'plots', [cruise '_SUVF_fdom_timeseries']), 'jpg')
+  saveGraph(fullfile(ila.instrument.FLOW.path.prod, 'plots', [cruise '_SUVF_fdom_timeseries']), 'fig')
+  close figure 50
+  
+  SimpleMap(ws3s.fdom, ws3s(:,1:3), 'SUVF fdom [v uncalibrated]')
+  saveGraph(fullfile(ila.instrument.FLOW.path.prod, 'plots', [cruise '_SUVF_fdom_map']), 'jpg')
+  saveGraph(fullfile(ila.instrument.FLOW.path.prod, 'plots', [cruise '_SUVF_fdom_map']), 'fig')
+  close figure 1
+  
+  filename = sprintf('%s_InLine_%s_%s_%s_Product_v%s.sb', cruise, ila.cfg.instruments2run{:}, ...
+    datetime(min(ws3s.dt), 'Format', 'yyyyMMdd'), datetime(max(ws3s.dt), 'Format', 'yyyyMMdd'), datetime('today', 'Format', 'yyyyMMdd'));
+  
+  % % export product to SeaBASS format
+  % ila.meta.documents = [cruise '_SUVF_ProcessingReport_V2.pdf'];
+  % ila.meta.calibration_files = 'SUVF6244_CharSheet.pdf';
+  % exportSeaBASS(fullfile(ila.instrument.FLOW.path.prod, filename),...
+  %     ila.meta,...
+  %     ws3s,...
+  %     {'', '', ''});
+  % sprintf('%s_InLine_%s_Product.sb saved', cruise, cell2mat(ila.cfg.instruments2run))
+  
+  ws3s = renamevars(ws3s, {'t','s','bincount'}, {'sst','sss','fchl_n'});
+  
+  % save SUVF prod
+  fprintf('Export to mat and csv... ');
+  filename = strrep(filename, '.sb', '');
+  save(fullfile(ila.instrument.FLOW.path.prod, filename), 'ws3s');
+  writetable(ws3s, fullfile(ila.instrument.FLOW.path.prod, [filename '.csv']));
+  fprintf('Done\n');
+else
+  load(fullfile(ila.instrument.FLOW.path.prod, 'KM24SOPACE_InLine_WS3S1081P_20241024_20241216_Product_v20260505.mat'))
+end
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SUVF6244 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if ~isfile(fullfile(ila.instrument.FLOW.path.prod, 'KM24SOPACE_InLine_SUVF6244_20241024_20241216_Product_v20260505.mat'))

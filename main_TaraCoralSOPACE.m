@@ -85,17 +85,17 @@ ila.cfg.days2run = datetime(2025,12,16):datetime(2026,4,9);
 
 %%% Once everything is ready to Calibrate, reload ila structure to clear memory
 %%% load entire cruise SUVF/TSG prods and ACS qc and run Calibrate on all at once, save particulate prods
-ila.cfg.instruments2run = {'SUVF6266','SBE455462270286'}; % merge two TSG into one to run calibrate on entire cruise at once
-ila.Read('prod');
-ila.cfg.instruments2run = {'FLOW','ACS279'};
-ila.Read('qc');
+% ila.cfg.instruments2run = {'SUVF6266','SBE455462270286'};
+% ila.Read('prod');
+% ila.cfg.instruments2run = {'FLOW','ACS279'};
+% ila.Read('qc');
 %%% run ACS DIW Calibrate (see mainDI code), save dissolved prods
 %%% load HyperBB raw and qc and run Calibrate on all at once, save particulate prods
-% ila.cfg.instruments2run = {'SUVF6266','SBE455462270286','ACS279'}; % merge two TSG into one to run calibrate on entire cruise at once
-% ila.Read('prod');
-% ila.cfg.instruments2run = {'FLOW','HyperBB8005'};
-% ila.Read('raw');
-% ila.Read('qc');
+ila.cfg.instruments2run = {'SUVF6266','SBE455462270286','ACS279'};
+ila.Read('prod');
+ila.cfg.instruments2run = {'FLOW','HyperBB8005'};
+ila.Read('raw');
+ila.Read('qc');
 %%% load LISST qc and run Calibrate on all at once, save particulate prods
 % ila.cfg.instruments2run = {'FLOW','LISST100X1183'};
 % ila.Read('qc');
@@ -103,7 +103,9 @@ ila.Read('qc');
 %%% Process PAR: entire cruise at once until prod
 % ila.cfg.instruments2run = {'QCR2150A50351'};
 
-ila.cfg.qcref.view = 'ACS279';
+% ila.cfg.instruments2run = {'HyperBB8005'};
+
+ila.cfg.qcref.view = 'HyperBB8005';
 ila.cfg.parallel = 6; % Inf
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 ila.cfg.qc.specific.run = {ila.cfg.qcref.view};
@@ -183,7 +185,7 @@ ila.CheckDataStatus();
 
 %% 4.1. Spectral QC
 % check raw spectrums AC | BB | LISST sensors
-ila.SpectralQC('LISST',{'raw'});
+ila.SpectralQC('BB',{'raw'});
 
 %% 5. Automatic QC of raw data for step in ACS spectrum, spikes in BB and LISST, saturated data, and obvious bad PAR & ALFA values
 % Tolerance factor for auto QC ACS.
@@ -254,7 +256,7 @@ ila.CheckDataStatus();
 
 %% 8. QC Interactive or Loading previous qc selection
 %%%%% Settings %%%%%
-ila.cfg.qc.mode='ui';  % load or ui
+ila.cfg.qc.mode='load';  % load or ui
 ila.cfg.qc.remove_old = false;  % remove old selection of this period
 ila.cfg.qc.qc_once_for_all = false; % true = QC all variables | false = QC variables separately)
 ila.cfg.qc.remove_when_flow_below = 0; % true = remove data when flow <= 0.5 | false = no data removal data depending on flow | number = remove data when flow <= number)

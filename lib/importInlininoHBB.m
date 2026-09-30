@@ -1,6 +1,6 @@
-function [ data, lambda ] = importInlininoHBB( filename, calfile_plaque, calfile_temp, verbose )
+function [ data, lambda ] = importInlininoHBB( filename, hbb_cal, hbb_tcal, verbose )
   % Import HyperBB data logged with Inlinino and apply SEQUOIA's processing code
-  % using calfile_plaque and calfile_temp
+  % using hbb_cal and hbb_tcal
   % Authors: SEQUOIA SCIENTIFIC
   % Modified: Guillaume Bourdin
   % Date : May 2021
@@ -14,7 +14,7 @@ function [ data, lambda ] = importInlininoHBB( filename, calfile_plaque, calfile
     fprintf('Importing %s ... ', foo{end});
   end
   
-  p.RemoveMultiplePmtGains = false;
+  p.RemoveMultiplePmtGains = true;
   try
     % Open file
     fid=fopen(filename);
@@ -35,32 +35,6 @@ function [ data, lambda ] = importInlininoHBB( filename, calfile_plaque, calfile
     % Set parser & read data
     parser = ['%s%f%f%s%s' repmat('%f', 1, size(hd(6:end),2))];
     t = textscan(fid, parser, 'delimiter', ',');
-    % try
-    %   parser = ['%s%f%f%{yyyy/MM/dd}D%{hh:mm:ss}T' repmat('%f', 1, size(hd(6:end),2))];
-    %   t = textscan(fid, parser, 'delimiter', ',');
-    % catch
-    %   fid=fopen(filename);
-    %   % Get header
-    %   hd = strip(strsplit(strrep(fgetl(fid), ',,', ', ,'), ','));
-    %   hd(strcmp(hd, 'time')) = {'dt'};
-    %   % get units skipping empty lines (bug in Inlinino)
-    %   unit = fgetl(fid);
-    %   while isempty(unit)
-    %       unit = fgetl(fid);
-    %   end
-    %   unit = strip(strsplit(strrep(unit, ',,', ', ,'), ','));
-    %   parser = ['%s%f%f%s%s' repmat('%f', 1, size(hd(6:end),2))];
-    %   t = textscan(fid, parser, 'delimiter', ',');
-    %   t{4} = NaT(size(t{1}));
-    %   t{5} = NaT(size(t{1}));
-    % end
-    % Close file
-    % fclose(fid);
-    % dat = table(datenum(t{1}), t{2}, t{3}, t{6}, t{7}, t{8}, t{9}, t{10}, ...
-    %   t{11}, t{12}, t{13}, t{14}, t{15}, t{16}, t{17}, t{18}, t{19}, t{20}, ...
-    %   t{21}, t{22}, t{23}, t{24}, t{25}, t{26}, t{27}, t{28}, t{29}, t{30}, t{31}, ...
-    %   'VariableNames', hd(~contains(hd, {'Date', 'Time', 'beta_u', 'bb'})));
-  
     % Close file
     fclose(fid);
   
@@ -137,11 +111,6 @@ function [ data, lambda ] = importInlininoHBB( filename, calfile_plaque, calfile
       end
     end
   
-    % dat = table(datenum(tend{1}), tend{2}, tend{3}, tend{6}, tend{7}, tend{8}, tend{9}, tend{10}, ...
-    %   tend{11}, tend{12}, tend{13}, tend{14}, tend{15}, tend{16}, tend{17}, tend{18}, tend{19}, tend{20}, ...
-    %   tend{21}, tend{22}, tend{23}, tend{24}, tend{25}, tend{26}, tend{27}, tend{28}, tend{29}, tend{30}, tend{31}, ...
-    %   'VariableNames', hd(~contains(hd, {'Date', 'Time', 'beta_u', 'bb'})));
-  
     % Build table
     dat = table();
     for i = 1:size(hd, 2)
@@ -169,20 +138,20 @@ function [ data, lambda ] = importInlininoHBB( filename, calfile_plaque, calfile
   % dat(isnan(dat.dt), :) = [];
   % dat.Properties.VariableUnits = unit(~contains(hd, {'Date', 'Time'}));
   
+  mg = 0;
   for ks = unique(dat.ScanIdx')
     scanSel = dat.ScanIdx==ks;
     if length(unique(dat.PmtGain(scanSel)))~=1
       if p.RemoveMultiplePmtGains
-        if verbose
-          warning(['  Scan ' num2str(ks) ' has multiple PmtGain, REMOVING'])
-        end
         dat(scanSel,:) = [];
-      else
-        if verbose
-          warning(['  Scan ' num2str(ks) ' has multiple PmtGain'])
-        end
       end
+      mg = mg + 1;
     end
+  end
+  if p.RemoveMultiplePmtGains && verbose && mg > 0
+    warning(sprintf('  %i scans (%.1f%%) with multiple PmtGain: deleted', mg, mg/size(unique(dat.ScanIdx),1)*100))
+  elseif verbose && mg > 0
+    warning(sprintf('  %i scans (%.1f%%) with multiple PmtGain', mg, mg/size(unique(dat.ScanIdx),1)*100))
   end
   
   satLevel = 4000;
@@ -228,13 +197,54 @@ function [ data, lambda ] = importInlininoHBB( filename, calfile_plaque, calfile
   dat = addvars(dat, ScatX, GainX, 'After', 'Scat3', 'NewVariableNames', {'ScatX', 'GainX'});
   
   % read cal files
-  if ~all(isfield(calfile_plaque, {'gain12', 'gain23', 'pmtGamma', 'pmtRefGain', 'H', 'rho', 'muWavelengths', 'muFactors'}))
+  if ~all(isfield(hbb_cal, {'gain1_2','gain2_3','PMTGamma','PMTReferenceGain', ...
+      'muFactorWl','muFactors','darkOffsetPMTGain','darkOffsetWl',...
+      'darkOffsetScat1','darkOffsetScat2','darkOffsetScat3','muFactorLEDTemp'})) %  'H', 'rho', 
     error('Input cal struct does not contain required fields.')
   end
-  
+  % select calibration based on data dt
+  idhbb_cal = find(min(dat.dt) > cell2mat({hbb_cal.date})',1,'last');
+  idhbb_tcal = cell2mat({hbb_tcal.date})' == hbb_cal(idhbb_cal).tempCalDate;
+
+  % % Display calibration mufactors
+  % figure(600); clf; hold on
+  % % convert dates to numeric
+  % numeric_dates = posixtime(cell2mat({hbb_cal.date})');
+  % % normalize dates between 0 and 1
+  % norm_dates = (numeric_dates - min(numeric_dates)) / (max(numeric_dates) - min(numeric_dates));
+  % % select a base colormap and extract colors at exact normalized date positions
+  % base_colormap = colormap(jet(256));
+  % % linearly interpolate colors matching date spacing
+  % col = interp1(linspace(0, 1, 256), base_colormap, norm_dates);
+  % for c = 1:size(hbb_cal,2)
+  %   if idhbb_cal == c
+  %     plot(hbb_cal(c).muFactorWl,hbb_cal(c).muFactors,'Color',col(c,:),'LineWidth',3)
+  %   else
+  %     plot(hbb_cal(c).muFactorWl,hbb_cal(c).muFactors,'Color',col(c,:))
+  %   end
+  % end
+  % cb = colorbar;
+  % clim([min(numeric_dates), max(numeric_dates)]); % lock color limits to timestamps
+  % % place ticks based on calibration dates
+  % cb.Ticks = numeric_dates;
+  % cb.TickLabels = string(datetime(cell2mat({hbb_cal.date})','Format','yyyy-MM-dd'));
+  % % write selected calibration in bold and larger font
+  % ax = cb.Ruler;
+  % for i = 1:length(ax.TickLabels)
+  %   if idhbb_cal == i
+  %     ax.TickLabels{i} = ['\bf\fontsize{12}' ax.TickLabels{i}]; 
+  %   end
+  % end
+  % cb.Label.String = 'Calibration dates (selected calibration in bold)';
+  % cb.Label.FontSize = 12;
+  % xlabel('\lambda')
+  % ylabel('\mu factor')
+  % drawnow
+
+  % Apply calibration
   if istable(dat)
     if sum(ismember(dat.Properties.VariableNames, {'Scat1', 'Scat2', 'Scat3', 'PmtGain'})) == 4
-      dat = processDataTable(dat, calfile_plaque, calfile_temp);
+      dat = processDataTable(dat, hbb_cal(idhbb_cal), hbb_tcal(idhbb_tcal));
     else
       if verbose
         warning(['dat{' num2str(kd) '} does not contain proper data.'])
@@ -246,28 +256,51 @@ function [ data, lambda ] = importInlininoHBB( filename, calfile_plaque, calfile
     end
   end
   
-  [data, lambda] = reformatHBB(dat, calfile_temp.wl);
+  % get wavelength from file and count occurences 
+  [wl_counts, wlDat] = groupcounts(dat.wl);
+  % interpolate hbb_cal to file wavelengths if not recorded at the same wavelength
+  sel_hbb_cal = hbb_cal(idhbb_cal);
+  sel_hbb_tcal = hbb_tcal(idhbb_tcal);
+  % if at least two occurences of each wavelength => scan full: file lambda are all there
+  % => interpolate mufactor on file lambda before storing calibration data in .mat files
+  if all(wl_counts > 1) % different lambda in temperature calibration not tested, to be added here eventually
+    sel_hbb_cal.muFactors = interp1(sel_hbb_cal.muFactorWl, sel_hbb_cal.muFactors, wlDat, 'pchip');
+    sel_hbb_cal.muFactorTempCorr = interp1(sel_hbb_cal.muFactorWl, sel_hbb_cal.muFactorTempCorr, wlDat, 'pchip');
+    sel_hbb_cal.muFactorLEDTemp = interp1(sel_hbb_cal.muFactorWl, sel_hbb_cal.muFactorLEDTemp, wlDat, 'pchip');
+    sel_hbb_cal.muFactorWl = wlDat;
+    lambda = wlDat;
+  elseif mean(diff(sel_hbb_tcal.wl)) == mean(diff(wlDat))
+    lambda = sel_hbb_tcal.wl;
+  elseif mean(diff(sel_hbb_cal.muFactorWl)) == mean(diff(wlDat))
+    lambda = sel_hbb_cal.muFactorWl;
+  else
+    lambda = wlDat;
+    warning('Scan incomplete, complete lambda vector could not be retrieved')
+  end
+
+  % reshape data into clean table
+  [data, lambda] = reformatHBB(dat, lambda);
   data(all(isnan(data.beta), 2), :) = [];
   
-  % save calibration information in table properties
-  data = addprop(data, {'PlaqueCal', 'TemperatureCal'}, ...
-                {'table', 'table'});
-  
-  data.Properties.CustomProperties.PlaqueCal = calfile_plaque;
-  data.Properties.CustomProperties.TemperatureCal = calfile_temp;
+  % save lambda and calibration information in table properties
+  data = addprop(data, {'lambda','hbb_cal','hbb_tcal'}, {'table','table','table'});
+  data.Properties.CustomProperties.lambda = lambda;
+  data.Properties.UserData = lambda;
+  data.Properties.CustomProperties.hbb_cal = sel_hbb_cal;
+  data.Properties.CustomProperties.hbb_tcal = sel_hbb_tcal;
   
   if verbose; fprintf('Done\n'); end
-end 
+end
 
-function dat = processDataTable(dat, cal_plaque, cal_temp)
+function dat = processDataTable(dat, hbb_cal, hbb_tcal)
 
   % Interpolate wl and pmt to find dark offset
-  darkOffset_scat1 = interp2(cal_plaque.darkCalPmtGain, cal_plaque.darkCalWavelength, ...
-    cal_plaque.darkCalScat1, dat.PmtGain, dat.wl, 'linear');
-  darkOffset_scat2 = interp2(cal_plaque.darkCalPmtGain, cal_plaque.darkCalWavelength, ...
-    cal_plaque.darkCalScat2, dat.PmtGain, dat.wl, 'linear');
-  darkOffset_scat3 = interp2(cal_plaque.darkCalPmtGain, cal_plaque.darkCalWavelength, ...
-    cal_plaque.darkCalScat3, dat.PmtGain,dat.wl, 'linear');
+  darkOffset_scat1 = interp2(hbb_cal.darkOffsetPMTGain, hbb_cal.darkOffsetWl, ...
+    hbb_cal.darkOffsetScat1, dat.PmtGain, dat.wl, 'linear');
+  darkOffset_scat2 = interp2(hbb_cal.darkOffsetPMTGain, hbb_cal.darkOffsetWl, ...
+    hbb_cal.darkOffsetScat2, dat.PmtGain, dat.wl, 'linear');
+  darkOffset_scat3 = interp2(hbb_cal.darkOffsetPMTGain, hbb_cal.darkOffsetWl, ...
+    hbb_cal.darkOffsetScat3, dat.PmtGain,dat.wl, 'linear');
   
   % Subtract Dark Offset
   scat1_darkRemoved = dat.Scat1 - darkOffset_scat1;
@@ -275,9 +308,9 @@ function dat = processDataTable(dat, cal_plaque, cal_temp)
   scat3_darkRemoved = dat.Scat3 - darkOffset_scat3;
   
   % Apply PMT and front end gain factors
-  Gpmt = (dat.PmtGain ./ cal_plaque.pmtRefGain) .^ cal_plaque.pmtGamma;
-  scat1_gainCorrected = scat1_darkRemoved .* cal_plaque.gain12 .* cal_plaque.gain23 .* Gpmt;
-  scat2_gainCorrected = scat2_darkRemoved .* cal_plaque.gain23 .* Gpmt;
+  Gpmt = (dat.PmtGain ./ hbb_cal.PMTReferenceGain) .^ hbb_cal.PMTGamma;
+  scat1_gainCorrected = scat1_darkRemoved .* hbb_cal.gain1_2 .* hbb_cal.gain2_3 .* Gpmt;
+  scat2_gainCorrected = scat2_darkRemoved .* hbb_cal.gain2_3 .* Gpmt;
   scat3_gainCorrected = scat3_darkRemoved .* Gpmt;
   
   % Add dat to output table
@@ -286,7 +319,7 @@ function dat = processDataTable(dat, cal_plaque, cal_temp)
   dat = addvars(dat, scat3_gainCorrected, 'After', 'ScatCor2', 'NewVariableNames', 'ScatCor3');
   
   % Apply temperature correction
-  tempCoeff = GetTemperatureCoefficients(cal_temp, dat.wl, dat.LedTemp);
+  tempCoeff = GetTemperatureCoefficients(hbb_tcal, dat.wl, dat.LedTemp);
   scat1_tempCorrected = dat.ScatCor1 .* tempCoeff;
   scat2_tempCorrected = dat.ScatCor2 .* tempCoeff;
   scat3_tempCorrected = dat.ScatCor3 .* tempCoeff;
@@ -306,29 +339,29 @@ function dat = processDataTable(dat, cal_plaque, cal_temp)
   dat = addvars(dat, ScatTempCorX, 'After', 'ScatTempCor3', 'NewVariableNames', 'ScatTempCorX');
   
   % Temperature correct mu calibration
-  tempCoeff_mu = GetTemperatureCoefficients(cal_temp, cal_plaque.muWavelengths, cal_plaque.muLedTemp);
-  muFactors_tempCorrected = cal_plaque.muFactors .* tempCoeff_mu;
+  tempCoeff_mu = GetTemperatureCoefficients(hbb_tcal, hbb_cal.muFactorWl, hbb_cal.muFactorLEDTemp);
+  muFactors_tempCorrected = hbb_cal.muFactors .* tempCoeff_mu;
   
   % Calculate Beta
   wlDat = sort(unique(dat.wl))';
-  muFactors = interp1(cal_plaque.muWavelengths, muFactors_tempCorrected, wlDat, 'pchip');
+  muFactors = interp1(hbb_cal.muFactorWl, muFactors_tempCorrected, wlDat, 'pchip');
   dat = addvars(dat, NaN(height(dat),1), 'After','ScatTempCorX', 'NewVariableNames', 'beta'); % preallocate array
   for kw = 1:length(wlDat)
     dat.beta(dat.wl == wlDat(kw)) = dat.ScatTempCorX(dat.wl == wlDat(kw)) .* muFactors(kw);
   end        
 end
 
-function tempCoeff = GetTemperatureCoefficients(cal_temp, wavelength, temperature) 
+function tempCoeff = GetTemperatureCoefficients(hbb_tcal, wavelength, temperature) 
   % Generate temperature correction grid
   LEDTempRange = min(temperature):0.1:max(temperature) + 0.1; % need to make sure the max value is included
-  TempCorrGrid = NaN(length(cal_temp.wl), length(LEDTempRange));
-  for n = 1:length(cal_temp.wl)
-    TempCorrGrid(n,:) = polyval(cal_temp.coeff(n,:), LEDTempRange);
+  TempCorrGrid = NaN(length(hbb_tcal.wl), length(LEDTempRange));
+  for n = 1:length(hbb_tcal.wl)
+    TempCorrGrid(n,:) = polyval(hbb_tcal.coeff(n,:), LEDTempRange);
   end
   
   % 2D interpolate (wavelength x temperature) to find temperature
   % correction factor
-  tempCoeff = interp2(LEDTempRange, cal_temp.wl, TempCorrGrid, temperature, wavelength, 'linear');
+  tempCoeff = interp2(LEDTempRange, hbb_tcal.wl, TempCorrGrid, temperature, wavelength, 'linear');
 end
 
 function [data, lambda] = reformatHBB(dat, lambda)

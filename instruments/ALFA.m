@@ -22,7 +22,7 @@ classdef ALFA < Instrument
     function ReadRaw(obj, days2run, force_import, write)
       switch obj.logger
         case 'ALFA_LabView_m'
-          obj.data = iRead(@importALFAm, obj.path.raw, obj.path.wk, 'ALFA_',...
+          obj.data = iRead(@importALFAm, obj.path.raw, obj.path.wk, ['ALFA' obj.sn '_'],...
                          days2run, 'ALFA_LabView_m', force_import, ~write, true);
         otherwise
           error('ALFA: Unknown logger.');
@@ -38,9 +38,10 @@ classdef ALFA < Instrument
         fprintf('WARNING: DI Postfix set to "_DI" \n');
         obj.di_cfg.postfix = '_DI';
       end
+      if isempty(obj.di_cfg.prefix); obj.di_cfg.prefix = ['DIW_ALFA' obj.sn '_']; end
       switch obj.logger
         case 'ALFA_LabView_m'
-          obj.raw.diw = iRead(@importALFATeraTerm, obj.path.di, obj.path.wk, 'ALFA_',...
+          obj.raw.diw = iRead(@importALFATeraTerm, obj.path.di, obj.path.wk, obj.di_cfg.prefix,...
                          days2run, 'ALFA_LabView_m', force_import, ~write, true, false, obj.di_cfg.postfix);
         otherwise
           error('ALFA: Unknown logger.');

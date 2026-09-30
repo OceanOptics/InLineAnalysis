@@ -22,8 +22,8 @@ function [p, g, bad, DIW_biofouling_correction] = processACS(lambda, tot, filt, 
     SWITCH_TOTAL = fth_constants.SWITCH_TOTAL;
   end
   % check scattering correction method
-  if ~any(strcmp(scattering_correction, {'Zaneveld1994_proportional','Rottgers2013_semiempirical','Semiempirical_blended1','Semiempirical_blended2','Semiempirical_blended3'}))
-    warning('only scattering correction supported: %s', strjoin({'Zaneveld1994_proportional','Rottgers2013_semiempirical','Semiempirical_blended1','Semiempirical_blended2','Semiempirical_blended3'}, ', '))
+  if ~any(strcmp(scattering_correction, {'Zaneveld1994_proportional','Rottgers2013_flat','Rottgers2013_proportional','Semiempirical_blended1','Semiempirical_blended2','Semiempirical_blended3'}))
+    warning('only scattering correction supported: %s', strjoin({'Zaneveld1994_proportional','Rottgers2013_flat','Rottgers2013_proportional','Semiempirical_blended1','Semiempirical_blended2','Semiempirical_blended3'}, ', '))
     error('%s residual temperature and scattering correction not supported', scattering_correction)
   end
   flow_data = FTH.qc.tsw;
@@ -548,17 +548,24 @@ function [p, g, bad, DIW_biofouling_correction] = processACS(lambda, tot, filt, 
   
   if size(lambda.a, 2) > 50 % perform two separate corrections for ap and cp only for ACS data, not AC9
     % Interpolate wavelengths for Scattering & Residual temperature correction
-    ap_for_cpresiduals_corr = interp1(lambda.a', p.ap', lambda.c', 'linear', 'extrap')';
-    cp_for_apresiduals_corr = interp1(lambda.c', p.cp', lambda.a', 'linear', 'extrap')';
+    ap_for_cpresiduals_corr = interp1(lambda.a', p.ap', lambda.c', 'spline', 'extrap')';
+    cp_for_apresiduals_corr = interp1(lambda.c', p.cp', lambda.a', 'spline', 'extrap')';
     % ap Scattering & Residual temperature correction
     % cp Residual correction (for efficiency use the one computed from ap as it should be the same)
     fprintf('ap %s residual temperature and scattering correction ', strrep(scattering_correction, '_', ' '))
     switch scattering_correction
-      case 'Rottgers2013_semiempirical'
-        [p.ap, ~, filt_interp.flag_Tresidual] = ResidualTempScatterCorrRottgers_semiempirical(p.ap, cp_for_apresiduals_corr, lambda.a, psi, p.dt);
+      case 'Rottgers2013_flat'
+        [p.ap, ~, filt_interp.flag_Tresidual] = ResidualTempScatterCorrRottgers_flat(p.ap, cp_for_apresiduals_corr, lambda.a, psi, p.dt);
         fprintf(' Done\n')
         fprintf('cp %s residual temperature correction ', strrep(scattering_correction, '_', ' '))
-        [~, p.cp, ~] = ResidualTempScatterCorrRottgers_semiempirical(ap_for_cpresiduals_corr, p.cp, lambda.c, psi, p.dt);
+        [~, p.cp, ~] = ResidualTempScatterCorrRottgers_flat(ap_for_cpresiduals_corr, p.cp, lambda.c, psi, p.dt);
+        nap_offset = true;
+        fprintf(' Done\n')
+      case 'Rottgers2013_proportional'
+        [p.ap, ~, filt_interp.flag_Tresidual] = ResidualTempScatterCorrRottgers_proportional(p.ap, cp_for_apresiduals_corr, lambda.a, psi, p.dt);
+        fprintf(' Done\n')
+        fprintf('cp %s residual temperature correction ', strrep(scattering_correction, '_', ' '))
+        [~, p.cp, ~] = ResidualTempScatterCorrRottgers_proportional(ap_for_cpresiduals_corr, p.cp, lambda.c, psi, p.dt);
         nap_offset = true;
         fprintf(' Done\n')
       case 'Zaneveld1994_proportional'
@@ -595,8 +602,12 @@ function [p, g, bad, DIW_biofouling_correction] = processACS(lambda, tot, filt, 
   else
     fprintf('ap and cp %s residual temperature and scattering correction ', strrep(scattering_correction, '_', ' '))
     switch scattering_correction
-      case 'Rottgers2013_semiempirical'
-        [p.ap, p.cp, filt_interp.flag_Tresidual] = ResidualTempScatterCorrRottgers_semiempirical(p.ap, p.cp, lambda.ref, psi, p.dt);
+      case 'Rottgers2013_flat'
+        [p.ap, p.cp, filt_interp.flag_Tresidual] = ResidualTempScatterCorrRottgers_flat(p.ap, p.cp, lambda.ref, psi, p.dt);
+        nap_offset = true;
+        fprintf(' Done\n')
+      case 'Rottgers2013_proportional'
+        [p.ap, p.cp, filt_interp.flag_Tresidual] = ResidualTempScatterCorrRottgers_proportional(p.ap, p.cp, lambda.ref, psi, p.dt);
         nap_offset = true;
         fprintf(' Done\n')
       case 'Zaneveld1994_proportional'
@@ -620,7 +631,7 @@ function [p, g, bad, DIW_biofouling_correction] = processACS(lambda, tot, filt, 
     fprintf(' Done\n')
   end
   
-  % Remove lines full of NaNs (Rottgers2013_semiempirical potentially fail when temperature correct is too large)
+  % Remove lines full of NaNs (Rottgers2013_flat potentially fail when temperature correct is too large)
   sel2rm = all(isnan(p.ap), 2) | all(isnan(p.cp), 2);
   p(sel2rm, :) = [];
   tot(sel2rm, :) = [];
@@ -886,9 +897,12 @@ function [p, g, bad, DIW_biofouling_correction] = processACS(lambda, tot, filt, 
   p.cp(todelete, :) = NaN;
 
   % flag ap spectra when ap430-700 < -0.0015
-  toflag = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
+  % toflag = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
+  toflag = any(p.ap < -0.0015 & lambda.a >= wla_430 & lambda.a <= wla_700, 2) | ...
+    (median(p.ap(:, lambda.a >= 510 & lambda.a <= 530), 2, 'omitmissing') - ...
+    median(p.ap(:, lambda.a >= 705 & lambda.a <= 725), 2, 'omitmissing') < -0.0015);
   if sum(toflag) > 0
-    fprintf('%.2f%% (%i) spectra flagged: ap 430-700 < -0.0015\n', ...
+    fprintf('%.2f%% (%i) spectra flagged: any ap[430,700] < -0.0015 or ap520 - ap715 < -0.0015\n', ...
       sum(toflag) / size(p, 1) * 100, sum(toflag))
   end
   flag.ap430_700_neg(toflag) = true;
@@ -899,7 +913,7 @@ function [p, g, bad, DIW_biofouling_correction] = processACS(lambda, tot, filt, 
   % flag ap spectra when any ap < -0.01
   toflag = any(p.ap < -0.01 & lambda.a >= wla_430 & lambda.a <= wla_700, 2);
   if sum(toflag) > 0
-    fprintf('%.2f%% (%i) spectra flagged: ap 430-700 < -0.01\n', ...
+    fprintf('%.2f%% (%i) spectra flagged: ap[430,700] < -0.01\n', ...
       sum(toflag) / size(p, 1) * 100, sum(toflag))
   end
   flag.ap_neg(toflag) = true;
@@ -1231,8 +1245,8 @@ function [p, g, bad, DIW_biofouling_correction] = processACS(lambda, tot, filt, 
 
     % Interpolate wavelength of c on a 
     % g.cg = cell2mat(arrayfun(@(i) interp1(c_wl, g.cg(i,:), a_wl, 'linear', 'extrap'), 1:size(g,1), 'UniformOutput', false)');
-    g.ag = interp1(lambda.a', g.ag', lambda.ref', 'linear', 'extrap')';
-    g.cg = interp1(lambda.c', g.cg', lambda.ref', 'linear', 'extrap')';
+    g.ag = interp1(lambda.a', g.ag', lambda.ref', 'spline', 'extrap')';
+    g.cg = interp1(lambda.c', g.cg', lambda.ref', 'spline', 'extrap')';
     fprintf('Correcting for temperature & salinity dependence ... ')
     % Temperature & Salinity Correction (No Scattering correction needed)
     [g.ag, g.cg] = TemperatureAndSalinityDependence(g.ag, g.cg, lambda.a, lambda.c, psi, flag_g.deltaTSnotcorrected_filt);
@@ -1520,8 +1534,8 @@ function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrZaneveld_
   ap_final = ap_Tcorr - ap_Tcorr(:,iref) ./ bp_approx(:,iref) .* bp_approx; 
 end
 
-%% Residual Temperature And Scattering Correction (Rottgers2013 semiempirical)
-function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrRottgers_semiempirical(ap_approx, cp_approx, wl, psi, dt)
+%% Residual Temperature And Scattering Correction (Rottgers2013 flat) using flat shape + NIR offset from Rottgers et al. (2013)
+function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrRottgers_flat(ap_approx, cp_approx, wl, psi, dt)
   fprintf('...')
   % Function from Emmanuel Boss and Guillaume Bourdin after Rottgers et al. 2013: allows absorption in NIR in case of high NAP
   % Find Near Infrared & references
@@ -1533,21 +1547,55 @@ function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrRottgers_
   if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
   
   % Define empirical function of scattering correction at lambda reference
-  ap715 = @(ap) 0.212 * ap .^ 1.135;
+  ap715 = @(ap) 0.212 * ap .^ 1.135; % non-linear NIR offset from Rottgers et al. (2013)
+  % ap715 = @(ap) 0.0823 * ap; % linear NIR offset from Bourdin et al. (submitted)
 
   % correct for residual temperature signal
-  [ap_Tcorr, cp_final, flag_Tresidual] = ResidualTemperatureCorrection(wl, ap_approx, cp_approx, psi, iNIR, iref, dt, ap715(ap_approx(:,iref)), 'Rottgers2013_semiempirical');
+  [ap_Tcorr, cp_final, flag_Tresidual] = ResidualTemperatureCorrection(wl, ap_approx, cp_approx, psi, iNIR, iref, dt, ap715(ap_approx(:,iref)), 'Rottgers2013_flat');
   
   % select ap reference and replace negative values by NaN to prevent leakage
   ap_Tcorr_iref = ap_Tcorr(:,iref);
   ap_Tcorr_iref(ap_Tcorr_iref < 0) = NaN;
-  % apply flat scattering correction
-  % ap_final = ap_Tcorr - (ap_Tcorr_iref - 0.212*ap_Tcorr_iref.^1.135);
-  ap_final = ap_Tcorr - (ap_Tcorr_iref - ap715(ap_Tcorr(:,iref)));
+  
+  % apply Rottgers2013 flat scattering correction
+  ap_final = ap_Tcorr - (ap_Tcorr_iref - ap715(ap_Tcorr_iref));
 end
 
-%% Blended 1 residual Temperature And Scattering Correction using cp shape (Slade 2015 + NIR offset from Rottgers2013 semiempirical and Bourdin et al. in prep)
-% function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrSlade_blended(ap_approx, cp_approx, wl, psi, dt)
+%% Residual Temperature And Scattering Correction (Rottgers2013 proportional+) using bp shape + NIR offset from Rottgers et al. (2013)
+function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrRottgers_proportional(ap_approx, cp_approx, wl, psi, dt)
+  fprintf('...')
+  % Function from Guillaume Bourdin after Rottgers et al. 2013: allows absorption in NIR in case of high NAP
+  % Find Near Infrared & references
+  iNIR = 710 <= wl &  wl <= 750;  % spectral srange for optimization (710 to 750nm)
+  if isempty(iNIR); error('Unable to perform correction as no wavelength available in NIR.'); end
+  % Find nearest wavelength to greater than 715 nm to use as reference for correction
+  iref = find(abs(wl - 715) == min(abs(wl - 715)), 1, 'first'); % 715 730
+  % If ACS spectra do not go up to 715 nm take the closest wavelength to 715 nm
+  if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
+  
+  % Define empirical function of scattering correction at lambda reference
+  ap715 = @(ap) 0.212 * ap .^ 1.135; % non-linear NIR offset from Rottgers et al. (2013)
+  % ap715 = @(ap) 0.0823 * ap; % linear NIR offset from Bourdin et al. (submitted)
+
+  % correct for residual temperature signal
+  [ap_Tcorr, cp_Tcorr, flag_Tresidual] = ResidualTemperatureCorrection(wl, ap_approx, cp_approx, psi, iNIR, iref, dt, ap715(ap_approx(:,iref)), 'Rottgers2013_proportional');
+  fprintf('.')
+
+  % select ap reference and replace negative values by NaN to prevent leakage
+  ap_Tcorr_iref = ap_Tcorr(:,iref);
+  ap_Tcorr_iref(ap_Tcorr_iref < 0) = NaN;
+
+  % apply Rottgers2013 proportional scattering correction
+  ec = 1/0.56; % acceptance angle correcton
+  ap_corr = ap_Tcorr - (ap_Tcorr_iref - ap715(ap_Tcorr_iref)) .* ((ec .* cp_Tcorr - ap_Tcorr) ./ (ec .* cp_Tcorr(:,iref) - ap_Tcorr_iref));
+  fprintf('.')
+  
+  % correct again for residual temperature signal after scattering correction
+  [ap_final, cp_final, flag_Tresidual2] = ResidualTemperatureCorrection(wl, ap_corr, cp_Tcorr, psi, iNIR, iref, dt, ap715(ap_approx(:,iref)), 'Rottgers2013_proportional');
+  flag_Tresidual(flag_Tresidual2) = true;
+end
+
+%% Blended 1 residual Temperature And Scattering Correction using cp shape (Slade et al. 2015) + NIR offset from Bourdin et al. (submitted)
 function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrSemiempirical_blended1(ap_approx, cp_approx, wl, psi, dt)
   % Function from Emmanuel Boss and Guillaume Bourdin after Slade and Boss 2015 and Rottgers et al. 2013: 
   % Proportional scattering correction + allows absorption in NIR in case of high NAP
@@ -1583,144 +1631,9 @@ function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrSemiempir
   % correct again for residual temperature signal after scattering correction
   [ap_final, cp_final, flag_Tresidual2] = ResidualTemperatureCorrection(wl, ap_corr, cp_Tcorr, psi, iNIR, iref, dt, ap715(ap_approx(:,iref)), 'Semiempirical_blended1');
   flag_Tresidual(flag_Tresidual2) = true;
-
-
-  % figure; hold on
-  % plot(wl, ap_Tcorr(100, :))
-  % plot(wl, ap_corr(100, :))
-  % plot(wl, ap_final_Z(100, :))
-  % legend('ap\_Tcorr','ap\_final','ap\_final_{Zaneveld}')
-
-
-  % zoom_in = wl > 550;
-  % visProd3D(wl(zoom_in), dt, ap_approx(:,zoom_in), false, 'Wavelength', false, 12);
-  % title('ap')
-  % visProd3D(wl(zoom_in), dt, cp_approx(:,zoom_in), false, 'Wavelength', false, 22);
-  % title('cp')
-  % 
-  % zoom_in = wl > 550;
-  % visProd3D(wl(zoom_in), dt, ap_corr(:,zoom_in), false, 'Wavelength', false, 13);
-  % title('ap')
-  % visProd3D(wl(zoom_in), dt, cp_Tcorr(:,zoom_in), false, 'Wavelength', false, 23);
-  % title('cp')
-  % 
-  % zoom_in = wl > 550;
-  % visProd3D(wl(zoom_in), dt, ap_final(:,zoom_in), false, 'Wavelength', false, 14);
-  % title('ap')
-  % visProd3D(wl(zoom_in), dt, cp_final(:,zoom_in), false, 'Wavelength', false, 24);
-  % title('cp')
-  % 
-  % 
-  % 
-  % visProd3D(wl, dt, ap_approx, false, 'Wavelength', false, 12);
-  % title('ap')
-  % visProd3D(wl, dt, cp_approx, false, 'Wavelength', false, 22);
-  % title('cp')
-  % 
-  % visProd3D(wl, dt, ap_corr, false, 'Wavelength', false, 13);
-  % title('ap')
-  % visProd3D(wl, dt, cp_Tcorr, false, 'Wavelength', false, 23);
-  % title('cp')
-  % 
-  % visProd3D(wl, dt, ap_final, false, 'Wavelength', false, 14);
-  % title('ap')
-  % visProd3D(wl, dt, cp_final, false, 'Wavelength', false, 24);
-  % title('cp')
-  % 
-  % 
-  % 
-  % visProd3D(wl, dt, ap_corr-ap_final, false, 'Wavelength', false, 14);
-  % title('ap')
-  % visProd3D(wl, dt, cp_Tcorr-cp_final, false, 'Wavelength', false, 24);
-  % title('cp')
-  % 
-  % % ap_iref_function = @(ap) 0.0854 * ap;
-  % % ap_iref_function = @(ap) 0.0854 * ap;
-  % 
-  % 
-  % 
-  % 
-  % 
-  % 
-  % % Select good spectra to run minimization routine on
-  % ap_approx2 = NaN(size(ap_approx));
-  % cp_approx2 = NaN(size(cp_approx));
-  % % ap_it_diff = NaN(size(ap_approx));
-  % 
-  % max_iteration = 10;
-  % i = 1;
-  % 
-  % 
-  % 
-  % 
-  % 
-  % 
-  % 
-  % figure(11); hold on
-  % while i <= max_iteration && ((all(isnan(ap_approx2),"all") && all(isnan(cp_approx2),"all")) || any(abs(ap_it_diff) > 0.001, "all"))
-  %   % Init routine parameter scattering correction
-  %   bp_approx = cp_approx - ap_approx;
-  %   sel = find(all(isfinite(ap_approx),2));
-  %   for k = sel'
-  %     deltaT(k) = fminsearch(@costFun_RTSC, 0, opts, ap_approx(k,:), bp_approx(k,:), psiT, iNIR, iref);         
-  %   end
-  %   % Interpolate linearly deltaT in case of missing few wavelength data in spectra (up to 10 min gaps)
-  %   deltaT = fillmissing(deltaT,'linear',1,'MaxGap',minutes(10),'SamplePoints',dt);
-  %   flag_deltaT(sel) = false;
-  %   % Apply temperature correction and replace negative values at iref by NaN to avoid complex solution leakage
-  %   ap_Tcorr = ap_approx - psiT.*deltaT;
-  %   cp_approx2 = cp_approx - psiT.*deltaT;
-  %   ap_Tcorr_iref = ap_Tcorr(:,iref);
-  %   ap_Tcorr_iref(ap_Tcorr_iref < 0) = NaN;
-  %   bp_Tcorr = cp_approx2 - ap_Tcorr;
-  %   % Apply scattering correction
-  %   ap_approx2 = ap_Tcorr - ap_Tcorr_iref ./ bp_Tcorr(:,iref) .* bp_Tcorr + 0.0854*ap_Tcorr_iref; % 0.212*ap_Tcorr_iref.^1.135;
-  %   % Check difference with previous iteration
-  %   ap_it_diff = ap_approx - ap_approx2;
-  %   cp_it_diff = cp_approx - cp_approx2;
-  % 
-  %   ap_approx = ap_approx2;
-  %   cp_approx = cp_approx2;
-  %   i = i + 1;
-  % 
-  %   % figure(15)
-  %   % plot(wl, mean(ap_it_diff,1,'omitmissing'))
-  %   % ylabel('ap difference between iteration')
-  %   % 
-  %   % figure;
-  %   % histogram(ap_it_diff)
-  %   % xlabel('ap difference between iteration')
-  % 
-  %   figure(11); subplot(1,2,1); hold on
-  %   plot(wl, mean(ap_it_diff,1,'omitmissing'))
-  %   ylabel('ap difference between iteration')
-  %   subplot(1,2,2); hold on
-  %   plot(wl, mean(cp_it_diff,1,'omitmissing'))
-  %   ylabel('ap difference between iteration')
-  % 
-  %   figure; subplot(1,2,1)
-  %   histogram(ap_it_diff)
-  %   xlabel('ap difference between iteration')
-  %   subplot(1,2,2)
-  %   histogram(cp_it_diff)
-  %   xlabel('cp difference between iteration')
-  % 
-  %   fprintf('.')
-  % end
-  % 
-  % zoom_in = wl > 550;
-  % visProd3D(wl(zoom_in), dt, ap_approx(:,zoom_in), false, 'Wavelength', false, 12+i);
-  % title('ap')
-  % visProd3D(wl(zoom_in), dt, cp_approx(:,zoom_in), false, 'Wavelength', false, 22+i);
-  % title('cp')
-  % 
-  % 
-  % cp_corr = cp_approx2;
-  % ap_corr = ap_approx2;
 end
 
-%% Blended 3 residual Temperature And Scattering Correction using cp shape (Zaneveld 1994 proportional + NIR offset from Rottgers2013 semiempirical and Bourdin et al. in prep)
-% function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrZaneveld_cp_blended(ap_approx, cp_approx, wl, psi, dt)
+%% Blended 3 residual Temperature And Scattering Correction using cp shape + NIR offset from Bourdin et al. (submitted)
 function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrSemiempirical_blended2(ap_approx, cp_approx, wl, psi, dt)
   % Function from Emmanuel Boss and Guillaume Bourdin after Zaneveld 1994 method 3 modified to use cp instead of bp and Rottgers et al. 2013: 
   % Proportional scattering correction + allows absorption in NIR in case of high NAP
@@ -1733,7 +1646,7 @@ function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrSemiempir
   % If ACS spectra do not go up to 715 nm take the closest wavelength to 715 nm
   if isempty(iref); [~, iref] = max(wl); end % works as there is data in iNIR so lowest wavelength is 710
   
-  % Define empirical function of scattering correction at lambda reference (From Bourdin et al. 2025)
+  % Define empirical function of scattering correction at lambda reference (From Bourdin et al. 2026)
   ap715 = @(ap) 0.0823 * ap;
 
   % correct for residual temperature signal
@@ -1750,8 +1663,7 @@ function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrSemiempir
   flag_Tresidual(flag_Tresidual2) = true;
 end
 
-%% Blended 3 residual Temperature And Scattering Correction using bp shape (Zaneveld 1994 proportional + NIR offset from Rottgers2013 semiempirical and Bourdin et al. in prep)
-% function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrZaneveld_bp_blended(ap_approx, cp_approx, wl, psi, dt)
+%% Blended 3 residual Temperature And Scattering Correction using bp shape (Zaneveld 1994 proportional) + NIR offset from Bourdin et al. (submitted)
 function [ap_final, cp_final, flag_Tresidual] = ResidualTempScatterCorrSemiempirical_blended3(ap_approx, cp_approx, wl, psi, dt)
   % Function from Emmanuel Boss and Guillaume Bourdin after Zaneveld 1994 method 3 and Rottgers et al. 2013: 
   % Proportional scattering correction + allows absorption in NIR in case of high NAP
@@ -1811,11 +1723,20 @@ function [ap_Tcorr, cp_Tcorr, flag_Tresidual] = ResidualTemperatureCorrection(wl
       for k = sel'
         deltaTresiduals(k) = fminsearch(@costFun_RTSC_Zaneveld, 0, opts, ap(k,:), cp(k,:), psiT, iNIR, iref);
       end
-    case 'Rottgers2013_semiempirical'
+    case 'Rottgers2013_flat'
       % Select only spectra with no NaN
       sel = find(all(isfinite(ap),2));
       for k = sel'
-        foo = fminsearch(@costFun_RTSC_Rottgers, [0 NiRoffset(k)], opts, ap(k,:), psiT, iNIR, iref);
+        foo = fminsearch(@costFun_RTSC_Rottgers_flat, [0 NiRoffset(k)], opts, ap(k,:), psiT, iNIR, iref);
+        deltaTresiduals(k) = foo(1);
+      end
+    case 'Rottgers2013_proportional'
+      % compute bp
+      bp = cp - ap;
+      % Select only spectra with no NaN
+      sel = find(all(isfinite(bp),2));
+      for k = sel'
+        foo = fminsearch(@costFun_RTSC_Rottgers_prop, [0 NiRoffset(k)], opts, ap(k,:), cp(k,:), 1/0.56, psiT, iNIR, iref);
         deltaTresiduals(k) = foo(1);
       end
     case 'Semiempirical_blended1'
@@ -1845,15 +1766,6 @@ function [ap_Tcorr, cp_Tcorr, flag_Tresidual] = ResidualTemperatureCorrection(wl
       error('Residual temperature and scattering correction "%s" not supported', scattering_correction)
   end
 
-  % for k = sel'
-  %   if isnan(NiRoffset(k))
-  %     deltaTresiduals(k) = fminsearch(@costFun_RTSC, 0, opts, ap(k,:), bp(k,:), psiT, iNIR, iref, NiRoffset(k));
-  %   else
-  %     foo = fminsearch(@costFun_RTSC, [0 NiRoffset(k)], opts, ap(k,:), bp(k,:), psiT, iNIR, iref, NiRoffset(k));
-  %     deltaTresiduals(k) = foo(1);
-  %   end
-  % end
-
   % Interpolate linearly deltaT in case of missing few wavelength data in spectra (up to 10 min gaps)
   deltaTresiduals = fillmissing(deltaTresiduals,'linear',1,'MaxGap',minutes(10),'SamplePoints',dt);
   % flag spectra not corrected for residual T
@@ -1866,71 +1778,29 @@ function [ap_Tcorr, cp_Tcorr, flag_Tresidual] = ResidualTemperatureCorrection(wl
   cp_Tcorr = cp - psiT .* deltaTresiduals;
 end
 
-% % Residual Temperature Correction cost function
-% function cost = costFun_RTSC(x0, ap, bp, psiT, iNIR, iref, NiRoffset)
-%   if isnan(NiRoffset)
-%     cost = sum(abs(ap(iNIR) - psiT(iNIR).*x0(1) - ((ap(iref)-psiT(iref).*x0(1))./bp(iref)).*bp(iNIR)));
-%   else
-%     cost = sum(abs(ap(iNIR) - psiT(iNIR).*x0(1) - ((ap(iref)-psiT(iref).*x0(1))./bp(iref)).*bp(iNIR) + x0(2)));
-%   end
-% end
-% % Residual Temperature Correction cost function
-% function cost = costFun_RTSC(deltaT, ap, bp, psiT, iNIR, iref)
-%   cost = sum(abs(ap(iNIR) - psiT(iNIR).*deltaT - ((ap(iref)-psiT(iref).*deltaT)./bp(iref)).*bp(iNIR)));
-% end
-
-  % % blended 1
-  % ap_corr = ap_Tcorr - (ap_Tcorr(:,iref) - ap715(ap_Tcorr(:,iref))) .* cp_Tcorr ./ cp_Tcorr(:,iref);
-  % 
-  % % blended 2
-  % ap_corr = ap_Tcorr - ap_Tcorr(:,iref) .* cp_Tcorr ./ cp_Tcorr(:,iref) + ap715(ap_Tcorr(:,iref));
-  % 
-  % % blended 3
-  % ap_corr = ((1 - ap_Tcorr(:,iref) ./ (cp_Tcorr(:,iref).*ec - ap715(ap_Tcorr(:,iref))))).^(-1) .* ...
-  %   (ap_Tcorr - ap_Tcorr(:,iref) .* cp_Tcorr.*ec ./ (cp_Tcorr(:,iref).*ec - ap715(ap_Tcorr(:,iref))) + ap715(ap_Tcorr(:,iref)));
-  
-
-% Residual Temperature Correction cost function (Zaneveld)
+% Residual Temperature Correction cost function (Zaneveld et al. 1994)
 function cost = costFun_RTSC_Zaneveld(x0, ap, cp, psiT, iNIR, iref)
-  % ap_final = ap_Tcorr - ap_Tcorr(:,iref) ./ bp_approx(:,iref) .* bp_approx;
-  % cost = sum(abs(ap(iNIR) - psiT(iNIR).*x0 - ((ap(iref)-psiT(iref).*x0)./bp(iref)).*bp(iNIR))); old zaneveld cost function
   cost = sum(abs(ap(iNIR)-psiT(iNIR).*x0 - ((ap(iref)-psiT(iref).*x0)./(cp(iref)-(ap(iref)-psiT(iref).*x0(1))).*(cp(iNIR)-(ap(iNIR)-psiT(iNIR).*x0(1))))));
 end
-% Residual Temperature Correction cost function (Rottgers)
-function cost = costFun_RTSC_Rottgers(x0, ap, psiT, iNIR, iref)
-  % ap_final = ap_Tcorr - (ap_Tcorr_iref - ap715(ap_Tcorr(:,iref)));
-  % cost = sum(abs(ap(iNIR)-psiT(iNIR).*x0(1) - ((ap(iref)-psiT(iref).*x0(1)) - (x0(2)-psiT(iref).*x0(1)))));
-  % cost = sum(abs(ap(iNIR)-psiT(iNIR).*x0(1) - ((ap(iref)-psiT(iref).*x0(1)) - x0(2))));
+% Residual Temperature Correction cost function (Rottgers et al. 2013 - flat)
+function cost = costFun_RTSC_Rottgers_flat(x0, ap, psiT, iNIR, iref)
   cost = sum(abs(ap(iNIR)-psiT(iNIR).*x0(1) - (ap(iref)-psiT(iref).*x0(1))));
+end
+% Residual Temperature Correction cost function (Rottgers et al. 2013 - proportional)
+function cost = costFun_RTSC_Rottgers_prop(x0, ap, cp, ec, psiT, iNIR, iref)
+  cost = sum(abs((ap(iNIR)-psiT(iNIR).*x0(1)) - (ap(iref)-psiT(iref).*x0(1)) .* ((cp(iNIR)-psiT(iNIR).*x0(1)).*ec - (ap(iref)-psiT(iref).*x0(1))) ./ ...
+    ((cp(iref)-psiT(iref).*x0(1)).*ec - (ap(iref)-psiT(iref).*x0(1)))));
 end
 % Residual Temperature Correction cost function (blended1)
 function cost = costFun_RTSC_blended1(x0, ap, cp, psiT, iNIR, iref)
-  % ap_corr = ap_Tcorr - (ap_Tcorr(:,iref) - ap715(ap_Tcorr(:,iref))) .* cp_Tcorr ./ cp_Tcorr(:,iref);
-  % cost = sum(abs((ap(iNIR)-psiT(iNIR).*x0(1)) - ((ap(iref)-psiT(iref).*x0(1)) - (x0(2)-psiT(iref).*x0(1))) .* ...
-  %   (cp(iNIR)-psiT(iNIR).*x0(1)) ./ (cp(iref)-psiT(iref).*x0(1))));
-  % cost = sum(abs((ap(iNIR)-psiT(iNIR).*x0(1)) - ((ap(iref)-psiT(iref).*x0(1)) - x0(2)) .* ...
-  %   (cp(iNIR)-psiT(iNIR).*x0(1)) ./ (cp(iref)-psiT(iref).*x0(1))));
   cost = sum(abs((ap(iNIR)-psiT(iNIR).*x0(1)) - (ap(iref)-psiT(iref).*x0(1)) .* (cp(iNIR)-psiT(iNIR).*x0(1)) ./ (cp(iref)-psiT(iref).*x0(1))));
 end
 % Residual Temperature Correction cost function (blended2)
 function cost = costFun_RTSC_blended2(x0, ap, cp, psiT, iNIR, iref)
-  % ap_corr = ap_Tcorr - ap_Tcorr(:,iref) .* cp_Tcorr ./ cp_Tcorr(:,iref) + ap715(ap_Tcorr(:,iref));
-  % cost = sum(abs((ap(iNIR)-psiT(iNIR).*x0(1)) - (ap(iref)-psiT(iref).*x0(1)) .* (cp(iNIR)-psiT(iNIR).*x0(1)) ./ ...
-  %   (cp(iref)-psiT(iref).*x0(1)) + (x0(2)-psiT(iref).*x0(1))));
-  % cost = sum(abs((ap(iNIR)-psiT(iNIR).*x0(1)) - (ap(iref)-psiT(iref).*x0(1)) .* (cp(iNIR)-psiT(iNIR).*x0(1)) ./ ...
-  %   (cp(iref)-psiT(iref).*x0(1)) + x0(2)));
   cost = sum(abs((ap(iNIR)-psiT(iNIR).*x0(1)) - (ap(iref)-psiT(iref).*x0(1)) .* (cp(iNIR)-psiT(iNIR).*x0(1)) ./ (cp(iref)-psiT(iref).*x0(1))));
 end
 % Residual Temperature Correction cost function (blended3)
 function cost = costFun_RTSC_blended3(x0, ap, cp, ec, psiT, iNIR, iref)
-  % ap_corr = ((1 - ap_Tcorr(:,iref) ./ (cp_Tcorr(:,iref).*ec - ap715(ap_Tcorr(:,iref))))).^(-1) .* ...
-  %   (ap_Tcorr - ap_Tcorr(:,iref) .* cp_Tcorr.*ec ./ (cp_Tcorr(:,iref).*ec - ap715(ap_Tcorr(:,iref))) + ap715(ap_Tcorr(:,iref)));
-  % cost = sum(abs(((1 - (ap(iNIR)-psiT(iNIR).*x0(1)) ./ ((cp(iNIR)-psiT(iNIR).*x0(1)).*ec - (x0(2)-psiT(iref).*x0(1))))).^(-1) .* ...
-  %   ((ap(iNIR)-psiT(iNIR).*x0(1)) - (ap(iref)-psiT(iref).*x0(1)) .* (cp(iNIR)-psiT(iNIR).*x0(1)).*ec ./ ((cp(iref)-psiT(iref).*x0(1)).*ec - ...
-  %   (x0(2)-psiT(iref).*x0(1))) + (x0(2)-psiT(iref).*x0(1)))));
-  % cost = sum(abs(((1 - (ap(iNIR)-psiT(iNIR).*x0(1)) ./ ((cp(iNIR)-psiT(iNIR).*x0(1)).*ec - x0(2)))).^(-1) .* ...
-  %   ((ap(iNIR)-psiT(iNIR).*x0(1)) - (ap(iref)-psiT(iref).*x0(1)) .* (cp(iNIR)-psiT(iNIR).*x0(1)).*ec ./ ((cp(iref)-psiT(iref).*x0(1)).*ec - ...
-  %   x0(2)) + x0(2))));
   cost = sum(abs((1 - (ap(iNIR)-psiT(iNIR).*x0(1)) ./ ((cp(iNIR)-psiT(iNIR).*x0(1)).*ec)).^(-1) .* ...
     ((ap(iNIR)-psiT(iNIR).*x0(1)) - (ap(iref)-psiT(iref).*x0(1)) .* (cp(iNIR)-psiT(iNIR).*x0(1)).*ec ./ ((cp(iref)-psiT(iref).*x0(1)).*ec))));
 end
@@ -2132,32 +2002,46 @@ function agaus = GaussDecomp(p, lambda, compute_ad_aphi, nap_offset)
     % into phytoplankton and non-phytoplankton components, J. Geophys. Res. Oceans, 118, 2155?2174, doi:10.1002/jgrc.20115.
     % - Zheng, G., and D. Stramski (2013), A model for partitioning the light absorption coefficient of suspended marine particles into phytoplankton 
     % and nonalgal components, J. Geophys. Res. Oceans, 118, 2977?2991, doi:10.1002/jgrc.20206.
-    wl_ZS13 = [400 412 420 430 443 450 467 490 500 510 550 555 630 650 670 700];
-    qwl = unique([wl_ZS13(:)' 442 676]);
-    ap_ZS13 = interp1(lambda, ap_filled', qwl, 'linear', 'extrap'); % need to extrapolate for 400
-  
-  %   % vectorized partition_ap (DOESN'T WORK YET)
+
+  %   % Old code super slow
+  %   wl_ZS13 = [400 412 420 430 443 450 467 490 500 510 550 555 630 650 670 700];
+  %   qwl = unique([wl_ZS13(:)' 442 676]);
+  %   ap_ZS13 = interp1(lambda, ap_filled', qwl, 'linear', 'extrap'); % need to extrapolate for 400
+  %   % Run partition_ap
+  %   ad_ZS13_old = NaN(size(ap_ZS13, 2), size(qwl, 2));
+  %   aphi_ZS13_old = NaN(size(ap_ZS13, 2), size(qwl, 2));
+  % %   parfor i = 1:size(ap_ZS13, 2)
+  %   for i = progress(1:size(ap_ZS13, 2)))
+  %     [ad_ZS13_old(i,:), aphi_ZS13_old(i,:)] = partition_ap(ap_ZS13(:, i), qwl', 50);
+  %   end
   %   agaus.ad_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
   %   agaus.aphi_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
-  %   [agaus.ad_ZS13, agaus.aphi_ZS13] = partition_ap_vec(ap_ZS13, qwl', 50);  % Must be in colum direction
-    
-    % Run partition_ap
-    ad_ZS13 = NaN(size(ap_ZS13, 2), size(qwl, 2));
-    aphi_ZS13 = NaN(size(ap_ZS13, 2), size(qwl, 2));
-  %   parfor i = 1:size(ap_ZS13, 2)
-    for i = progress(1:size(ap_ZS13, 2))
-      [ad_ZS13(i,:), aphi_ZS13(i,:)] = partition_ap(ap_ZS13(:, i), qwl', 50);
-    end
-  %   figure; hold on
-  %   plot(qwl, ad)
-  %   plot(qwl, aphi_ZS13)
-  
+  %   agaus.ad_ZS13(~idnan,:) = ad_ZS13_old;
+  %   agaus.aphi_ZS13(~idnan,:) = aphi_ZS13_old;
+    % % test difference with vectorized method
+    % foo_diff = ad_ZS13(1:1000,:)-ad_ZS13_old(1:1000,:);
+    % figure; histogram(foo_diff(:))
+    % foo_diff = aphi_ZS13(1:1000,:)-aphi_ZS13_old(1:1000,:);
+    % figure; histogram(foo_diff(:))
+    % 
+    % figure; hold on
+    % plot(lambda, acs_spectral.ap(2,:))
+    % plot(qwl, ad_ZS13(2,:))
+    % plot(qwl, aphi_ZS13(2,:))
+
+    % vectorized partition_ap
+    wl_ZS13 = 400:5:700;
+    qwl = unique([wl_ZS13(:)' 412 442 443 467 676]);
+    ap_ZS13 = interp1(lambda', ap_filled', qwl', 'linear', 'extrap')'; % need to extrapolate for 400
+    % compute ad_ZS13 and aphi_ZS13
     agaus.ad_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
     agaus.aphi_ZS13 = NaN(size(agaus, 1), size(qwl, 2));
-    agaus.ad_ZS13(~idnan,:) = ad_ZS13;
-    agaus.aphi_ZS13(~idnan,:) = aphi_ZS13;
-    agaus.Properties.VariableUnits = repmat({'1/m'}, 1, size(agaus, 2));
+    [agaus.ad_ZS13, agaus.aphi_ZS13] = partition_ap_vec(ap_ZS13, qwl', 50, false);
+    % re-interpolate to ACS lambda
+    agaus.ad_ZS13 = interp1(qwl', agaus.ad_ZS13', lambda', 'linear')';
+    agaus.aphi_ZS13 = interp1(qwl', agaus.aphi_ZS13', lambda', 'linear')';
   end
+  agaus.Properties.VariableUnits = repmat({'1/m'}, 1, size(agaus, 2));
   fprintf('Done\n')
 end
 
@@ -2197,6 +2081,7 @@ function [filt_interp, filt, fit_unc] = agcg_fdom_interpolation(filt_interp, fil
   % METHOD 2: median or mean of percentiles of da/dfdom and dc/dfdom ratios
   da_dfdom = da ./ dfdom;
   dc_dfdom = dc ./ dfdom;
+
   % % Using 30th and 25th percentiles
   % slope_da_dfdom = prctile(da_dfdom, 30, 1);
   % slope_dc_dfdom = prctile(dc_dfdom, 25, 1);
@@ -2210,7 +2095,6 @@ function [filt_interp, filt, fit_unc] = agcg_fdom_interpolation(filt_interp, fil
   dc_dfdom(~idc_avg) = NaN;
   slope_da_dfdom = mean(da_dfdom, 1, 'omitmissing');
   slope_dc_dfdom = mean(dc_dfdom, 1, 'omitmissing');
-
 
   % Fit exponential between 410 and 550 nm
   fprintf('Exponential fit on da/dfdom and dc/dfdom ... \n')

@@ -284,27 +284,27 @@ classdef InLineAnalysis < handle
               % get percentage of data deleted
               foo = sum(foo) / size(obj.instrument.(i{:}).(level).tsw, 1) * 100;
             elseif any(contains(lower(i{:}),'alfa'))
-              alf_ar = table2array(obj.instrument.(i{:}).(level).tsw);
-              toqc = repmat(~contains(obj.instrument.(i{:}).(level).tsw.Properties.VariableNames, ...
-                {'dt', 'WL'}), size(alf_ar,1),1);
+              alfat_ar = table2array(obj.instrument.(i{:}).(level).tsw(:,2:end));
+              toqc = repmat(~contains(obj.instrument.(i{:}).(level).tsw.Properties.VariableNames(:,2:end), ...
+                {'dt', 'WL'}), size(alfat_ar,1),1);
               % clean with derivative
               clean_cycles = 50;
               foo = 0;
               for ii = progress(1:clean_cycles)
-                alfa_deriv = [zeros(1, size(alf_ar, 2)); diff(alf_ar, [], 1)];
-                prc_deriv = repmat(prctile(alfa_deriv, 95), size(alf_ar,1),1);
+                alfa_deriv = [zeros(1, size(alfat_ar, 2)); diff(alfat_ar, [], 1)];
+                prc_deriv = repmat(prctile(alfa_deriv, 95), size(alfat_ar,1),1);
                 toclean = toqc & alfa_deriv > 1.5*prc_deriv & alfa_deriv(:,1) < 0.6;
-                alf_ar(toclean) = NaN;
+                alfat_ar(toclean) = NaN;
                 foo = foo + sum(toclean(:));
               end
               % clean with absolute values
-              alfa_prc = repmat(prctile(alf_ar, 95), size(alf_ar,1),1);
+              alfa_prc = repmat(prctile(alfat_ar, 95), size(alfat_ar,1),1);
               toclean = toqc & alfa_deriv > 1.5*alfa_prc;
-              alf_ar(toclean) = NaN;
+              alfat_ar(toclean) = NaN;
               foo = foo + sum(toclean(:));
               % rebuild table
-              obj.instrument.(i{:}).(level).tsw = array2table(alf_ar, 'VariableNames', ...
-                obj.instrument.(i{:}).(level).tsw.Properties.VariableNames);
+              obj.instrument.(i{:}).(level).tsw = [obj.instrument.(i{:}).(level).tsw(:,1) array2table(alfat_ar, 'VariableNames', ...
+                obj.instrument.(i{:}).(level).tsw.Properties.VariableNames(2:end))];
               % get percentage of data deleted
               foo = foo / sum(toqc(:));
             end
@@ -958,6 +958,7 @@ classdef InLineAnalysis < handle
                   user_selection = guiSelectOnTimeSeries(fh);
                   % Apply user selection
                   obj.instrument.(i{:}).DeleteUserSelection(user_selection, 'qc', ['tsw' j]);
+                  obj.instrument.(i{:}).DeleteUserSelection(user_selection, 'qc', ['fsw' j]);
                   % Save user selection
                   filename = fullfile(obj.instrument.(i{:}).path.ui, [i{:} '_QCSpecific_UserSelection.mat']);
                   obj.update_userselection_bad(filename, user_selection, obj.cfg.qc.remove_old, ...
@@ -1139,6 +1140,12 @@ classdef InLineAnalysis < handle
               else
                 fprintf(['Warning: ' filename ' not found\n'])
               end
+              % Display interactive figure
+              visFlag(obj.instrument.(i{:}).raw.tsw, obj.instrument.(i{:}).raw.fsw, ...
+                    obj.instrument.(i{:}).qc.tsw, obj.instrument.(i{:}).suspect.tsw, obj.instrument.(i{:}).qc.fsw, ...
+                    obj.instrument.(i{:}).suspect.fsw, obj.instrument.(i{:}).view.varname, obj.instrument.(i{:}).view.varcol,...
+                    obj.instrument.(i{:}).raw.bad, fooflow, obj.instrument.FLOW.view.spd_variable);
+              title(['\fontsize{22}\color{red}' i{:} ' ' obj.instrument.(i{:}).view.varname ' QCed'], 'interpreter', 'tex');
             end
           end
           if ~obj.cfg.qc.global.active && ~obj.cfg.qc.specific.active
@@ -1755,17 +1762,17 @@ classdef InLineAnalysis < handle
             otherwise
               error('Unknow loading mode.');
           end
-          % extract custom properties
-          non_empty = find(structfun(@(x) ~isempty(x), obj.instrument.(i{:}).(level)));
-          fnam = fieldnames(obj.instrument.(i{:}).(level));
-          if ~isempty(non_empty)
-            cprop = fieldnames(obj.instrument.(i{:}).(level).(fnam{non_empty(1)}).Properties.CustomProperties);
-            if ~isempty(cprop)
-              for j = 1:size(cprop, 1)
-                obj.instrument.(i{:}).(cprop{j}) = obj.instrument.(i{:}).(level).(fnam{non_empty(1)}).Properties.CustomProperties.(cprop{j});
-              end
-            end
-          end
+          % % extract custom properties %%%% used for HyperBB to track calibration: now deprecated because calibrations are automatically applied based on data dates %%%%
+          % non_empty = find(structfun(@(x) ~isempty(x), obj.instrument.(i{:}).(level)));
+          % fnam = fieldnames(obj.instrument.(i{:}).(level));
+          % if ~isempty(non_empty)
+          %   cprop = fieldnames(obj.instrument.(i{:}).(level).(fnam{non_empty(1)}).Properties.CustomProperties);
+          %   if ~isempty(cprop)
+          %     for j = 1:size(cprop, 1)
+          %       obj.instrument.(i{:}).(cprop{j}) = obj.instrument.(i{:}).(level).(fnam{non_empty(1)}).Properties.CustomProperties.(cprop{j});
+          %     end
+          %   end
+          % end
         end
       end
     end

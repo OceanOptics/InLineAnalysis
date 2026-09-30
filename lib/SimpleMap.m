@@ -1,4 +1,3 @@
-% function SimpleMap(data, station_info, colorbarlabel, varargin)
 function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, colorscale, bubble_data, bubble_label, print_station_name, text_col, biogeography)
   % author: Guillaume Bourdin
   % created: August 13, 2020
@@ -138,19 +137,8 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, colorsc
   %   end
   % end
 
-  % get screen size to scale the figure
-  screen_sz = get(0,'screensize');
-  if screen_sz(3) == 2048 || screen_sz(3) == 2056
-    plot_w = 0.4;
-  elseif screen_sz(3) == 2560
-    plot_w = 0.38;
-  elseif screen_sz(3) == 3440
-    plot_w = 0.34;
-  end
-  plot_h = plot_w*0.5*screen_sz(3)/screen_sz(4);
-  figh = figure('units','normalized', 'outerposition',[0 0.025 plot_w plot_h]);
-  % figh = figure('units','normalized', 'outerposition',[0 0.025 0.4 0.4]); hold on
-  set(gca, 'Visible', 'off')
+
+
 
   % wrap longitude over 360°
   if all(any(station_info.lon(:) < 0) & any(station_info.lon(:) >= 0) & ...
@@ -159,7 +147,6 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, colorsc
   end
   % station_info.lon(station_info.lon < 0) = station_info.lon(station_info.lon < 0) + 360;
   % station_info.lon = station_info.lon + 80;
-
 
   % get lat/lon limits
   latlim = [min(station_info.lat) - (0.05 * (max(station_info.lat) - min(station_info.lat))) ...
@@ -170,6 +157,18 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, colorsc
     lonlim(1) = -180;
     lonlim(2) = 180;
   end
+
+  % get screen size to scale the figure
+  screen_sz = get(0,'screensize');
+  plot_h = round(screen_sz(4) * (2/3));
+  % get map length/height ratio
+  plot_w = plot_h * (max(lonlim) - min(lonlim)) / (max(latlim) - min(latlim));
+  if plot_w > screen_sz(3)
+    plot_w = screen_sz(3);
+  end
+  figh = figure('units','pixels', 'Position',[0 0.025 plot_w plot_h]);
+  % figh = figure('units','normalized', 'outerposition',[0 0.025 0.4 0.4]); hold on
+  set(gca, 'Visible', 'off')
 
   % lonlim(1) = 110;
   % lonlim(2) = 70;
@@ -227,14 +226,14 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, colorsc
       ax1 = axesm('robinson', 'MapLatLimit', latlim, 'MapLonLimit', lonlim,...
         'Frame', 'on', 'Grid', 'on', 'MLabelRound', 1, 'PLabelRound', 1,...
         'MeridianLabel', 'on', 'ParallelLabel', 'on',...
-        'MLineLocation', -280:30:520,...
-        'PLineLocation', -280:30:520,...
-        'MLabelLocation', -280:30:520,...
-        'PLabelLocation', -280:30:520);
-        % 'MLineLocation', round((max(lonlim)-min(lonlim))/5, round(-log10((max(lonlim)-min(lonlim))/5))),...
-        % 'PLineLocation', round((max(latlim)-min(latlim))/5, round(-log10((max(latlim)-min(latlim))/5))),...
-        % 'MLabelLocation', round((max(lonlim)-min(lonlim))/5, round(-log10((max(lonlim)-min(lonlim))/5))),...
-        % 'PLabelLocation', round((max(latlim)-min(latlim))/5, round(-log10((max(latlim)-min(latlim))/5))));
+        'MLineLocation', round((max(lonlim)-min(lonlim))/5, round(-log10((max(lonlim)-min(lonlim))/5))),...
+        'PLineLocation', round((max(latlim)-min(latlim))/5, round(-log10((max(latlim)-min(latlim))/5))),...
+        'MLabelLocation', round((max(lonlim)-min(lonlim))/5, round(-log10((max(lonlim)-min(lonlim))/5))),...
+        'PLabelLocation', round((max(latlim)-min(latlim))/5, round(-log10((max(latlim)-min(latlim))/5))));
+        % 'MLineLocation', -280:30:520,...
+        % 'PLineLocation', -280:30:520,...
+        % 'MLabelLocation', -280:30:520,...
+        % 'PLabelLocation', -280:30:520);
     end
     % plot coastline
     land = shaperead('landareas.shp', 'UseGeoCoords', true);
@@ -379,6 +378,11 @@ function figh = SimpleMap(data, station_info, colorbarlabel, cmap_limit, colorsc
       set(gca, 'ColorScale', 'log')
       if h.Ruler.Exponent > -4
         h.Ticks = extick;
+      end
+      if ~isempty(cmap_limit)
+        if cmap_limit(1) == 0
+          clim(ax1, [min(data(:)) cmap_limit(2)])
+        end
       end
     end
     set(gca,'FontSize',14)

@@ -197,7 +197,7 @@ function [betap_corr, bbp_corr, flags] = betap_Kcorrection(beta_total, beta_filt
   % 
   %   % visProd3D(lambda_beta, beta_total.dt, (bbp_corr-betap_notcorr)./betap_notcorr*100, false, 'Wavelength', false, 75);
   %   % title('% change Doxaran')
-  else % apply Zhang's sigma correction
+  else % apply Zhou et al. 2026 (Zhang's group) sigma correction
     if isempty(ag_interp)
       % estimate ag440 from chlorophyll based on Morel and Maritorena, 2001 (appendix B)
       ag440 = 0.2 .* 0.06 .* chl_interp .^ 0.65;
@@ -210,22 +210,22 @@ function [betap_corr, bbp_corr, flags] = betap_Kcorrection(beta_total, beta_filt
     % Estimate c
     c_estimated = cp_interp + cg_interp;
     % Estimate single scattering albedo (w)
-    w_estimated = bp_interp ./ c_estimated;
-    % Force w to be between 0 and 1 when 1 < w_estimated < 1.005 (uncertainty of ACS == 0.005 m^-1)
-    w_estimated(w_estimated > 1 & w_estimated <= 1.005) = 1;
+    ssa_estimated = bp_interp ./ c_estimated;
+    % Force ssa to be between 0 and 1 when 1 < ssa_estimated < 1.005 (uncertainty of ACS == 0.005 m^-1)
+    ssa_estimated(ssa_estimated > 1 & ssa_estimated <= 1.005) = 1;
     
-    % % load Zhang's LUT (1st method)
+    % % load Zhou et al. 2026 (Zhang's group) LUT (1st method)
     % if isfile(fullfile('packages','Zhang_hyper_bb_sigma_correction_1st_method.mat'))
     %   load(fullfile('packages','Zhang_hyper_bb_sigma_correction_1st_method.mat'), 'B', 'bbr', 'c', 'w')
     % end
-    % load Zhang's LUT (3rd method 2026)
+    % load Zhou et al. 2026 (Zhang's group) LUT (3rd method 2026)
     if isfile(fullfile('packages', 'BB_sigma_correction_2026_LUT.mat'))
       load(fullfile('packages', 'BB_sigma_correction_2026_LUT.mat'),'LUT_sigmacorr_2026')
     else
       LUT_sigmacorr_2026 = [];
     end
 
-    % prepare auxilliary data for new Zhang correction
+    % prepare auxilliary data for sigma correction from Zhou et al. 2026
     env = table();
     env.T = beta_filt_interp.t; % replace missing T by 25
     env.T(isnan(env.T)) = 22;
@@ -246,12 +246,12 @@ function [betap_corr, bbp_corr, flags] = betap_Kcorrection(beta_total, beta_filt
       % isolate bbp_approx to compare after iteration
       bbp_approx_old = bbp_approx_new;
 
-      % % Find sigma in Zhang LUT (1st method)
-      % sigma_corr_old = interp3(bbr, w, c, B, bbr_estimated, w_estimated, c_estimated, "linear");
+      % % Find sigma in Zhou et al. 2026 (Zhang's group) LUT (1st method)
+      % sigma_corr_old = interp3(bbr, w, c, B, bbr_estimated, ssa_estimated, c_estimated, "linear");
       
-      % Compute sigma with Zhang 3rd method (VECTORIZED)
+      % Compute sigma with Zhou et al. 2026 (Zhang's group) 3rd method (VECTORIZED)
       [sigma_corr, ~, LUT_sigmacorr_2026] = get_bb_sigmacorr_2026_vect(lambda_beta, ...
-        c_estimated, bbr_estimated, w_estimated, env, instrument_types, LUT_sigmacorr_2026);
+        c_estimated, bbr_estimated, ssa_estimated, env, instrument_types, LUT_sigmacorr_2026);
 
       sigma_corr = fillmissing(sigma_corr, 'nearest', 'SamplePoints', beta_total.dt, 'MaxGap',minutes(40));
       betap_approx_new = beta_total.beta .* sigma_corr - beta_filt_corr;
@@ -266,7 +266,7 @@ function [betap_corr, bbp_corr, flags] = betap_Kcorrection(beta_total, beta_filt
       end
       fprintf(' done\n')
     end
-    fprintf("betap attenuation correction: Zhang's sigma correction applied.\n")
+    fprintf("betap attenuation correction: Zhou et al. 2026 (Zhang's group) sigma correction applied.\n")
 
     % visProd3D(lambda_beta, beta_total.dt, ag_interp, false, 'Wavelength', false, 68);
     % zlabel('a_g input')
@@ -284,13 +284,13 @@ function [betap_corr, bbp_corr, flags] = betap_Kcorrection(beta_total, beta_filt
     % zlabel('bbp approximation (2 * pi * Chi .* (beta_{total} - beta_{filt}))'); title('uncorrected')
     % 
     % visProd3D(lambda_beta, beta_total.dt, sigma_corr, false, 'Wavelength', false, 73);
-    % zlabel('sigma correction'); title("Zhang's lookup table")
+    % zlabel('sigma correction'); title("Zhou et al. 2026 (Zhang's group) lookup table")
     % 
     % visProd3D(lambda_beta, beta_total.dt, bbp_corr, false, 'Wavelength', false, 74);
-    % zlabel('bbp corrected'); title("Zhang's lookup table")
+    % zlabel('bbp corrected'); title("Zhou et al. 2026 (Zhang's group) lookup table")
     % 
     % visProd3D(lambda_beta, beta_total.dt, (bbp_approx_new - bbp_approx) ./ bbp_approx*100, false, 'Wavelength', false, 75);
-    % zlabel('% change bbp'); title("Zhang's lookup table")
+    % zlabel('% change bbp'); title("Zhou et al. 2026 (Zhang's group) lookup table")
 
   end
 end

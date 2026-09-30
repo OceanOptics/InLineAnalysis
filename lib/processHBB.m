@@ -433,7 +433,7 @@ function [p, g, FiltStat] = processHBB(param, tot, filt_qc, filt_raw, filt_bad, 
   end
   instrument_types.bb_type = 'HyperBB';
   if strcmpi(instrument_types.bb_type, 'HyperBB')
-    instrument_types.acc_ang_bb = 12.5;
+    instrument_types.acc_ang_bb = 12.5; % Lingfeng Zhou & Xiaodong Zhang value: 12.5° but it should be 39° (Tom Leeuw's poster Ocean Optics 2026) TO BE TESTED
   end
   if strcmpi(instrument_types.c_type, 'acs') | strcmpi(instrument_types.c_type, 'ac9')
     instrument_types.acc_ang_c = 0.93;

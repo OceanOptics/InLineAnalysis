@@ -394,6 +394,12 @@ classdef (Abstract) Instrument < handle
           if ~exist('data','var')
             error('File %s empty', fullfile(obj.path.wk, f{:}))
           end
+          % load HyperBB lambda
+          if any(strcmp(fieldnames(data.Properties.CustomProperties), 'lambda')) && any(strcmp(fieldnames(obj),'lambda'))
+            obj.lambda = data.Properties.CustomProperties.lambda;
+          elseif any(strcmp(fieldnames(data.Properties.CustomProperties), 'PlaqueCal')) && any(strcmp(fieldnames(obj),'lambda'))
+            obj.lambda = data.Properties.CustomProperties.PlaqueCal.muWavelengths;
+          end
           data_temp = sortrows(data, 'dt');
           if ~isdatetime(data_temp.dt)
             data_temp.dt = datetime(data_temp.dt, 'ConvertFrom', 'datenum');

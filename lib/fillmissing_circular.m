@@ -1,4 +1,7 @@
 function data_filled = fillmissing_circular(data_deg, method, sample_points)
+  % Fillmissing that works for data in the -180 to 180 degree range
+  % author: Guillaume Bourdin
+  %%
   if nargin < 4
     method = 'linear';
   end

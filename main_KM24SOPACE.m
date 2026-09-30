@@ -30,19 +30,6 @@ ila = InLineAnalysis('cfg/KM24SOPACE_cfg.m');
 % ila.instrument.SBE38450091.qc.tsw = tsg;
 
 % Quick cfg update
-%% Whole expedition
-% ila.cfg.days2run = datetime(2020,12,12):datetime(2022,9,17);
-
-%% TSG
-% ila.instrument.TSG.logger = 'Matlab';
-% ila.cfg.days2run = datetime(2020,12,12):datetime(2021,5,9);
-% ila.instrument.TSG.logger = 'TeraTerm';
-% ila.cfg.days2run = datetime(2021,1,10):datetime(2021,1,15);
-% ila.instrument.TSG.logger = 'Inlinino_base';
-% ila.cfg.days2run = datetime(2021,1,16):datetime(2022,7,15);
-% ila.instrument.TSG.logger = 'Inlinino_base';
-% ila.cfg.days2run = datetime(2022,7,15):datetime(2022,10,30);
-
 %% Empty ACs data without losing the rest
 instrument_to_clear = 'ACS111'; % ACS91 ACS111
 ila.instrument.(instrument_to_clear).data = [];
@@ -64,6 +51,19 @@ ila.instrument.(instrument_to_clear).prod.QCfailed = [];
 % ila.cfg.days2run = datetime(2024,11,17):datetime(2024,11,26);
 % ila.cfg.days2run = datetime(2024,11,28):datetime(2024,12,5);
 % ila.cfg.days2run = datetime(2024,12,6):datetime(2024,12,16);
+
+%% Whole expedition
+ila.cfg.days2run = datetime(2024,10,23):datetime(2024,12,16);
+
+%% TSG
+% ila.instrument.TSG.logger = 'Matlab';
+% ila.cfg.days2run = datetime(2020,12,12):datetime(2021,5,9);
+% ila.instrument.TSG.logger = 'TeraTerm';
+% ila.cfg.days2run = datetime(2021,1,10):datetime(2021,1,15);
+% ila.instrument.TSG.logger = 'Inlinino_base';
+% ila.cfg.days2run = datetime(2021,1,16):datetime(2022,7,15);
+% ila.instrument.TSG.logger = 'Inlinino_base';
+% ila.cfg.days2run = datetime(2022,7,15):datetime(2022,10,30);
 
 %% ACS091
 % ila.cfg.days2run = datetime(2024,10,19):datetime(2024,10,20);
@@ -116,8 +116,10 @@ ila.cfg.days2run = datetime(2024,12,2):datetime(2024,12,16);
 %% %%%%%%%%%%%%%% PROCESSING CHRONOLOGY RECOMMENDATIONS: %%%%%%%%%%%%%%% %%
 % Instruments available: 'NMEA','FLOW','SBE3845KM24','ACS91','ACS111','HyperBB8005','SUVF6244','LISST100X1183','WS3S1081P','ALFA'
 %%% Run ReadRaw week by week without going further (reloading 'ila' structure between each run to clear memory)
-% ila.cfg.instruments2run = {'FLOW','NMEA','SUVF6244','SBE3845KM24','LISST100X1183','HyperBB8005'};
+% ila.cfg.instruments2run = {'FLOW','NMEA','SUVF6244','SBE3845KM24','LISST100X1183','HyperBB8005','WS3S1081P'};
 %%% Process to the end
+% ila.cfg.instruments2run = {'FLOW','WS3S1081P'};
+ila.cfg.instruments2run = {'FLOW','ALFA011'};
 % ila.cfg.instruments2run = {'FLOW','NMEA','SBE3845KM24'};
 % ila.cfg.instruments2run = {'FLOW','SUVF6244'};
 %%% Process each of the following up to qc level (just before Calibrate and save temporay files raw/bin/qc)
@@ -140,18 +142,18 @@ ila.cfg.days2run = datetime(2024,12,2):datetime(2024,12,16);
 %%% run ACS DIW Calibrate, save prod dissolved
 %%% run ACS DIW Calibrate (see mainDI code), save dissolved prods
 %%% load HyperBB raw and qc and run Calibrate on all at once, save particulate prods
-ila.cfg.instruments2run = {'SUVF6244','SBE3845KM24','ACS111','ACS91'}; % merge two TSG into one to run calibrate on entire cruise at once
-ila.Read('prod');
-ila.cfg.instruments2run = {'FLOW','HyperBB8005'};
-ila.Read('raw');
-ila.Read('qc');
+% ila.cfg.instruments2run = {'SUVF6244','SBE3845KM24','ACS111','ACS91'}; % merge two TSG into one to run calibrate on entire cruise at once
+% ila.Read('prod');
+% ila.cfg.instruments2run = {'FLOW','HyperBB8005'};
+% ila.Read('raw');
+% ila.Read('qc');
 %%% load LISST qc and run Calibrate, save prod dissolved
 % ila.cfg.instruments2run = {'FLOW','LISST100X1183'};
 
 %%% Process PAR: entire cruise at once until prod
 % ila.cfg.instruments2run = {'QCR2150A50351'};
 
-ila.cfg.qcref.view = 'HyperBB8005';
+ila.cfg.qcref.view = 'ALFA011';
 ila.cfg.parallel = 6; % Inf
 ila.cfg.calibrate.(ila.cfg.qcref.view).compute_dissolved = false;
 ila.cfg.qc.specific.run = {ila.cfg.qcref.view};
@@ -215,7 +217,7 @@ ila.Read('prod');
 % Note: when redoing QC of a given period of time (days2run) the previous
 % QC during the same period of time is erased, QC done on other periods of
 % time is kept in the json file
-ila.cfg.qcref.mode='load'; % 'ui' or 'load'
+ila.cfg.qcref.mode='ui'; % 'ui' or 'load'
 ila.cfg.qcref.remove_old = false; % remove old selection of the same period
 ila.QCRef();
 
@@ -273,6 +275,7 @@ ila.cfg.qc.specific.run = {ila.cfg.qcref.view}; % 'FLOW','ACS57','TSG', 'BB31502
 ila.QC();
 
 %% 5.4. Write clean raw after split for BB3 and HBB | write only 'part' or 'diw' or 'all'
+ila.cfg.write.skip = {'FLOW'};
 ila.Write('raw', 'part')
 ila.CheckDataStatus();
 
@@ -289,6 +292,7 @@ ila.CheckDataStatus();
 ila.SpectralQC('AC',{'bin'}); % AC, BB, or LISST
 
 %% 6.2. Write bin | write only 'part' or 'diw' or 'all'
+ila.cfg.write.skip = {'FLOW'};
 ila.Write('bin', 'part')
 ila.CheckDataStatus();
 
@@ -301,7 +305,7 @@ ila.CheckDataStatus();
 ila.cfg.qc.mode='ui';  % load or ui
 ila.cfg.qc.remove_old = false;  % remove old selection of this period
 ila.cfg.qc.qc_once_for_all = false; % true = QC all variables | false = QC variables separately)
-ila.cfg.qc.remove_when_flow_below = false; % true = remove data when flow <= 0.5 | false = no data removal data depending on flow | number = remove data when flow <= number)
+ila.cfg.qc.remove_when_flow_below = 0.1; % true = remove data when flow <= 0.5 | false = no data removal data depending on flow | number = remove data when flow <= number)
 % Global
 ila.cfg.qc.global.view = {ila.cfg.qcref.view};
 ila.cfg.qc.global.active = false;
@@ -341,12 +345,13 @@ ila.SpectralQC('BB',{'qc'}, false, {'tsw','all'});
 ila.QCSwitchPosition()
 
 %% 9.1. Write qc | write only 'part' or 'diw' or 'all'
+ila.cfg.write.skip = {'FLOW'};
 ila.Write('qc', 'part')
 
 %% 10. Calibrate
 % ila.cfg.calibrate.skip = {'FLOW', 'TSG', 'ALFA', 'NMEA'};
 % update filter event calcualtion method if needed: exponential_fit 25percentil
-ila.cfg.calibrate.(ila.cfg.qcref.view).filt_method = 'exponential_fit';
+ila.cfg.calibrate.(ila.cfg.qcref.view).filt_method = '25percentil';
 % update filter interpolation method if needed: CDOM linear
 ila.cfg.calibrate.(ila.cfg.qcref.view).interpolation_method = 'CDOM'; % linear CDOM
 % update scattering correction method if needed: Rottgers2013_semiempirical Zaneveld1994_proportional Semiempirical_blended1 Semiempirical_blended2 Semiempirical_blended3 
@@ -401,6 +406,7 @@ ila.cfg.qc.specific.run = {ila.cfg.qcref.view}; % 'FLOW','ACS57','TSG', 'BB31502
 ila.QC();
 
 %% 12. Save products | write only 'part' or 'diw' or 'all'
+ila.cfg.write.skip = {'FLOW'};
 ila.Write('prod', 'part')
 
 % % Notify with a song that the job is done
@@ -408,6 +414,7 @@ ila.Write('prod', 'part')
 % return
 
 %% re-write final version of 'raw', 'qc' and 'bin' | write only 'part' or 'diw' or 'all'
+ila.cfg.write.skip = {};
 ila.Write('raw', 'part')
 ila.Write('bin', 'part')
 ila.Write('qc', 'part')

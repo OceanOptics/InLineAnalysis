@@ -239,7 +239,8 @@ switch instrument
     varT = data.Properties.VariableNames{idvar};
     varS = data.Properties.VariableNames{strcmpi(data.Properties.VariableNames, 's') | ...
       strcmpi(data.Properties.VariableNames, 'sss') | ...
-      strcmpi(data.Properties.VariableNames, 'sss_adj')};
+      strcmpi(data.Properties.VariableNames, 'sss_adj') | ...
+      strcmpi(data.Properties.VariableNames, 'sal')};
     fig(30);
     clf
     yyaxis('left')
@@ -265,11 +266,11 @@ switch instrument
     scatter(data.dt, data.fdom, 6, 'filled');
     ylabel('FDOM [v uncalibrated]');
     xlim([min(data.dt) max(data.dt)]);
-  case 'WSS'
+  case {'WSS','WSSP'}
     fig(60);
     clf
-    scatter(data.dt, data.chl, 6, 'filled');
-    ylabel('Chl (mg.m^{-3})');
+    scatter(data.dt, data.fchl, 6, 'filled');
+    ylabel('Chl fluorescence [v uncalibrated]');
     xlim([min(data.dt) max(data.dt)]);
   case 'ALFA'
     fig(70);
