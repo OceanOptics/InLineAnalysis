@@ -146,8 +146,8 @@ cfg.instruments.(['HyperBB' SN]).ila_prefix = ['HyperBB' SN];
 cfg.instruments.(['HyperBB' SN]).logger = 'InlininoHBB';
 cfg.instruments.(['HyperBB' SN]).theta = 135;
 cfg.instruments.(['HyperBB' SN]).fdom_ag_correlation = fullfile(PATH_ROOT, 'DeviceFiles', 'parameter_to_convert_FDOM_to_ag_TaraEuropa_2023_2024.csv');
-cfg.instruments.(['HyperBB' SN]).PlaqueCal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Plaque_20240215_142925.mat');
-cfg.instruments.(['HyperBB' SN]).TemperatureCal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Temp_20230217_160954.mat');
+cfg.instruments.(['HyperBB' SN]).hbb_cal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Plaque_SN8005.hbb_cal');
+cfg.instruments.(['HyperBB' SN]).hbb_tcal = fullfile(PATH_ROOT, 'DeviceFiles', 'Hbb_Cal_Temp_SN8005.hbb_tcal');
 cfg.instruments.(['HyperBB' SN]).path = struct('raw', fullfile(PATH_ROOT, 'raw', ['HyperBB' SN]),...
                                   'di', fullfile(PATH_ROOT, 'raw', ['HyperBB' SN], 'DI'),...
                                   'wk', fullfile(PATH_ROOT, 'wk', ['HyperBB' SN]),...
@@ -275,7 +275,7 @@ cfg.process.di.bin = struct('bin_size', 30);
 cfg.process.sync = struct();
 cfg.process.sync.delay = struct();
 cfg.process.sync.skip = cfg.process.instruments2run(contains(lower(cfg.process.instruments2run), ...
-  {'flow','tsg','sbe45','sbe3845','nmea','par', 'alfa','qcr','qsp'}));
+  {'flow','nmea','par','qcr','qsp'}));
 % Set default sync delay.
 % To customize sync delay, uncomment section below
 for i = 1:length(cfg.process.instruments2run)
@@ -295,7 +295,7 @@ end
 cfg.process.qcref = struct();
 cfg.process.qcref.reference = 'FLOW';
 cfg.process.qcref.view = cfg.process.instruments2run{find(contains(lower(cfg.process.instruments2run), ...
-  {'acs', 'ac9'}),1, 'first')};
+  {'acs','ac9'}),1, 'first')};
 cfg.process.qcref.mode = 'ui'; % load or ui
 cfg.process.qcref.remove_old = false; % remove old selection of the same period
 cfg.process.qcref.MinFiltPeriod = minutes(50); % filter even period in minute
@@ -306,7 +306,7 @@ cfg.process.split = struct();
 cfg.process.split.reference = 'FLOW';
 cfg.process.split.buffer = struct();
 cfg.process.split.skip = cfg.process.instruments2run(contains(lower(cfg.process.instruments2run), ...
-  {'flow','tsg','sbe45','sbe3845','nmea','par', 'alfa','qcr','qsp'}));
+  {'flow','tsg','sbe45','sbe3845','nmea','par', alfa','qcr','qsp'}));
 % Set buffer length depending on instrument type (default).
 % To customize buffer length, uncomment section below
 for i = 1:length(cfg.process.instruments2run)
@@ -328,6 +328,8 @@ for i = 1:length(cfg.process.instruments2run)
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = seconds([180, 60]); % [540, 360] for LISST
   elseif any(contains(lower(cfg.process.instruments2run{i}), {'lissttau','lisst-tau'}))
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = seconds([180, 60]); % [180, 60] for LISST-Tau
+  elseif any(contains(lower(cfg.process.instruments2run{i}), 'alfa'))
+    cfg.process.split.buffer.(cfg.process.instruments2run{i}) = seconds([180, 180]); % [180, 180] for ALFA
   else
     cfg.process.split.buffer.(cfg.process.instruments2run{i}) = seconds([180, 60]);
   end
@@ -378,7 +380,7 @@ for i = 1:length(cfg.process.instruments2run)
   elseif any(contains(lower(cfg.process.instruments2run{i}), {'lissttau','lisst-tau'}))
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = minutes(1); % 1 min for LISST-Tau
   elseif any(contains(lower(cfg.process.instruments2run{i}), 'alfa'))
-    cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = minutes(10); % 10 min for ALFA
+    cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = minutes(5); % 5 min for ALFA
   else
     cfg.process.bin.bin_size.(cfg.process.instruments2run{i}) = minutes(1);
   end
@@ -396,12 +398,12 @@ end
 % cfg.process.bin.bin_size.HyperBB8005 = minutes(5);
 % cfg.process.bin.bin_size.LISST1183 = minutes(10);
 % cfg.process.bin.bin_size.SUVF6244 = minutes(1);
-% cfg.process.bin.bin_size.ALFA = minutes(10);
+% cfg.process.bin.bin_size.ALFA = minutes(5);
 % cfg.process.bin.skip = {};
 
-%%% Automatically flagging %%%
-cfg.process.flag = struct();
-cfg.process.flag.skip = cfg.process.instruments2run;
+%%% Pass data to QC level %%% (FLag function deprecated)
+cfg.process.Pass2QC = struct();
+cfg.process.Pass2QC.skip = cfg.process.instruments2run;
 % Default: parameters set to all instruments if not specific parameters set
 cfg.process.flag.default = struct();
 % cfg.process.flag.default.maximum_fudge_factor = 4;
@@ -415,18 +417,25 @@ cfg.process.flag.default = struct();
   
 %%% Auto QC %%%
 cfg.process.qc = struct();
-cfg.process.qc.AutoQC_tolerance.filtered.a = 3;
-cfg.process.qc.AutoQC_tolerance.filtered.c = 3;
-cfg.process.qc.AutoQC_tolerance.total.a = 3;
-cfg.process.qc.AutoQC_tolerance.total.c = 3;
+cfg.process.qc.AutoQC_tolerance.filtered.a = 'auto';
+cfg.process.qc.AutoQC_tolerance.filtered.c = 'auto';
+cfg.process.qc.AutoQC_tolerance.total.a = 'auto';
+cfg.process.qc.AutoQC_tolerance.total.c = 'auto';
 cfg.process.qc.AutoQC_tolerance.dissolved.a = 3;
 cfg.process.qc.AutoQC_tolerance.dissolved.c = 3;
-cfg.process.qc.AutoQC_tolerance.filtered.bb = 3;
-cfg.process.qc.AutoQC_Saturation_Threshold.a = 50; % in uncalibrated m^-1
-cfg.process.qc.AutoQC_Saturation_Threshold.c = 50; % in uncalibrated m^-1
-cfg.process.qc.AutoQC_tolerance.total.bb = 3;
-cfg.process.qc.AutoQC_tolerance.dissolved.bb = 3;
-cfg.process.qc.AutoQC_Saturation_Threshold.bb = 4100; % (counts) max being 4130
+% define saturation threshold of a and c in uncalibrated m^-1
+cfg.process.qc.AutoQC_Saturation_Threshold.a = 10; % remove any spectra > threshold m^-1 (uncalibrated)
+cfg.process.qc.AutoQC_Saturation_Threshold.c = 40; % remove any spectra > threshold m^-1 (uncalibrated)
+% Tolerance factor for auto QC BB
+% 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
+cfg.process.qc.AutoQC_tolerance.filtered.bb = 100; % 10
+cfg.process.qc.AutoQC_tolerance.total.bb = 10; % 10
+% define saturation threshold of beta in counts
+cfg.process.qc.AutoQC_Saturation_Threshold.bb = 4100; % (counts) max being 4130 for BB3 (HyperBB has automatic gains)
+% Tolerance factor for auto QC LISST
+% 0.1 = minimum tolerance and >> 10 = very high tolerance (default = 3)
+cfg.process.qc.AutoQC_tolerance.filtered.lisst = 10; % 10
+cfg.process.qc.AutoQC_tolerance.total.lisst = 10; % 10
 
 %%% Manually QC %%%
 cfg.process.qc.mode = 'ui';
